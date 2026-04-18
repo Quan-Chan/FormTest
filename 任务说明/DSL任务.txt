@@ -1,0 +1,126 @@
+<任务>
+    <目标>
+        "任务名": "数据源优化 + 关联功能激活"
+        "优先级": "P1 - 数据源优化优先，P2 - 关联激活"
+        "时间": "3小时"
+    </目标>
+
+    <背景>
+        "现状1": "Root.json 和 UI.json 重复定义映射，手动维护繁琐"
+        "现状2": "被测试文件 ↔ 测试问题 硬绑定在UI.json中"
+        "现状3": "bindings功能前端可用但测试执行时完全未使用"
+        "现状4": "系统提示使用硬编码模板，无法使用自定义内容"
+    </背景>
+
+    <问题列表>
+        "问题1": "Root.json 和 UI.json 重复定义，冗余"
+        "问题2": "被测试文件 ↔ 测试问题 硬绑定，添加新文件需手动修改UI.json"
+        "问题3": "bindings.json 前端可用但后端测试执行时完全不使用"
+        "问题4": "系统提示使用硬编码模板，无法使用自定义system prompt"
+    </问题列表>
+
+    <解决方案>
+        <任务1>
+            <名称>数据源优化（自动扫描 + 解耦）</名称>
+            <步骤1>
+                "步骤名": "后端修改 - 自动扫描"
+                "改动1": "添加 questions_dir 配置项，默认为 questions"
+                "改动2": "修改 get_ui_config() 实现目录自动扫描"
+                "改动3": "自动建立被测文件 ↔ 问题集映射（根据目录名）"
+                "改动4": "删除 Root.json 依赖，不再读取"
+            </步骤1>
+            <步骤2>
+                "步骤名": "目录规范"
+                "改动1": "创建 questions 目录（新问题集存放位置）"
+                "改动2": "被测试文件目录保持不变"
+                "改动3": "问题文件格式保持现状（不简化）"
+            </步骤2>
+            <步骤3>
+                "步骤名": "前端优化"
+                "改动1": "更新目录选择UI，支持配置questions目录"
+                "改动2": "更新绑定逻辑，支持 system ↔ questions 绑定"
+            </步骤3>
+        </任务1>
+
+        <任务2>
+            <名称>关联功能激活</名称>
+            <步骤1>
+                "步骤名": "后端修改 - 读取bindings"
+                "改动1": "修改 run-tests API，接收 selected_system_prompt 参数"
+                "改动2": "在 run_single_test 中加载bindings"
+                "改动3": "根据system prompt文件名加载自定义内容"
+                "改动4": "替换硬编码模板为自定义内容"
+            </步骤1>
+            <步骤2>
+                "步骤名": "前端修改"
+                "改动1": "测试执行时传递选中的system prompt到后端"
+                "改动2": "关联面板支持 questions 列表选择"
+            </步骤2>
+        </任务2>
+    </解决方案>
+
+    <代码示例>
+        <示例1>
+            // app.py 配置新增
+            config = {
+                "questions_dir": "questions",  // 新增
+            }
+        </示例1>
+        <示例2>
+            // get_ui_config() 自动扫描
+            def get_ui_config():
+                test_set_dir = get_test_set_dir()
+                formatGroups = []
+                # 自动扫描被测试文件
+                src_dir = os.path.join(test_set_dir, "被测试文件")
+                for category in os.listdir(src_dir):
+                    category_path = os.path.join(src_dir, category)
+                    if os.path.isdir(category_path):
+                        files = []
+                        for f in os.listdir(category_path):
+                            if f.endswith('.txt'):
+                                files.append({
+                                    "source": f"测试集/被测试文件/{category}/{f}",
+                                    "testQuestion": f"测试集/questions/{category}"
+                                })
+                        formatGroups.append({"name": category, "files": files})
+                return {"formatGroups": formatGroups}
+        </示例2>
+        <示例3>
+            // run-tests 接收参数
+            @app.route("/api/v1/run-tests", methods=["POST"])
+            def run_tests():
+                data = request.json
+                test_files = data.get("test_files", [])
+                models = data.get("models", [])
+                selected_system_prompt = data.get("selected_system_prompt")  # 新增
+                # ... 执行逻辑
+        </示例3>
+    </代码示例>
+
+    <时间分配>
+        "数据源优化之后端": "1小时"
+        "数据源优化之目录": "0.5小时"
+        "数据源优化之前端": "0.5小时"
+        "关联激活之后端": "0.5小时"
+        "关联激活之前端": "0.5小时"
+    </时间分配>
+
+    <验收标准>
+        "[x]标准1": "删除 Root.json 后系统正常运作"
+        "[x]标准2": "新增被测文件或问题集后，无需手动修改UI.json"
+        "[x]标准3": "测试执行时使用自定义system prompt内容"
+        "[x]标准4": "bindings中定义的关联在测试中生效"
+    </验收标准>
+
+    <回滚方案>
+        <方案1>
+            "步骤1": "复制 UI.json.bak 重命名为 UI.json"
+            "步骤2": "删除新增的 questions 目录"
+            "步骤3": "重启服务测试"
+        </方案1>
+        <方案2>
+            "步骤": "恢复到提交 '修改前' 的版本: git checkout app.py static/index.html"
+        </方案2>
+    </回滚方案>
+</任务>

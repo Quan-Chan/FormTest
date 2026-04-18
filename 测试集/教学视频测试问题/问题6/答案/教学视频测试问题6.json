@@ -1,0 +1,4 @@
+{
+  "id": 6,
+  "answer": "Local（局部作用域）→ Enclosing（嵌套作用域）→ Global（全局作用域）→ Built-in（内置作用域）。"
+}
