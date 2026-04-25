@@ -1,13 +1,10 @@
 import os
 import json
 import requests
-import threading
 from flask import Flask, jsonify, request, Response
 from flask_cors import CORS
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import time
-
-CONFIG_FILE = os.path.join(os.path.dirname(__file__), "config.json")
 
 app = Flask(__name__, static_folder="static")
 CORS(app)
@@ -24,10 +21,7 @@ SRC_DIR = os.path.join(os.path.dirname(__file__), "src")
 RESULTS_DIR = os.path.join(os.path.dirname(__file__), "results")
 ANSWER_CACHE_DIR = os.path.join(os.path.dirname(__file__), "Answer Cache")
 
-config_lock = threading.Lock()
-stop_event = threading.Event()
-
-default_config = {
+config = {
     "api_key": "",
     "base_url": "http://192.168.1.45:1919/v1",
     "model": "qwen3.5-0.8b",
@@ -40,26 +34,12 @@ default_config = {
     "test_count": 1,
     "max_retries": 3,
     "streaming": True,
-    "test_set_dir": "",
+    "test_set_dir": "D:/文件/提示词/草稿A/测试集",
     "system_dir": "system",
     "questions_dir": "questions",
     "bindings_file": "bindings.json",
-    "timeout": 60,
+    "stop_flag": False,
 }
-
-config = dict(default_config)
-
-
-def load_config():
-    global config
-    saved = load_json(CONFIG_FILE)
-    if saved:
-        config.update(saved)
-
-
-def save_config():
-    save_json(CONFIG_FILE, config)
-
 
 bindings = {}
 
@@ -86,7 +66,7 @@ def read_file(filepath):
 def get_test_set_dir():
     if config.get("test_set_dir"):
         return config["test_set_dir"]
-    return os.path.join(os.path.dirname(__file__), "data")
+    return os.path.join(os.path.dirname(__file__), "..", "测试集")
 
 
 def log_debug(msg):
@@ -99,18 +79,10 @@ def log_debug(msg):
 def handle_config():
     global config
     if request.method == "GET":
-        with config_lock:
-            return jsonify(config)
-    data = request.get_json() or {}
-    allowed_keys = {"api_key", "base_url", "model", "temperature", "top_p",
-                    "top_k", "min_p", "context_size", "concurrency", "test_count",
-                    "max_retries", "streaming", "test_set_dir"}
-    with config_lock:
-        for k, v in data.items():
-            if k in allowed_keys:
-                config[k] = v
-        save_config()
-    return jsonify({"status": "ok"})
+        return jsonify(config)
+    data = request.json
+    config.update(data)
+    return jsonify({"status": "ok", "config": config})
 
 
 @app.route("/api/v1/models", methods=["GET", "POST"])
@@ -247,57 +219,46 @@ def clear_results():
 
 @app.route("/api/v1/stop-tests", methods=["POST"])
 def stop_tests():
-    stop_event.set()
+    config["stop_flag"] = True
     return jsonify({"status": "ok"})
 
 
-def call_ai(system_prompt, user_prompt, model=None, max_retries=None, timeout=None):
+def call_ai(system_prompt, user_prompt, model=None, max_retries=None):
     if max_retries is None:
         max_retries = config.get("max_retries", 3)
-    if timeout is None:
-        timeout = config.get("timeout", 60)
-
-    with config_lock:
-        api_key = config.get("api_key", "")
-        base_url = config.get("base_url", "http://localhost:8000/v1")
-        temperature = config.get("temperature", 0.7)
-        top_p = config.get("top_p", 1.0)
-        model_name = model or config.get("model", "gpt-4o")
-        top_k = config.get("top_k")
-        min_p = config.get("min_p")
-        context_size = config.get("context_size")
 
     headers = {}
-    if api_key:
-        headers["Authorization"] = f"Bearer {api_key}"
+    if config.get("api_key"):
+        headers["Authorization"] = f"Bearer {config['api_key']}"
     headers["Content-Type"] = "application/json"
 
     payload = {
-        "model": model_name,
+        "model": model or config["model"],
         "messages": [
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": temperature,
-        "top_p": top_p,
+        "temperature": config.get("temperature", 0.7),
+        "top_p": config.get("top_p", 1.0),
     }
 
-    if top_k:
-        payload["top_k"] = top_k
-    if min_p:
-        payload["min_p"] = min_p
+    if config.get("top_k"):
+        payload["top_k"] = config["top_k"]
+    if config.get("min_p"):
+        payload["min_p"] = config["min_p"]
+    context_size = config.get("context_size")
     if context_size is not None and context_size > 0:
         payload["context_size"] = context_size
 
     for attempt in range(max_retries):
-        if stop_event.is_set():
+        if config.get("stop_flag"):
             return None
         try:
             response = requests.post(
-                f"{base_url}/chat/completions",
+                f"{config['base_url']}/chat/completions",
                 headers=headers,
                 json=payload,
-                timeout=timeout,
+                timeout=60,
             )
             if response.status_code == 200:
                 result = response.json()
@@ -316,17 +277,13 @@ def call_ai(system_prompt, user_prompt, model=None, max_retries=None, timeout=No
         except requests.exceptions.Timeout:
             continue
         except Exception as e:
-            log_debug(f"AI请求异常: {e}")
             time.sleep(2**attempt)
     return None
 
 
 def run_single_test(test_item, source_content, group_name, model):
-    if stop_event.is_set():
+    if config.get("stop_flag"):
         return None
-
-    with config_lock:
-        test_count = config.get("test_count", 1)
 
     test_id = test_item.get("id", "")
     question = test_item.get("question", "")
@@ -336,10 +293,11 @@ def run_single_test(test_item, source_content, group_name, model):
     system_prompt = f"以下是被测试的文件内容：\n\n{source_content}\n\n请根据以上文件内容回答用户的问题。"
     user_prompt = question
 
+    test_count = config.get("test_count", 1)
     multi_answers = []
 
     for i in range(test_count):
-        if stop_event.is_set():
+        if config.get("stop_flag"):
             break
         ai_answer = call_ai(system_prompt, user_prompt, model=model)
         if ai_answer:
@@ -362,24 +320,16 @@ def run_single_test(test_item, source_content, group_name, model):
 
 @app.route("/api/v1/run-tests", methods=["POST"])
 def run_tests():
-    stop_event.clear()
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid request"}), 400
+    config["stop_flag"] = False
+    data = request.json
     test_files = data.get("test_files", [])
-    models = data.get("models", [])
+    models = data.get("models", [config.get("model", "gpt-4o")])
 
     if not test_files:
         return jsonify({"error": "No test files specified"}), 400
-    if not models:
-        with config_lock:
-            default_model = config.get("model", "gpt-4o")
-        models = [default_model]
-
-    with config_lock:
-        concurrency = config.get("concurrency", 1)
 
     test_set_dir = get_test_set_dir()
+
     ui_json_path = os.path.join(test_set_dir, "UI.json")
     ui_config = load_json(ui_json_path)
 
@@ -396,126 +346,125 @@ def run_tests():
     all_results = {}
     source_content_cache = {}
 
-    def get_file_name(file_key):
-        return file_key.split("|")[0].replace("\\", "/").split("/")[-1]
-
-    def load_test_items(file_key, source, test_question):
-        nonlocal total_tasks
-        items = []
-        if source not in source_content_cache:
-            source_rel = source.replace("\\", "/")
-            if source_rel.startswith("测试集/"):
-                source_rel = source_rel[len("测试集/"):]
-            source_path = os.path.join(test_set_dir, source_rel)
-            content = read_file(source_path)
-            source_content_cache[source] = content if content else ""
-
-        question_base = test_question.replace("\\", "/")
-        if question_base.startswith("测试集/"):
-            question_base = question_base[len("测试集/"):]
-        abs_question_dir = os.path.join(test_set_dir, question_base)
-
-        if os.path.exists(abs_question_dir):
-            for item in os.listdir(abs_question_dir):
-                item_path = os.path.join(abs_question_dir, item)
-                if os.path.isdir(item_path) and item.startswith("问题"):
-                    question_subdir = os.path.join(item_path, "问题")
-                    answer_subdir = os.path.join(item_path, "答案")
-
-                    if os.path.exists(question_subdir) and os.path.exists(answer_subdir):
-                        for qf in os.listdir(question_subdir):
-                            if not qf.endswith(".json"):
-                                continue
-                            qf_full_path = os.path.join(question_subdir, qf)
-                            base_name = qf.replace("答案", "")
-                            for af in os.listdir(answer_subdir):
-                                if af.replace(".json", "") == base_name.replace(".json", ""):
-                                    question_data = load_json(qf_full_path)
-                                    answer_data = load_json(os.path.join(answer_subdir, af))
-                                    if question_data and answer_data:
-                                        items.append({
-                                            "id": question_data.get("id"),
-                                            "question": question_data.get("question"),
-                                            "answer": answer_data.get("answer"),
-                                            "source": source,
-                                            "testQuestion": test_question,
-                                        })
-                                    break
-        return items
-
-    total_tasks = 0
-    task_queue = []
-    for file_key in test_files:
-        parts = file_key.split("|")
-        if len(parts) != 2:
-            continue
-        source = parts[0]
-        test_question = parts[1]
-        items = load_test_items(file_key, source, test_question)
-        if not items:
-            continue
-        group_name = file_to_group.get(file_key, "default")
-        for model in models:
-            group_key = f"{group_name}_{model}"
-            for item in items:
-                task_queue.append((item, source, group_name, model, group_key))
-        total_tasks += len(items) * len(models)
-
-    if total_tasks == 0:
-        return jsonify({"error": "No valid test items found"}), 400
-
     def generate():
-        nonlocal total_tasks
+        total_tasks = 0
         completed_tasks = 0
 
-        yield f"data: {json.dumps({'type': 'status', 'message': f'共 {total_tasks} 个测试任务, 并发数 {concurrency}'})}\n\n"
+        for file_key in test_files:
+            yield f"data: {json.dumps({'type': 'status', 'message': f'加载测试文件: {file_key.split('/').pop()}'})}\n\n"
 
-        def run_task(task_item):
-            item, source, group_name, model, group_key = task_item
+            parts = file_key.split("|")
+            if len(parts) != 2:
+                continue
+
+            source = parts[0]
+            test_question = parts[1]
+
+            if source not in source_content_cache:
+                source_rel = source.replace("测试集/", "").replace("测试集\\", "")
+                source_path = os.path.join(test_set_dir, source_rel)
+                content = read_file(source_path)
+                source_content_cache[source] = content if content else ""
+
             source_content = source_content_cache.get(source, "")
-            result = run_single_test(item, source_content, group_name, model)
-            return group_key, result
 
-        with ThreadPoolExecutor(max_workers=concurrency) as executor:
-            futures = {executor.submit(run_task, task): task for task in task_queue}
-            for future in as_completed(futures):
-                if stop_event.is_set():
-                    executor.shutdown(wait=False, cancel_futures=True)
-                    yield f"data: {json.dumps({'type': 'status', 'message': '测试已终止'})}\n\n"
-                    return
+            question_base = test_question.replace("测试集/", "").replace("测试集\\", "")
+            abs_question_dir = os.path.join(test_set_dir, question_base)
 
-                try:
-                    group_key, result = future.result()
-                except Exception as e:
-                    log_debug(f"Task failed: {e}")
-                    continue
+            test_items = []
+            if os.path.exists(abs_question_dir):
+                for item in os.listdir(abs_question_dir):
+                    item_path = os.path.join(abs_question_dir, item)
+                    if os.path.isdir(item_path) and item.startswith("问题"):
+                        question_subdir = os.path.join(item_path, "问题")
+                        answer_subdir = os.path.join(item_path, "答案")
 
-                if result is None:
-                    continue
+                        if os.path.exists(question_subdir) and os.path.exists(
+                            answer_subdir
+                        ):
+                            json_files = os.listdir(question_subdir)
+                            answer_files = os.listdir(answer_subdir)
+
+                            for qf in json_files:
+                                if not qf.endswith(".json"):
+                                    continue
+
+                                qf_full_path = os.path.join(question_subdir, qf)
+                                base_name = qf.replace("答案", "")
+                                matching_af = None
+                                for af in answer_files:
+                                    if af.replace(".json", "") == base_name.replace(
+                                        ".json", ""
+                                    ):
+                                        matching_af = af
+                                        break
+
+                                if matching_af:
+                                    question_data = load_json(qf_full_path)
+                                    answer_json_path = os.path.join(
+                                        answer_subdir, matching_af
+                                    )
+                                    answer_data = load_json(answer_json_path)
+
+                                    if question_data and answer_data:
+                                        test_items.append(
+                                            {
+                                                "id": question_data.get("id"),
+                                                "question": question_data.get(
+                                                    "question"
+                                                ),
+                                                "answer": answer_data.get("answer"),
+                                                "source": source,
+                                                "testQuestion": test_question,
+                                            }
+                                        )
+
+            if not test_items:
+                continue
+
+            total_tasks += len(test_items)
+            group_name = file_to_group.get(file_key, "default")
+
+            for model in models:
+                group_key = f"{group_name}_{model}"
 
                 if group_key not in all_results:
                     all_results[group_key] = []
-                all_results[group_key].append(result)
-                completed_tasks += 1
 
-                first_answer = ""
-                if result.get("multi_answers"):
-                    first_answer = result["multi_answers"][0].get("answer", "")
+                yield f"data: {json.dumps({'type': 'status', 'message': f'开始测试 {group_key}，共 {len(test_items)} 题'})}\n\n"
 
-                yield f"data: {json.dumps({
-                    'type': 'result',
-                    'group': group_key,
-                    'id': result.get('id'),
-                    'question': result.get('question', ''),
-                    'expected_answer': result.get('expected_answer', ''),
-                    'ai_answer': first_answer,
-                    'multi_answers': result.get('multi_answers', []),
-                    'test_count': len(result.get('multi_answers', [])),
-                    'source': result.get('source', ''),
-                    'model': result.get('model', ''),
-                    'completed': completed_tasks,
-                    'total': total_tasks,
-                }, ensure_ascii=False)}\n\n"
+                for item in test_items:
+                    if config.get("stop_flag"):
+                        yield f"data: {json.dumps({'type': 'status', 'message': '测试已终止'})}\n\n"
+                        return
+
+                    result = run_single_test(item, source_content, group_name, model)
+                    all_results[group_key].append(result)
+                    completed_tasks += 1
+
+                    first_answer = ""
+                    if result.get("multi_answers"):
+                        first_answer = result["multi_answers"][0].get("answer", "")
+
+                    yield f"data: {
+                        json.dumps(
+                            {
+                                'type': 'result',
+                                'group': group_key,
+                                'id': result.get('id'),
+                                'question': result.get('question', ''),
+                                'expected_answer': result.get('expected_answer', ''),
+                                'ai_answer': first_answer,
+                                'multi_answers': result.get('multi_answers', []),
+                                'test_count': len(result.get('multi_answers', [])),
+                                'source': result.get('source', ''),
+                                'model': result.get('model', ''),
+                                'completed': completed_tasks,
+                                'total': total_tasks,
+                            },
+                            ensure_ascii=False,
+                        )
+                    }\n\n"
 
         yield f"data: {json.dumps({'type': 'done', 'message': '测试完成'})}\n\n"
 
@@ -527,5 +476,4 @@ if __name__ == "__main__":
         if not os.path.exists(dir_path):
             os.makedirs(dir_path)
 
-    load_config()
     app.run(debug=True, port=5000)

@@ -1,0 +1,19 @@
+{
+  "api_key": "",
+  "base_url": "http://192.168.1.45:1919/v1",
+  "model": "qwen3.5-0.8b",
+  "temperature": 0.7,
+  "top_p": 1,
+  "top_k": 40,
+  "min_p": 0.05,
+  "context_size": 8192,
+  "concurrency": 1,
+  "test_count": 1,
+  "max_retries": 3,
+  "streaming": true,
+  "test_set_dir": "",
+  "system_dir": "system",
+  "questions_dir": "questions",
+  "bindings_file": "bindings.json",
+  "timeout": 60
+}

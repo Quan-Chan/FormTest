@@ -1293,6 +1293,7 @@
             color: white;
             border: 2px solid var(--accent);
         }
+        }
 
         .model-name {
             flex: 1;
@@ -1872,7 +1873,7 @@
                                 <div class="form-group">
                                     <label>模型</label>
                                     <button class="btn btn-secondary" id="openModelBtn" onclick="openModelModal()">选择模型 (<span id="selectedModelCount" style="position:relative;top:0.5px">0</span>)</button>
-                                    <div class="model-list" id="modelList"></div>
+                                    <div class="model-list" id="modelList" style="display:none"></div>
                                     <div style="display:flex;gap:8px;margin-top:12px">
                                         <button class="btn btn-primary" id="runBtn" onclick="runTests()" style="flex:1">开始测试</button>
                                         <button class="btn btn-secondary" id="stopBtn" onclick="stopTests()" style="flex:1" disabled>终止测试</button>
@@ -1888,11 +1889,40 @@
                                 <span id="progressPercent">0%</span>
                             </div>
                         </div>
+                        <div class="binding-section">
+                            <div class="panel-header">
+                                <div class="panel-title">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                                        <polyline points="15 3 21 3 21 9"/>
+                                        <line x1="10" y1="14" x2="21" y2="3"/>
+                                    </svg>
+                                    关联管理
+                                </div>
+                                <button class="btn btn-primary" onclick="saveBindings()" style="padding:5px 10px;font-size:11px">保存</button>
+                            </div>
+                            <div class="binding-box">
+                                <div class="binding-col">
+                                    <div class="binding-col-header">系统提示</div>
+                                    <div class="binding-col-list" id="systemPromptList"></div>
+                                </div>
+                                <div class="binding-col binding-col-center">
+                                    <div class="binding-col-header">关联可视化</div>
+                                    <div class="binding-col-canvas" id="bindingCanvas">
+                                        <svg class="binding-svg" id="bindingSvg"></svg>
+                                    </div>
+                                </div>
+                                <div class="binding-col">
+                                    <div class="binding-col-header">已选测试 (<span id="selectedTestCount">0</span>)</div>
+                                    <div class="binding-col-list" id="selectedTestList"></div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+
         <aside class="ai-stream-panel">
             <div class="ai-stream-header">
                 <div class="ai-stream-title">
@@ -1994,9 +2024,19 @@
                             </div>
                         </div>
                     </div>
+                    <div class="progress-container" id="progressContainer" style="display:none;">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill" style="width:0%"></div>
+                        </div>
+                        <div class="progress-stats">
+                            <span id="progressText">准备中...</span>
+                            <span id="progressPercent">0%</span>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
+    </main>
 
     <div class="model-modal-overlay" id="modelModal">
         <div class="model-modal">
@@ -2025,10 +2065,6 @@
         let questionGroups = {};
         let bindings = {};
         let selectedSystemPrompt = null;
-
-        function getFileName(path) {
-            return path.replace(/\\/g, '/').split('/').pop();
-        }
 
         async function init() {
             await loadConfig();
@@ -2118,7 +2154,7 @@
             document.getElementById('selectedTestCount').textContent = selectedFiles.size;
             const fileArray = Array.from(selectedFiles);
             container.innerHTML = fileArray.map(fileKey => {
-                const name = getFileName(fileKey.split('|')[0]);
+                const name = fileKey.split('|')[0].split('/').pop();
                 const isConnected = bindings[selectedSystemPrompt] && bindings[selectedSystemPrompt].includes(fileKey);
                 return `
                     <div class="binding-item" onclick="event.stopPropagation();toggleTestBinding('${fileKey.replace(/'/g, "\\'")}')">
@@ -2184,7 +2220,7 @@
                 const x = centerX + radius * Math.cos(angle);
                 const y = centerY + radius * Math.sin(angle);
                 const isConnected = connectedTests.includes(fileKey);
-                const name = getFileName(fileKey.split('|')[0]).substring(0, 6);
+                const name = fileKey.split('|')[0].split('/').pop().substring(0, 6);
                 
                 svgContent += `<circle cx="${x}" cy="${y}" r="20" class="node-circle ${isConnected ? 'selected' : ''}"/>`;
                 svgContent += `<text x="${x}" y="${y + 4}" class="node-text">${name}</text>`;
@@ -2224,9 +2260,16 @@
             }
         }
 
+        function renderBindings() {
+            renderSystemPromptList();
+            renderSelectedTestList();
+            renderBindingCanvas();
+            updateSelectedTestCount();
+        }
+
         function renderBindingCanvas() {
             const svg = document.getElementById('bindingSvg');
-            const container = document.getElementById('bindingCanvas');
+            const container = document.getElementById('connectionCanvas');
             
             if (!selectedSystemPrompt || Object.keys(questionGroups).length === 0) {
                 svg.innerHTML = `
@@ -2279,7 +2322,7 @@
             container.innerHTML = uiConfig.formatGroups.map((group, index) => {
                 const filteredFiles = (group.files || []).filter(file => {
                     if (!searchText) return true;
-                    const showName = getFileName(file.source).toLowerCase();
+                    const showName = file.source.split('/').pop().toLowerCase();
                     return showName.includes(searchText);
                 });
                 
@@ -2303,7 +2346,7 @@
                             <li class="file-item ${selectedFiles.has(fileKey) ? 'selected' : ''}" onclick="toggleFile('${fileKey}')">
                                 <span class="file-checkbox ${selectedFiles.has(fileKey) ? 'checked' : ''}"></span>
                                 <div class="file-info">
-                                    <div class="file-name">${getFileName(file.source)}</div>
+                                    <div class="file-name">${file.source.split('/').pop()}</div>
                                     <div class="file-source">${file.testQuestion}</div>
                                 </div>
                             </li>
@@ -2383,22 +2426,6 @@
         });
 
         function syncModalFromMain() {
-            const syncSlider = (id) => {
-                const slider = document.getElementById('modal-' + id);
-                const input = document.getElementById('modal-' + id + 'Input');
-                if (slider && input) {
-                    const val = parseFloat(input.value);
-                    slider.value = val;
-                }
-            };
-            syncSlider('temperature');
-            syncSlider('concurrency');
-            syncSlider('testCount');
-            syncSlider('maxRetries');
-            syncSlider('contextSize');
-            syncSlider('topP');
-            syncSlider('topK');
-            syncSlider('minP');
         }
 
         async function loadUIConfig() {
@@ -2497,17 +2524,14 @@
 
         function updateSelectedModelCount() {
             document.getElementById('selectedModelCount').textContent = selectedModels.length;
-            renderModelList();
         }
 
         function renderModelList() {
             const container = document.getElementById('modelList');
             if (selectedModels.length === 0) {
                 container.innerHTML = '';
-                container.style.display = 'none';
                 return;
             }
-            container.style.display = 'flex';
             container.innerHTML = selectedModels.map((model, index) => `
                 <div class="model-tag">
                     <span class="model-tag-order">${index + 1}</span>
@@ -2548,7 +2572,7 @@
             uiConfig.formatGroups.forEach(group => {
                 (group.files || []).forEach(file => {
                     const fileKey = `${file.source}|${file.testQuestion}`;
-                    const showName = getFileName(file.source).toLowerCase();
+                    const showName = file.source.split('/').pop().toLowerCase();
                     if (!searchText || showName.includes(searchText)) {
                         selectedFiles.add(fileKey);
                     }
@@ -2584,6 +2608,7 @@
                     headers: { 'Content-Type': 'application/json' }, 
                     body: JSON.stringify(config) 
                 });
+                await loadUIConfig();
             } catch (error) {
                 console.error('Failed to save config:', error);
             }
@@ -2724,8 +2749,7 @@
             
             item.innerHTML = `
                 <div class="result-header">
-                    <span class="result-id">问题 ${escapeHtml(data.id)}</span>
-                    <span class="result-source">${escapeHtml(data.model || '')}</span>
+                    <span class="result-id">问题 ${data.id}</span>
                 </div>
                 <div class="result-section">
                     <div class="result-label">期望答案</div>
