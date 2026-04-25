@@ -1,0 +1,13 @@
+{
+  "formatGroups": [
+    {
+      "name": "教学视频",
+      "files": [
+        {
+          "source": "测试集/被测试文件/教学视频/教学视频DSL.txt",
+          "testQuestion": "测试集/教学视频测试问题"
+        }
+      ]
+    }
+  ]
+}

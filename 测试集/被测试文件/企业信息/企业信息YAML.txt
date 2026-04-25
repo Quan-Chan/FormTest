@@ -1,0 +1,313 @@
+company:
+  name: "星云科技"
+  founded: "2018年3月15日"
+  headquarters: "深圳市南山区科技园A栋12层"
+  main_business: "人工智能解决方案"
+  products:
+    - "NebulaBot智能客服系统"
+    - "StarLens数据分析平台"
+  employees: 247
+  annual_revenue: "约3.2亿元人民币"
+  valuation: "15亿元人民币"
+  office_area: "约2800平方米"
+  r&d_center:
+    location: "成都"
+    employees: 38
+  vision: "成为国内领先的企业级AI解决方案提供商"
+  mission: "让每一家企业都能享受AI带来的效率提升"
+
+ownership:
+  ceo_chen_zhiyuan: "42%"
+  cto_liu_minghua: "18%"
+  employee_pool: "15%"
+  series_a_investor: "15%"
+  series_b_investor: "10%"
+
+development_history:
+  - year: "2018年3月"
+    event: "注册成立，初始团队5人"
+  - year: "2018年9月"
+    event: "发布NebulaBot 1.0版本，获得首个付费客户"
+  - year: "2019年6月"
+    event: "完成A轮融资2000万元，团队扩展至35人"
+  - year: "2020年"
+    event: "疫情推动线上化需求，客户数突破100家，团队增至80人"
+  - year: "2021年3月"
+    event: "发布StarLens数据分析平台，实现产品线扩展"
+  - year: "2022年"
+    event: "营收突破1亿元，团队达到150人"
+  - year: "2023年"
+    event: "完成B轮融资8000万元，团队扩展至220人"
+  - year: "2024年"
+    event: "营收预计3.5亿元，团队扩展至280人目标"
+
+main_business:
+  nebulabot:
+    revenue_ratio: "58%"
+    customers: 350
+    industries: ["电商", "金融", "教育", "医疗"]
+  starlens:
+    revenue_ratio: "32%"
+    customers: 120
+    industries: ["零售", "制造业"]
+  custom_ai:
+    revenue_ratio: "10%"
+    customers: 25
+    model: "项目制收费"
+
+departments:
+  r&d:
+    name: "技术研发部"
+    employees: 89
+    ratio: "36%"
+    budget_ratio: "42%"
+    budget:
+      personnel: "约4500万元"
+      cloud: "约800万元"
+      software: "约200万元"
+    leader: "技术总监张明远"
+    report_to: "CTO刘明华"
+    mission: "打造稳定、高效、智能的产品技术底座，支撑业务快速增长"
+    teams:
+      - name: "后端组"
+        employees: 25
+        responsibility: "核心业务逻辑开发和API服务"
+      - name: "前端组"
+        employees: 18
+        responsibility: "Web端和移动端界面开发"
+      - name: "算法组"
+        employees: 22
+        responsibility: "NLP模型训练和数据分析算法"
+      - name: "测试组"
+        employees: 14
+        responsibility: "功能测试、性能测试和自动化测试建设"
+      - name: "运维组"
+        employees: 10
+        responsibility: "基础设施、部署和监控"
+
+  product:
+    name: "产品运营部"
+    employees: 42
+    ratio: "17%"
+    budget_ratio: "18%"
+    leader: "产品总监林小雨"
+    report_to: "CEO陈志远"
+    teams:
+      - name: "产品组"
+        employees: 15
+      - name: "运营组"
+        employees: 18
+      - name: "设计组"
+        employees: 9
+
+  sales:
+    name: "销售部"
+    employees: 28
+    ratio: "11%"
+    budget_ratio: "12%"
+    leader: "销售总监陈志刚"
+    teams:
+      - name: "KA大客户��"
+        employees: 10
+      - name: "SMB中小客户组"
+        employees: 12
+      - name: "渠道销售组"
+        employees: 6
+
+  customer_success:
+    name: "客户成功部"
+    employees: 18
+    ratio: "7%"
+    budget_ratio: "6%"
+    leader: "客户成功总监周芳"
+    teams:
+      - name: "交付实施组"
+        employees: 7
+      - name: "客户服务组"
+        employees: 7
+      - name: "续约管理组"
+        employees: 4
+
+  hr:
+    name: "行政人事部"
+    employees: 12
+    ratio: "5%"
+    budget_ratio: "4%"
+    leader: "人力资源总监赵敏"
+    teams:
+      - name: "招聘组"
+        employees: 4
+      - name: "薪酬绩效组"
+        employees: 3
+      - name: "行政组"
+        employees: 5
+
+  finance:
+    name: "财务部"
+    employees: 8
+    ratio: "3%"
+    budget_ratio: "2%"
+    leader: "财务总监孙志强"
+    teams:
+      - name: "会计组"
+        employees: 4
+      - name: "出纳组"
+        employees: 2
+      - name: "财务分析组"
+        employees: 2
+
+key_employees:
+  - name: "张明远"
+    employee_id: "T2018015"
+    position: "技术总监"
+    department: "技术研发部"
+    hire_date: "2018年4月2日"
+    company_id: 15
+    salary: 85000
+    bonus: "3个月薪资"
+    options: 0.8
+    vesting: "50%"
+    performance: "连续3年A级"
+    stack: ["Python", "Go", "Kubernetes", "PostgreSQL", "Redis"]
+    experience: "2010-2015年腾讯后端工程师，2015-2018年字节跳动技术经理"
+    education: "哈尔滨工业大学计算机科学与技术本科、清华大学软件工程硕士"
+
+  - name: "赵伟"
+    employee_id: "T2019018"
+    position: "算法组长"
+    department: "技术研发部"
+    hire_date: "2019年5月6日"
+    direct_reports: 22
+    salary: 55000
+    bonus: "3个月薪资"
+    options: 0.3
+    vesting: "70%"
+    performance: "连续3年A级"
+    experience: "2014-2017年微软亚洲研究院研究员，2017-2019年阿里巴巴算法专家"
+    education: "中国科学技术大学计算机博士"
+
+  - name: "钱进"
+    employee_id: "T2019025"
+    position: "后端组长"
+    department: "技术研发部"
+    hire_date: "2019年6月3日"
+    direct_reports: 25
+    salary: 50000
+    bonus: "3个月薪资"
+    options: 0.25
+    vesting: "70%"
+    performance: "2021年B+级、2022年A级、2023年A级"
+
+  - name: "林芳"
+    employee_id: "T2020008"
+    position: "前端组长"
+    department: "技术研发部"
+    hire_date: "2020年3月16日"
+    direct_reports: 18
+    salary: 42000
+    bonus: "2.5个月薪资"
+    options: 0.18
+    vesting: "50%"
+
+  - name: "吴敏"
+    employee_id: "T2019038"
+    position: "测试组长"
+    department: "技术研发部"
+    hire_date: "2019年9月2日"
+    direct_reports: 14
+    salary: 35000
+    bonus: "2.5个月薪资"
+    options: 0.12
+    vesting: "60%"
+    performance: "连续3年B+级"
+
+  - name: "孙强"
+    employee_id: "T2020005"
+    position: "运维组长"
+    department: "技术研发部"
+    hire_date: "2020年2月10日"
+    direct_reports: 10
+    salary: 38000
+    bonus: "2.5个月薪资"
+    options: 0.1
+    vesting: "50%"
+
+  - name: "林小雨"
+    employee_id: "P2018008"
+    position: "产品总监"
+    department: "产品运营部"
+    hire_date: "2018年5月20日"
+    company_id: 8
+    salary: 60000
+    bonus: "3个月薪资"
+    options: 0.5
+    vesting: "70%"
+    performance: "连续3年A级"
+
+  - name: "陈志刚"
+    employee_id: "S2018006"
+    position: "销售总监"
+    department: "销售部"
+    hire_date: "2018年4月25日"
+    company_id: 6
+    salary: 55000
+    bonus_plus_commission: "约80万元"
+    options: 0.4
+    vesting: "70%"
+    performance: "连续3年A级"
+
+  - name: "周芳"
+    employee_id: "C2019002"
+    position: "客户成功总监"
+    department: "客户成功部"
+    hire_date: "2019年3月5日"
+    salary: 48000
+    bonus: "3个月薪资"
+    options: 0.2
+    vesting: "60%"
+    performance: "连续3年A级"
+
+  - name: "赵敏"
+    employee_id: "H2018006"
+    position: "人力资源总监"
+    department: "行政人事部"
+    hire_date: "2018年4月1日"
+    company_id: 6
+    salary: 45000
+    bonus: "3个月薪资"
+    options: 0.3
+    vesting: "70%"
+    performance: "连续4年A级"
+
+  - name: "孙志强"
+    employee_id: "F2019012"
+    position: "财务总监"
+    department: "财务部"
+    hire_date: "2019年3月20日"
+    salary: 55000
+    bonus: "3个月薪资"
+    options: 0.2
+    vesting: "60%"
+    performance: "连续3年A级"
+
+organization_summary:
+  management_style: "扁平化管理，从CEO到基层员工平均层级为3.5级"
+  decision_efficiency: "决策链条短，信息传递效率高"
+  tech_focus: "研发人员占比36%为各部门最高，研发预算占比42%"
+  equity_incentive: "覆盖约15%核心员工"
+  growth_stage: "B轮融资后快速成长期，预计年度新增员工50到80人"
+
+  talent_profile:
+    average_age: 29
+    gen_z_ratio: "72%"
+    gen_y_ratio: "25%"
+    gen_x_ratio: "3%"
+    bachelor_above: "92%"
+    master_above: "28%"
+
+  culture:
+    values: ["创新", "务实", "协作"]
+    satisfaction_score: 4.2
+    satisfaction_max: 5
+    positives: ["成长空间", "团队氛围", "工作内容挑战性"]
+    improvements: ["薪酬竞争力", "工作生活平衡"]

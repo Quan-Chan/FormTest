@@ -1,0 +1,68 @@
+{
+    "formatGroups": [
+        {
+            "name": "DSL",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频DSL.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息DSL.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志DSL.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "JSON",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频JSON.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息JSON.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志JSON.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "YAML",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频YAML.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息YAML.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志YAML.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "XML",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频XML.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息XML.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志XML.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "Markdown",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频Markdown.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息Markdown.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志Markdown.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "MarkdownKV",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频MarkdownKV.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息MarkdownKV.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志MarkdownKV.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "列表",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频列表.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息列表.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志列表.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        },
+        {
+            "name": "原版",
+            "files": [
+                {"source": "测试集/被测试文件/教学视频/教学视频原版.txt", "testQuestion": "测试集/教学视频测试问题"},
+                {"source": "测试集/被测试文件/企业信息/企业信息原版.txt", "testQuestion": "测试集/企业信息测试问题"},
+                {"source": "测试集/被测试文件/运行日志/运行日志原版.txt", "testQuestion": "测试集/运行日志测试问题"}
+            ]
+        }
+    ]
+}

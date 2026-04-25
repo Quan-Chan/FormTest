@@ -1,0 +1,70 @@
+ * Serving Flask app 'app'
+ * Debug mode: on
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+ * Debugger is active!
+ * Debugger PIN: 170-664-042
+ * Detected change in 'D:\\ÎÄ¼þ\\ÌáÊ¾´Ê\\²Ý¸åA\\²âÊÔÈí¼þ\\app.py', reloading
+ * Restarting with stat
+  File "D:\ÎÄ¼þ\ÌáÊ¾´Ê\²Ý¸åA\²âÊÔÈí¼þ\app.py", line 374
+    source_content = source_content_cache.get(source, "")
+                                                         ^
+IndentationError: unindent does not match any outer indentation level
