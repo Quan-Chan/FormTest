@@ -1,0 +1,62 @@
+[
+  {
+    "id": 1,
+    "tag": "Python进阶",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。"
+  },
+  {
+    "id": 2,
+    "tag": "Python进阶",
+    "question": "Generators（生成器）函数与普通函数的区别是什么？",
+    "answer": "生成器函数使用`yield`关键字代替`return`，每次调用`yield`会暂停函数执行并返回一个值，下次调用从暂停处继续执行，因此支持惰性求值（lazy evaluation），只在需要时才生成值。"
+  },
+  {
+    "id": 3,
+    "tag": "Python进阶",
+    "question": "Context Manager（上下文管理器）协议要求实现哪两个魔法方法？",
+    "answer": "`__enter__`和`__exit__`两个方法。`__enter__`在进入`with`块时调用，返回值绑定到`as`子句的变量；`__exit__`在退出`with`块时调用，负责清理资源。"
+  },
+  {
+    "id": 4,
+    "tag": "Python进阶",
+    "question": "使用`@functools.wraps`装饰器的主要目的是什么？",
+    "answer": "`@functools.wraps`用于在自定义装饰器中保留原函数的元数据（如`__name__`、`__doc__`、`__module__`等），避免被装饰器包装后丢失原函数的信息。"
+  },
+  {
+    "id": 5,
+    "tag": "Python进阶",
+    "question": "生成器表达式与列表推导式在内存使用上的关键区别是什么？",
+    "answer": "生成器表达式使用圆括号`()`，返回生成器对象，惰性求值，不一次性生成所有元素，内存占用小；列表推导式使用方括号`[]`，立即生成完整列表，所有元素同时驻留内存。"
+  },
+  {
+    "id": 6,
+    "tag": "Python进阶",
+    "question": "Python的`with`语句在异常处理方面相比`try/finally`有什么优势？",
+    "answer": "`with`语句自动调用`__exit__`方法进行资源清理，即使块内发生异常也会执行。它封装了`try/finally`的样板代码，使资源管理代码更简洁、更安全，且`__exit__`可以接收异常信息并决定是否抑制异常。"
+  },
+  {
+    "id": 7,
+    "tag": "Python进阶",
+    "question": "在上下文管理器中，`__exit__`方法的三个参数分别是什么？",
+    "answer": "`__exit__(self, exc_type, exc_val, exc_tb)`。exc_type：异常类型（如果没有异常则为None）；exc_val：异常实例；exc_tb：异常追踪信息（traceback object）。"
+  },
+  {
+    "id": 8,
+    "tag": "Python进阶",
+    "question": "`@staticmethod`装饰器和`@classmethod`装饰器的主要区别是什么？",
+    "answer": "`@staticmethod`定义一个静态方法，不接受隐式的第一个参数（既不是self也不是cls），类似普通函数但属于类的命名空间。`@classmethod`定义一个类方法，接收cls作为第一个参数，可以访问类属性和调用其他类方法，且支持多态（子类调用时cls为子类）。"
+  },
+  {
+    "id": 9,
+    "tag": "Python进阶",
+    "question": "`yield from`语法的作用是什么？",
+    "answer": "`yield from`用于在生成器中委托部分生成操作给另一个生成器（或任何可迭代对象），可以简化嵌套生成器的代码，等价于`for item in iterable: yield item`的简写，并且可以处理子生成器的返回值。"
+  },
+  {
+    "id": 10,
+    "tag": "Python进阶",
+    "question": "contextlib模块中，`@contextmanager`装饰器的作用是什么？",
+    "answer": "`@contextmanager`装饰器允许用生成器函数的方式定义上下文管理器，替代手动实现`__enter__`和`__exit__`方法的类方式。在yield之前的代码相当于`__enter__`，yield之后的代码相当于`__exit__`。这种方式更简洁，适合简单的上下文管理场景。"
+  }
+]

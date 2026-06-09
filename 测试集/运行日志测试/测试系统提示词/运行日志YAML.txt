@@ -1,0 +1,247 @@
+log_date: "2024年11月15日"
+
+events:
+  - timestamp: "[09:23:45]"
+    type: "系统启动序列"
+    server: "node-prod-07"
+    os: "Ubuntu 22.04.3 LTS"
+    kernel: "5.15.0-91-generic"
+    memory_total: "64GB"
+    memory_available: "58.2GB"
+    cpu_load: 0.25
+    boot_time: "47秒"
+    ip: "192.168.1.207"
+
+  - timestamp: "[09:23:47]"
+    type: "存储子系统初始化"
+    partitions:
+      - device: "/dev/sda1"
+        capacity: "100GB"
+        fs: "ext4"
+        used: "23GB"
+      - device: "/dev/sdb1"
+        capacity: "500GB"
+        fs: "XFS"
+        used: "312GB"
+      - device: "/dev/sdc1"
+        capacity: "2TB"
+        fs: "ext4"
+        used: "1.2TB"
+
+  - timestamp: "[09:24:17]"
+    type: "数据库连接池初始化"
+    master: "192.168.1.100:5432"
+    slave: "192.168.1.101:5432"
+    pool_size:
+      min: 10
+      max: 50
+    version: "PostgreSQL 15.4"
+    active_connections: 12
+
+  - timestamp: "[09:25:33]"
+    type: "缓存服务连接"
+    mode: "3主3从"
+    nodes: 6
+    version: "Redis 7.2.3"
+    memory_used: "3.2GB/16GB"
+    keys: 1200000
+
+  - timestamp: "[09:26:15]"
+    type: "消息队列连接"
+    nodes: 3
+    version: "RabbitMQ 3.12.6"
+    queues: 127
+    connections: 156
+
+  - timestamp: "[09:30:00]"
+    type: "应用服务启动"
+    services:
+      - name: "api-gateway"
+        port: 8080
+        status: "running"
+      - name: "user-service"
+        port: 8081
+        status: "running"
+      - name: "order-service"
+        port: 8082
+        status: "running"
+      - name: "payment-service"
+        port: 8083
+        status: "running"
+      - name: "notification-service"
+        port: 8084
+        status: "running"
+    total_time: "4分37秒"
+
+  - timestamp: "[09:35:22]"
+    type: "定时任务调度器"
+    scheduler: "XXL-JOB 2.4.0"
+    tasks: 32
+
+  - timestamp: "[09:42:15]"
+    type: "监控系统初始化"
+    metrics: 2800
+    grafana_dashboards: 23
+    alert_rules: 47
+
+  - timestamp: "[10:15:33]"
+    type: "异常流量检测"
+    severity: "P2"
+    ip: "203.45.178.92"
+    frequency: "127次/秒"
+    threshold: "100次/秒"
+    action: "封禁600秒"
+
+  - timestamp: "[10:23:47]"
+    type: "第二波异常流量"
+    ip: "45.33.32.156"
+    frequency: "89次/秒"
+    action: "加入观察名单"
+
+  - timestamp: "[10:47:22]"
+    type: "数据库慢查询检测"
+    query_time: "3.7秒"
+    table_records: 5200000
+    action: "创建复合索引"
+
+  - timestamp: "[11:05:33]"
+    type: "索引创建完成"
+    index: "idx_orders_user_status_time"
+    creation_time: "7分42秒"
+    improvement: "3.7秒->35ms"
+
+  - timestamp: "[11:23:17]"
+    type: "缓存命中率告警"
+    hit_rate: 78.3
+    threshold: 85
+    action: "TTL调整180->600秒"
+    after_hit_rate: 86.7
+
+  - timestamp: "[11:48:55]"
+    type: "第三方服务延迟"
+    severity: "P2"
+    PAY_GW_01: "120ms->580ms"
+    PAY_GW_02: "115ms->420ms"
+
+  - timestamp: "[12:08:45]"
+    type: "服务降级"
+    reason: "支付网关超时"
+    mode: "异步队列"
+    affected: "约200笔支付"
+
+  - timestamp: "[12:15:33]"
+    type: "支付网关恢复"
+    duration: "38分钟"
+    affected: "约200笔"
+    status: "resolved"
+
+  - timestamp: "[12:32:18]"
+    type: "数据库连接池告警"
+    connections: "30->45"
+    max: 50
+    root_cause: "连接泄漏bug"
+
+  - timestamp: "[12:58:47]"
+    type: "应用健康检查异常"
+    instance: "user-service-pod-7"
+    action: "自动重启"
+    restart_time: "28秒"
+
+  - timestamp: "[13:02:58]"
+    type: "磁盘空间预警"
+    usage: 87
+    free: "8.3GB"
+    main_usage: "/data/logs 42.7GB"
+
+  - timestamp: "[13:15:22]"
+    type: "日志轮转执行"
+    released: "27.5GB"
+    usage_after: 72
+
+  - timestamp: "[13:45:33]"
+    type: "网络延迟异常"
+    delay: "15ms->85ms"
+    cause: "Istio sidecar内存过高"
+
+  - timestamp: "[14:18:55]"
+    type: "消息队列积压"
+    queue: "notification.send"
+    backlog: "23->1523"
+    action: "扩容1->5实例"
+
+  - timestamp: "[14:30:11]"
+    type: "自动扩容"
+    node: "node-prod-12"
+    instance_type: "c5.2xlarge"
+    time: "47秒"
+    cost_per_hour: 0.34
+
+  - timestamp: "[15:15:47]"
+    type: "配置变更审批"
+    content: "订单超时30->45分钟"
+    status: "approved"
+
+  - timestamp: "[17:28:19]"
+    type: "配置执行"
+    status: "success"
+    version: "v2024111502"
+
+  - timestamp: "[17:58:33]"
+    type: "自动缩容"
+    nodes: "8->7"
+    savings_per_hour: 0.34
+
+  - timestamp: "[18:15:47]"
+    type: "日志异常"
+    errors: "5->35条/分"
+    cause: "网络抖动"
+
+  - timestamp: "[19:25:22]"
+    type: "业务统计"
+    orders: 12847
+    revenue: 2156000
+    new_users: 1258
+
+  - timestamp: "[19:55:47]"
+    type: "告警统计"
+    total: 47
+    P1: 2
+    P2: 15
+    P3: 30
+
+  - timestamp: "[20:32:18]"
+    type: "系统巡检"
+    status: "正常"
+    log_level: "WARN"
+
+  - timestamp: "[21:15:33]"
+    type: "容量规划"
+    cpu_avg: 45
+    cpu_peak: 82
+    memory_avg: 62
+
+  - timestamp: "[21:58:14]"
+    type: "系统日报"
+    availability: 99.97
+    requests: 12847293
+    response_time: 127
+
+  - timestamp: "[22:45:00]"
+    type: "数据归档"
+    released: "约35GB"
+    duration: "1小时28分钟"
+
+  - timestamp: "[23:15:47]"
+    type: "安全复核"
+    score: 85
+    blocked_ip: "203.45.178.92"
+
+  - timestamp: "[23:45:00]"
+    type: "夜间巡检"
+    status: "正常"
+    log_level: "WARN"
+
+  - timestamp: "[23:59:59]"
+    type: "日期变更"
+    status: "ready"
+    timezone: "UTC+8"

@@ -1,0 +1,62 @@
+[
+  {
+    "id": 11,
+    "tag": "教学视频-进阶",
+    "question": "根据课程内容，Python的整数类型没有大小限制，而C语言的int有固定范围。请解释Python是如何实现任意精度整数的底层机制。",
+    "answer": "Python的int类型使用任意精度算法（arbitrary-precision arithmetic），底层实现使用PyLongObject结构体，将整数拆分为多个30位或15位的digit数组存储，通过algorithms处理进位和借位，因此只受限于可用内存。"
+  },
+  {
+    "id": 12,
+    "tag": "教学视频-进阶",
+    "question": "课程讲解了`x = 42`和`y = x; y = 100`的内存模型变化。假设有一个函数`def modify(lst): lst.append(4)`，调用`my_list = [1,2,3]; modify(my_list)`后，my_list的值是多少？请结合Python的引用语义解释原因。",
+    "answer": "my_list的值为[1,2,3,4]。原因：列表是可变对象，my_list传递的是引用（指向同一列表对象），函数内通过该引用修改了原对象的内容，因此外部变量可见变化。"
+  },
+  {
+    "id": 13,
+    "tag": "教学视频-进阶",
+    "question": "根据课程中关于浮点数精度问题的讲解，请解释为什么`Decimal('0.1') + Decimal('0.2')`可以精确得到0.3，而直接使用float则不行？",
+    "answer": "Decimal使用十进制浮点数表示，以10为基数存储每一位数字，因此0.1和0.2在十进制中是精确的有限小数。而float使用二进制浮点数表示（IEEE 754），0.1在二进制中是无限循环小数（0.0001100110011...），无法精确表示，因此产生精度误差。"
+  },
+  {
+    "id": 14,
+    "tag": "教学视频-进阶",
+    "question": "课程的f-string讲解中提到Python 3.12增强了f-string功能。请结合课程内容，解释f-string相比%格式化和str.format方法的三个核心优势，并给出一个利用f-string调试功能的代码示例。",
+    "answer": "三个优势：①简洁高效，变量直接嵌入{}；②运行时求值，支持表达式计算；③性能接近字符串拼接。调试示例：`x = 42; print(f'{x=}')` 输出 `x=42`。Python 3.12还支持嵌套引号和多行f-string。"
+  },
+  {
+    "id": 15,
+    "tag": "教学视频-进阶",
+    "question": "课程讲解了LEGB作用域规则。请分析以下代码的输出结果并解释每一步的变量查找过程：`x = 10; def outer(): x = 20; def inner(): print(x); inner(); outer()`",
+    "answer": "输出结果为20。执行流程：调用outer()→定义x=20（Enclosing作用域）→调用inner()→print(x)时按LEGB顺序查找：Local（inner内无x）→Enclosing（outer内x=20）→找到并输出20。Global作用域的x=10不会被访问到。"
+  },
+  {
+    "id": 16,
+    "tag": "教学视频-进阶",
+    "question": "根据课程关于切片操作的讲解，请解释`s[-5:]`和`s[::-1]`两种切片方式的区别，并说明为什么切片操作不会抛出索引越界异常。",
+    "answer": "s[-5:]表示从倒数第5个字符到末尾；s[::-1]表示步长为-1，从末尾到开头反转字符串。切片不会越界的原因是Python自动将超出范围的索引调整到有效范围内：start小于0时取0，end大于长度时取长度，空切片返回空字符串。"
+  },
+  {
+    "id": 17,
+    "tag": "教学视频-进阶",
+    "question": "课程提到True和False是int的子类，True等于1，False等于0。请解释为什么`True + True`的值为2，以及这种设计在实际编程中的一个潜在陷阱。",
+    "answer": "因为bool继承自int，True被实现为1，False为0，因此True+True=2。潜在陷阱：当使用`is`比较时，`True is 1`返回False（因为is比较对象身份），但`True == 1`返回True；另外在列表去重或类型检查时可能导致意外行为，如`sum([True, False, True])`返回2而非期望的布尔值。"
+  },
+  {
+    "id": 18,
+    "tag": "教学视频-进阶",
+    "question": "根据类型转换章节的内容，请列出int()函数在不同输入类型下的至少四种不同行为模式，并说明哪些情况会抛出异常。",
+    "answer": "四种行为：①int(3.9)截断小数返回3；②int(\"42\")解析十进制字符串返回42；③int(\"0xff\", 16)按指定进制解析返回255；④int(True)返回1。抛异常情况：int(\"abc\")抛出ValueError（格式错误）；int(None)抛出TypeError（类型不兼容）；int(\"3.14\")抛出ValueError（合法的浮点数字符串也不能直接用int转换，需先转float）。"
+  },
+  {
+    "id": 19,
+    "tag": "教学视频-进阶",
+    "question": "课程讲解了None与空值、零值、空容器的区别。请从布尔上下文、身份比较、语义含义三个维度，对比分析None、0、\"\"（空字符串）、[]（空列表）的异同。",
+    "answer": "布尔上下文：四个值在if判断中均为False。身份比较：None is None为True，0 is 0不一定为True（取决于小整数缓存范围），\"\" is \"\"在CPython中可能为True（字符串驻留），[] is []为False（每次新建对象）。语义含义：None表示值缺失/未定义；0是数值零，表示数量为零；\"\"是空字符串，表示没有字符；[]是空列表，表示没有元素。"
+  },
+  {
+    "id": 20,
+    "tag": "教学视频-进阶",
+    "question": "课程讲解了类型提示（type hints）功能。请解释以下代码中的类型标注含义，并说明mypy会对其中哪些行报错：`def process(data: list) -> list: return [x * 2 for x in data]; result = process(\"hello\")`",
+    "answer": "标注含义：参数data标注为list类型，返回值标注为list。mypy会对`process(\"hello\")`报错，因为传入参数类型为str而非list，违反了类型约定。但Python运行时不会报错，因为str也是序列类型，列表推导式可以遍历字符串字符，返回['hh', 'ee', 'll', 'll', 'oo']。这说明类型提示不影响运行时行为，仅用于静态检查。"
+  }
+]
