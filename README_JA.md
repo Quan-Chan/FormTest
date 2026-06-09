@@ -55,3 +55,7 @@ python app.py
 ## ライセンス
 
 Apache License 2.0 — [LICENSE](LICENSE) を参照
+
+---
+
+**作者より：これはAIが酒に酔って書いたような代物です。私の主な目的はAIを拷問することです。**

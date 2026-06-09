@@ -99,3 +99,7 @@ Abrir navegador: http://localhost:5000
 ## Licencia
 
 Apache License 2.0 — Ver [LICENSE](LICENSE)
+
+---
+
+**Nota del autor: Esto podría ser algo escrito por una IA borracha. Mi objetivo principal es torturar a la IA.**

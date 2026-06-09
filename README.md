@@ -155,3 +155,7 @@ python app.py
 ## 许可证
 
 Apache License 2.0 — 详见 [LICENSE](LICENSE) 文件
+
+---
+
+**作者留言：这可能是AI喝假酒写出来的东西，我主要是拷打AI**

@@ -154,3 +154,7 @@ Open [http://localhost:5000](http://localhost:5000) in browser.
 ## License
 
 Apache License 2.0 — See [LICENSE](LICENSE)
+
+---
+
+**Author's note: This might be something written by an AI on fake alcohol. My main goal is to torture the AI.**

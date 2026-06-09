@@ -55,3 +55,7 @@ Ouvrir le navigateur : http://localhost:5000
 ## Licence
 
 Apache License 2.0 — Voir [LICENSE](LICENSE)
+
+---
+
+**Note de l'auteur : Ce pourrait être quelque chose écrit par une IA sous l'emprise de l'alcool. Mon objectif principal est de torturer l'IA.**
