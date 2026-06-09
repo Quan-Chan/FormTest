@@ -58,4 +58,4 @@ Apache License 2.0 — Ver [LICENSE](LICENSE)
 
 ---
 
-**Nota do autor: Isso pode ser algo escrito por uma IA bêbada. Meu objetivo principal é torturar a IA.**
+**Isso pode ser algo escrito por uma IA bêbada. Meu objetivo principal é torturar a IA.**

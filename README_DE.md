@@ -126,4 +126,4 @@ Apache License 2.0 — Siehe [LICENSE](LICENSE)
 
 ---
 
-**Anmerkung des Autors: Das könnte etwas sein, das eine KI unter Alkoholeinfluss geschrieben hat. Mein Hauptziel ist es, die KI zu quälen.**
+**Das könnte etwas sein, das eine KI unter Alkoholeinfluss geschrieben hat. Mein Hauptziel ist es, die KI zu quälen.**
