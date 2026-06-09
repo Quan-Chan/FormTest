@@ -91,23 +91,7 @@ FormTest/
 pip install -r 测试软件/requirements.txt
 ```
 
-### 2. 配置
-
-编辑 `测试软件/config.json`，设置 API 地址和模型：
-
-```json
-{
-  "base_url": "http://127.0.0.1:8000/v1",
-  "model": "your-model-name",
-  "api_key": "",
-  "temperature": 0.7,
-  "concurrency": 1,
-  "test_count": 1,
-  "streaming": true
-}
-```
-
-### 3. 启动
+### 2. 启动
 
 ```bash
 cd 测试软件
@@ -117,10 +101,24 @@ python app.py
 
 浏览器打开 [http://localhost:5000](http://localhost:5000)
 
+### 3. 配置
+
+启动后在网页界面右上角点击"设置"按钮，配置 API 地址、模型、参数等。
+
+也可直接编辑 `config.json`（不推荐）：
+
+```json
+{
+  "base_url": "http://127.0.0.1:8000/v1",
+  "model": "your-model-name",
+  ...
+}
+```
+
 ### 4. 运行测试
 
 1. 在界面左侧选择测试集和测试项
-2. 配置模型参数（或通过"参数"按钮微调）
+2. 配置模型参数
 3. 点击"开始测试"
 4. 实时查看流式返回结果
 

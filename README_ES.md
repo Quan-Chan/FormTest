@@ -68,6 +68,8 @@ python app.py
 
 Abrir navegador: http://localhost:5000
 
+Después de iniciar, haga clic en "Configuración" en la esquina superior derecha de la interfaz web para configurar la API, el modelo y los parámetros.
+
 ## Endpoints de API
 
 | Endpoint | Método | Descripción |

@@ -90,23 +90,7 @@ Each test set directory follows this structure:
 pip install -r 测试软件/requirements.txt
 ```
 
-### 2. Configure
-
-Edit `测试软件/config.json`, set API address and model:
-
-```json
-{
-  "base_url": "http://127.0.0.1:8000/v1",
-  "model": "your-model-name",
-  "api_key": "",
-  "temperature": 0.7,
-  "concurrency": 1,
-  "test_count": 1,
-  "streaming": true
-}
-```
-
-### 3. Start
+### 2. Start
 
 ```bash
 cd 测试软件
@@ -116,10 +100,24 @@ python app.py
 
 Open [http://localhost:5000](http://localhost:5000) in browser.
 
+### 3. Configure
+
+Click the "Settings" button in the top-right corner of the web UI to configure API address, model, parameters, etc.
+
+Or edit `config.json` directly (not recommended):
+
+```json
+{
+  "base_url": "http://127.0.0.1:8000/v1",
+  "model": "your-model-name",
+  ...
+}
+```
+
 ### 4. Run Tests
 
 1. Select test sets and items in the left sidebar
-2. Configure model parameters (or fine-tune via the "Parameters" button)
+2. Configure model parameters
 3. Click "Start Testing"
 4. View real-time streaming results
 

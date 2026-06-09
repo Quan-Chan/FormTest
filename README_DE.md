@@ -92,6 +92,8 @@ python app.py
 
 Browser öffnen: http://localhost:5000
 
+Nach dem Start im Web-UI oben rechts auf "Einstellungen" klicken, um API-Adresse, Modell und Parameter zu konfigurieren.
+
 ## API-Endpunkte
 
 | Endpunkt | Methode | Beschreibung |

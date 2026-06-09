@@ -48,6 +48,8 @@ python app.py
 
 Abrir navegador: http://localhost:5000
 
+Após iniciar, clique em "Configurações" no canto superior direito da interface web para configurar o endereço da API, modelo e parâmetros.
+
 ## Aviso Importante
 
 **Todos os conjuntos de dados de teste neste projeto são dados fictícios gerados por IA, não dados reais. Qualquer semelhança com entidades, organizações ou cenários reais é mera coincidência.** Estes dados são usados exclusivamente para avaliar a capacidade dos modelos de IA de compreender e analisar formatos estruturados.
