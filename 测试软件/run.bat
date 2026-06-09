@@ -4,10 +4,10 @@ cd /d %~dp0
 echo AI Test Software Starting...
 echo.
 
-python -c "import flask" 2>nul
+py -3.11 -c "import flask" 2>nul
 if errorlevel 1 (
     echo Installing dependencies...
-    pip install Flask Flask-CORS requests
+    py -3.11 -m pip install Flask Flask-CORS requests
 )
 
 if not exist "results" mkdir results
@@ -17,5 +17,5 @@ echo Starting server at http://127.0.0.1:5000
 echo Press Ctrl+C to stop
 echo.
 
-python app.py
+py -3.11 app.py
 pause

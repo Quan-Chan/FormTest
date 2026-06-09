@@ -1,55 +1,86 @@
-# AI Model Testing Framework
+# FormTest - AI Structured Format Parsing Evaluation Framework
 
-> **警告 Warning**: 尚未完成正在优化前端随后重构后端及文件结构
+> **All test datasets are AI-generated fictional data, not real data. Any resemblance to actual entities is purely coincidental.**
+>
+> **This project lacks thorough program construction and testing planning. The code structure and test coverage are not yet comprehensive. For reference and learning purposes only.**
 
-An automated testing framework for evaluating Large Language Models' (LLM) ability to understand and parse structured data formats.
-
-## Overview
-
-This project is designed to assess and test AI models' capability to understand various structured data format files. Through preset test cases, it automatically calls the AI API and compares the returned results with expected answers, thereby quantifying the model's format understanding performance.
+An automated testing framework for evaluating Large Language Models' (LLM) ability to understand and parse structured data formats. Through preset test cases, it automatically calls the AI API and compares the returned results with expected answers, quantifying the model's format comprehension performance.
 
 ## Project Structure
 
 ```
-草稿A/
-├── 测试软件/           # Main application (Flask backend + HTML frontend)
-├── 测试软件2/         # Configuration variant (different model/parameters)
-├── 测试软件3/
-├── 测试软件4/
-├── 测试集/           # Test dataset (non-real cases, AI-generated)
-│   ├── 被测试文件/    # Example files in various formats
-│   │   ├── XML/
-│   │   ├── JSON/
-│   │   ├── YAML/
-│   │   ├── Markdown/
-│   │   ├── DSL/
-│   │   └── 列表示例/
-│   ├── 教学视频测试问题/
-│   ├── 运行日志测试问题/
-│   ├── 企业信息测试问题/
-│   └── UI.json       # Test interface configuration
-├── 备份/             # Historical format backups
-├── 更新日志/         # Bug fix logs
-└── 任务说明/         # Development task documents
+FormTest/
+├── 测试软件/              # Main application (Flask backend + vanilla HTML frontend)
+│   ├── app.py            # Flask entry point, REST API + SSE streaming
+│   ├── config.json       # Runtime configuration
+│   ├── requirements.txt  # Python dependencies
+│   ├── run.bat           # Quick start script
+│   ├── static/           # Frontend static files (index.html + CSS/JS)
+│   └── data/             # Runtime data (canvas state, etc.)
+├── 测试集/               # Test datasets (AI-generated, not real data)
+│   ├── 教学视频测试/     # Teaching video content test
+│   ├── 企业信息测试/     # Enterprise information test
+│   ├── 运行日志测试/     # System operation log test
+│   └── Python进阶测试/   # Python advanced knowledge test
+├── .gitignore
+├── LICENSE               # Apache License 2.0
+└── README*.md            # Multi-language README files
 ```
 
-## Supported Formats
+## Test Set Structure
 
-- XML
-- JSON
-- YAML
-- Markdown (including tables, KV key-value pairs)
-- DSL (Domain-Specific Language)
-- Plain text lists
+Each test set directory follows this structure:
+
+```
+测试集/<name>/
+├── 测试问题/             # Test questions (JSON format)
+│   ├── 基础问题.json     # Basic level questions
+│   └── 进阶问题.json     # Advanced level questions
+├── 测试系统提示词/       # Same content in multiple format variants
+│   ├── <name>原版.txt    #   Plain text narrative
+│   ├── <name>列表.txt    #   Numbered list format
+│   ├── <name>JSON.txt    #   JSON structured format
+│   ├── <name>YAML.txt    #   YAML format
+│   ├── <name>XML.txt     #   XML format
+│   ├── <name>Markdown.txt      # Markdown table format
+│   ├── <name>MarkdownKV.txt    # Markdown key-value format
+│   ├── <name>DSL.txt     #   Custom DSL format
+│   └── Corresponding .json metadata files
+└── 测试结果/             # Test results (auto-generated)
+```
+
+### Format Variants
+
+| Format | Description |
+|--------|-------------|
+| Plain Text | Original narrative text (baseline) |
+| List | Numbered/bulleted list |
+| JSON | Standard JSON object |
+| YAML | YAML structured data |
+| XML | XML hierarchical markup |
+| Markdown | Markdown tables |
+| MarkdownKV | Markdown key-value pairs |
+| DSL | Custom Domain-Specific Language |
+
+### Test Domains
+
+| Test Set | Content Domain |
+|----------|----------------|
+| 教学视频测试 (Teaching Video) | Python programming lecture transcript |
+| 企业信息测试 (Enterprise Info) | Fictional corporate registration data |
+| 运行日志测试 (Operation Logs) | System operation log entries |
+| Python进阶测试 (Python Advanced) | Python decorators/generators/context managers |
 
 ## Core Features
 
-1. **Multi-format Testing**: Test parsing capabilities of multiple data formats simultaneously
-2. **Batch Testing**: Execute test cases in batch with streaming output
-3. **Multi-model Support**: Configure multiple AI models for comparative testing
-4. **Answer Caching**: Avoid repeated API calls to accelerate iterative testing
-5. **Custom System Prompt**: Configure test associations via bindings.json
-6. **Concurrency Control**: Configurable concurrency and retry counts
+- **Multi-format Comparison** — Same content in 8 formats, evaluating model comprehension differences
+- **Batch Automated Testing** — Cartesian product of prompts × questions × models, auto-executed
+- **Multi-model Parallel** — Configure multiple AI models for horizontal comparison
+- **Real-time SSE Streaming** — Server-Sent Events for live test result push
+- **Multi-round Testing** — Repeat each question (configurable `test_count`) for stability measurement
+- **Concurrency Control** — Configurable thread count and retry strategy
+- **Incremental Save** — Periodic incremental save during testing to prevent data loss
+- **Archive Snapshots** — Save/load test configuration snapshots
 
 ## Quick Start
 
@@ -59,7 +90,23 @@ This project is designed to assess and test AI models' capability to understand 
 pip install -r 测试软件/requirements.txt
 ```
 
-### 2. Start Service
+### 2. Configure
+
+Edit `测试软件/config.json`, set API address and model:
+
+```json
+{
+  "base_url": "http://127.0.0.1:8000/v1",
+  "model": "your-model-name",
+  "api_key": "",
+  "temperature": 0.7,
+  "concurrency": 1,
+  "test_count": 1,
+  "streaming": true
+}
+```
+
+### 3. Start
 
 ```bash
 cd 测试软件
@@ -67,66 +114,43 @@ python app.py
 # or double-click run.bat
 ```
 
-### 3. Access Interface
+Open [http://localhost:5000](http://localhost:5000) in browser.
 
-Open http://localhost:5000 in browser
+### 4. Run Tests
 
-### 4. Configure and Run
-
-1. Configure API address and model parameters in Settings
-2. Select format files and test question groups to test
+1. Select test sets and items in the left sidebar
+2. Configure model parameters (or fine-tune via the "Parameters" button)
 3. Click "Start Testing"
-4. View real-time results stream and final scores
-
-## Configuration
-
-| Parameter | Description | Default |
-|------|------|--------|
-| base_url | API address | http://192.168.1.45:1919/v1 |
-| model | Model name | qwen3.5-0.8b |
-| temperature | Temperature | 0.7 |
-| concurrency | Concurrency | 1 |
-| test_count | Tests per question | 1 |
-| max_retries | Max retries | 3 |
+4. View real-time streaming results
 
 ## API Endpoints
 
 | Endpoint | Method | Description |
-|------|------|------|
-| /api/v1/config | GET/POST | Configuration management |
-| /api/v1/models | GET | Get available models |
-| /api/v1/ui-config | Get | Get test interface config |
-| /api/v1/question-groups | GET | Get question groups |
-| /api/v1/bindings | GET/POST | Binding configuration |
-| /api/v1/run-tests | POST | Execute tests (SSE streaming) |
-| /api/v1/results | GET | Get all test results |
-| /api/v1/answer-cache | GET | Get answer cache |
-
-## Important Notice
-
-### Test Dataset Statement
-
-**All content in this project's test dataset is AI-generated examples, not real case data.**
-
-The test dataset includes:
-- Tutorial video information examples
-- Operation log examples
-- Enterprise information examples
-- Example files in various formats (XML, JSON, YAML, Markdown, DSL)
-
-These data are used solely for testing AI models' understanding and parsing capabilities of structured formats, and do not represent any real business scenarios.
+|----------|--------|-------------|
+| `/api/v1/config` | GET/POST | Configuration management |
+| `/api/v1/models` | GET | List available models |
+| `/api/v1/test-set/scan` | GET | Scan test sets |
+| `/api/v1/test-set/prompts` | GET | Get system prompts |
+| `/api/v1/test-set/questions` | GET | Get test questions |
+| `/api/v1/test-set/results` | GET | Get historical results |
+| `/api/v1/run-tests` | POST | Execute tests (SSE streaming) |
+| `/api/v1/stop-tests` | POST | Stop test execution |
+| `/api/v1/canvas-state` | GET/POST | Canvas state |
+| `/api/v1/archives` | GET/POST/DELETE | Archive management |
+| `/api/v1/tags` | GET | Get all tags |
 
 ## Tech Stack
 
 - **Backend**: Python Flask + Flask-CORS
-- **Frontend**: Vanilla HTML + CSS + JavaScript
-- **API Calls**: requests (Streaming SSE)
-- **Test Execution**: ThreadPoolExecutor concurrency
+- **Frontend**: Vanilla HTML / CSS (custom properties) / JavaScript
+- **AI Calls**: `requests` (SSE streaming + JSON modes)
+- **Concurrency**: `ThreadPoolExecutor`
+- **Output**: Server-Sent Events (`text/event-stream`)
 
-## Version History
+## Important Notice
 
-See `更新日志/changelog.json`
+**All test datasets in this project are AI-generated fictional data, not real data. Any resemblance to actual entities, organizations, or scenarios is purely coincidental.** These data are used solely for evaluating AI models' ability to understand and parse structured formats, and do not represent any real business scenarios or entities.
 
 ## License
 
-Apache License 2.0 - See [LICENSE](LICENSE)
+Apache License 2.0 — See [LICENSE](LICENSE)
