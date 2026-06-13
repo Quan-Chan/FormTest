@@ -4299,7 +4299,6 @@
                 async removeNode(nodeId) {
                     const node = this.canvasState.nodes.find(n => n.id === nodeId);
                     if (!node) return;
-                    const isAggregate = (node.type === 'prompt' || node.type === 'question') && !node.connId && !node.aggregateId && !node.value;
                     if (!(await this.showConfirm('确定删除该节点？相关连线也会被删除。'))) return;
                     if (node.type === 'prompt') {
                         if (node.value) {
@@ -5673,7 +5672,9 @@
                         if (textEl) textEl.textContent = '当前运行';
                     }
                     const modelFilter = document.getElementById('resultFilterModel');
-                    if (modelFilter) { modelFilter.innerHTML = '<option value="">所有模型</option>'; }
+                    if (modelFilter) { modelFilter.value = ''; }
+                    const modelDropdown = document.getElementById('resultFilterModelDropdown');
+                    if (modelDropdown) { modelDropdown.innerHTML = '<div class="custom-select-option selected" data-value="" onclick="App.selectDropdownOption(\'resultFilterModel\', \'\', \'所有模型\')">所有模型</div>'; }
 
                     const bySet = {};
                     selPrompts.forEach(p => {

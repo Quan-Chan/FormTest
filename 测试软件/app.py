@@ -477,9 +477,13 @@ def handle_canvas_state():
         if data:
             return jsonify(data)
         return jsonify({"nodes": [], "connections": []})
-    data = request.get_json() or {}
-    if request.content_length and request.content_length > 1024 * 1024:
+    raw = request.get_data()
+    if len(raw) > 1024 * 1024:
         return jsonify({"error": "请求体超过大小限制（1MB）"}), 413
+    try:
+        data = json.loads(raw) if raw else {}
+    except (json.JSONDecodeError, ValueError):
+        data = {}
     if not isinstance(data, dict):
         return jsonify({"error": "请求体必须为JSON对象"}), 400
     save_json(canvas_file, data)
