@@ -2647,7 +2647,7 @@
                             <div class="config-grid">
                                 <div class="form-group">
                                     <label>测试集目录</label>
-                                    <input type="text" class="form-input" id="testSetDir" placeholder="D:/测试集" onblur="App.onConfigChange()">
+                                    <input type="text" class="form-input" id="testSetDir" placeholder="D:/测试集" onblur="App.onTestSetDirChange()">
                                 </div>
                             </div>
                         </div>
@@ -3191,6 +3191,16 @@
                 async onConfigChange() {
                     const config = this._collectConfig();
                     await this.saveConfig(config, true);
+                },
+
+                async onTestSetDirChange() {
+                    const newPath = document.getElementById('testSetDir').value || '';
+                    const config = this._collectConfig();
+                    await this.saveConfig(config, true);
+                    if (newPath !== this._lastTestSetDir) {
+                        this._lastTestSetDir = newPath;
+                        await this.loadAllTestSets();
+                    }
                 },
 
                 toggleParamsModal() {
@@ -6079,6 +6089,7 @@
                         const response = await fetchWithTimeout('/api/v1/config');
                         const config = await response.json();
                         document.getElementById('testSetDir').value = config.test_set_dir || '';
+                        this._lastTestSetDir = config.test_set_dir || '';
                         document.getElementById('apiKey').value = config.api_key || '';
                         document.getElementById('baseUrl').value = config.base_url || '';
                         const setSlider = (id, val) => {
