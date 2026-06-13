@@ -5703,72 +5703,66 @@
                         return;
                     }
 
-                    this._totalTestSets = testSetNames.length;
+                    const testCount = parseInt(document.getElementById('modal-testCountInput').value) || 1;
+                    this._totalTestSets = 1;
                     let totalTasks = 0;
                     testSetNames.forEach(ts => {
                         const group = bySet[ts];
-                        totalTasks += group.prompts.length * Array.from(group.questions).length * this.selectedModels.length;
+                        totalTasks += group.prompts.length * Array.from(group.questions).length * this.selectedModels.length * testCount;
                     });
                     document.getElementById('progressContainer').dataset.total = totalTasks;
                     try {
-                        for (const ts of testSetNames) {
-                            try {
-                                const group = bySet[ts];
-                                const qList = Array.from(group.questions);
-                                const payload = {
-                                    test_set: ts,
-                                    prompts: group.prompts,
-                                    questions: qList,
-                                    models: this.selectedModels
-                                };
-                                const connTimer = setTimeout(() => {
-                                    try { this.abortController.abort(new DOMException('连接服务器超时')); } catch (e) {}
-                                }, 60000);
-                                const response = await fetch('/api/v1/run-tests', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify(payload),
-                                    signal: this.abortController.signal
-                                });
-                                clearTimeout(connTimer);
-                                if (!response.ok) {
-                                    let errMsg = response.statusText;
-                                    try { const errBody = await response.json(); errMsg = errBody.error || errBody.message || errMsg; } catch (e) {}
-                                    throw new Error(errMsg);
+                        const testSetsPayload = testSetNames.map(ts => ({
+                            name: ts,
+                            prompts: bySet[ts].prompts,
+                            questions: Array.from(bySet[ts].questions)
+                        }));
+                        const payload = {
+                            test_sets: testSetsPayload,
+                            models: this.selectedModels
+                        };
+                        const connTimer = setTimeout(() => {
+                            try { this.abortController.abort(new DOMException('连接服务器超时')); } catch (e) {}
+                        }, 60000);
+                        const response = await fetch('/api/v1/run-tests', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload),
+                            signal: this.abortController.signal
+                        });
+                        clearTimeout(connTimer);
+                        if (!response.ok) {
+                            let errMsg = response.statusText;
+                            try { const errBody = await response.json(); errMsg = errBody.error || errBody.message || errMsg; } catch (e) {}
+                            throw new Error(errMsg);
+                        }
+                        if (!response.body) throw new Error('服务器返回空响应体');
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+                        let sseTimeout = null;
+                        while (true) {
+                            const readPromise = reader.read();
+                            const timeoutPromise = new Promise((_, reject) =>
+                                sseTimeout = setTimeout(() => reject(new Error('SSE读取超时')), this._sseChunkTimeout)
+                            );
+                            const { done, value } = await Promise.race([readPromise, timeoutPromise]);
+                            clearTimeout(sseTimeout);
+                            sseTimeout = null;
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            const lines = buffer.split('\n');
+                            buffer = lines.pop() || '';
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    try { const data = JSON.parse(line.slice(6));
+                                        this.handleStreamData(data); } catch (e) { console.warn(
+                                            'SSE parse error:', e, line.slice(0, 200)); }
+                                } else if (line.startsWith('data:')) {
+                                    try { const data = JSON.parse(line.slice(5));
+                                        this.handleStreamData(data); } catch (e) { console.warn(
+                                            'SSE parse error:', e, line.slice(0, 200)); }
                                 }
-                                if (!response.body) throw new Error('服务器返回空响应体');
-                                const reader = response.body.getReader();
-                                const decoder = new TextDecoder();
-                                let buffer = '';
-                                let sseTimeout = null;
-                                while (true) {
-                                    const readPromise = reader.read();
-                                    const timeoutPromise = new Promise((_, reject) =>
-                                        sseTimeout = setTimeout(() => reject(new Error('SSE读取超时')), this._sseChunkTimeout)
-                                    );
-                                    const { done, value } = await Promise.race([readPromise, timeoutPromise]);
-                                    clearTimeout(sseTimeout);
-                                    sseTimeout = null;
-                                    if (done) break;
-                                    buffer += decoder.decode(value, { stream: true });
-                                    const lines = buffer.split('\n');
-                                    buffer = lines.pop() || '';
-                                    for (const line of lines) {
-                                        if (line.startsWith('data: ')) {
-                                            try { const data = JSON.parse(line.slice(6));
-                                                this.handleStreamData(data); } catch (e) { console.warn(
-                                                    'SSE parse error:', e, line.slice(0, 200)); }
-                                        } else if (line.startsWith('data:')) {
-                                            try { const data = JSON.parse(line.slice(5));
-                                                this.handleStreamData(data); } catch (e) { console.warn(
-                                                    'SSE parse error:', e, line.slice(0, 200)); }
-                                        }
-                                    }
-                                }
-                            } catch (e) {
-                                if (e.name === 'AbortError') throw e;
-                                console.error('测试集执行失败:', ts, e);
-                                showToast(`测试集 [${ts}] 执行失败，已跳过`, 'error');
                             }
                         }
                     } catch (error) {
@@ -5810,7 +5804,7 @@
                     const progressPercent = document.getElementById('progressPercent');
 
                     if (data.type === 'result') {
-                        const key = `${data.model_id || '?'}_${data.prompt_id || '?'}_${data.question_id || '?'}`;
+                        const key = `${data.model_id || '?'}_${data.prompt_id || '?'}_${data.question_id || '?'}_${data.test_index || 0}`;
                         if (!this.allResults[key]) { this.allResults[key] = []; }
                         this.allResults[key].push(data);
                         this.addAiStreamItem(data);

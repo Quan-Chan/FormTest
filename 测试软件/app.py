@@ -671,45 +671,50 @@ def run_tests():
         concurrency = config.get("concurrency", 1)
         test_count = config.get("test_count", 1)
 
-    test_set = data.get("test_set")
-    prompts_data = data.get("prompts", [])
-    questions_data = data.get("questions", [])
+    test_sets = data.get("test_sets", [])
     models = data.get("models", [])
     if not models:
         with config_lock:
             models = [config.get("model", "gpt-4o")]
 
-    if not test_set or not prompts_data or not questions_data:
-        return jsonify({"error": "No test items specified"}), 400
+    if not test_sets:
+        return jsonify({"error": "No test sets specified"}), 400
 
-    if not validate_test_set_name(test_set):
-        return jsonify({"error": "Invalid test_set name"}), 400
+    for ts in test_sets:
+        if not validate_test_set_name(ts.get("name", "")):
+            return jsonify({"error": f"Invalid test_set name: {ts.get('name')}"}), 400
 
-    return run_tests_cartesian(test_set, prompts_data, questions_data, models, concurrency, test_count, current_gen)
+    return run_tests_cartesian(test_sets, models, concurrency, test_count, current_gen)
 
 
 def should_stop(run_gen):
     with stop_lock:
         return stop_generation != run_gen
 
-def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_count, current_gen):
+def run_tests_cartesian(test_sets, models, concurrency, test_count, current_gen):
     MAX_TASKS = 10000
-    total_tasks = len(prompts) * len(questions) * len(models)
+    task_queue = []
+    for ts in test_sets:
+        name = ts["name"]
+        prompts = ts.get("prompts", [])
+        questions = ts.get("questions", [])
+        for p in prompts:
+            for q in questions:
+                for m in models:
+                    for i in range(test_count):
+                        task_queue.append((name, p, q, m, i))
+
+    total_tasks = len(task_queue)
     if total_tasks == 0:
         return jsonify({"error": "No test items (cartesian product is empty)"}), 400
     if total_tasks > MAX_TASKS:
         return jsonify({"error": f"任务数 {total_tasks} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
 
-    task_queue = []
-    for p in prompts:
-        for q in questions:
-            for m in models:
-                task_queue.append((p, q, m))
-
     def generate():
         completed = 0
         failed = 0
         all_results = []
+        results_by_set = {}
         results_lock = threading.Lock()
         disconnected = threading.Event()
 
@@ -717,7 +722,7 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
             yield f"data: {json.dumps({'type': 'status', 'message': f'共 {total_tasks} 个测试任务, 并发数 {concurrency}, 正在生成...'}, ensure_ascii=False)}\n\n"
 
             def run_task(task):
-                p, q, m = task
+                test_set_name, p, q, m, test_index = task
                 if should_stop(current_gen):
                     return None
 
@@ -733,35 +738,13 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
                 user_prompt = q.get("question", "")
                 expected_answer = q.get("answer", "")
 
-                multi_answers = []
-                for i in range(test_count):
-                    if should_stop(current_gen):
-                        break
-                    reply = call_ai(system_prompt, user_prompt, model=m, run_gen=current_gen)
-                    if reply is None:
-                        return None
-                    if isinstance(reply, dict) and reply.get("success"):
-                        multi_answers.append({"index": i + 1, "answer": reply["content"]})
-                    elif isinstance(reply, dict) and not reply.get("success"):
-                        return {
-                            "id": f"p{p.get('id', '?')}_q{q.get('id', '?')}_m{m}",
-                            "prompt_id": p.get("id"),
-                            "question_id": q.get("id"),
-                            "model_id": m,
-                            "prompt_tag": p.get("tag", ""),
-                            "question_tag": q.get("tag", ""),
-                            "question": user_prompt,
-                            "answer": expected_answer,
-                            "model_reply": None,
-                            "multi_answers": multi_answers,
-                            "error_type": reply.get("error_type"),
-                            "error_msg": reply.get("error_msg"),
-                        }
-
-                first_reply = multi_answers[0]["answer"] if multi_answers else None
+                reply = call_ai(system_prompt, user_prompt, model=m, run_gen=current_gen)
+                if reply is None:
+                    return None
 
                 result = {
-                    "id": f"p{p.get('id', '?')}_q{q.get('id', '?')}_m{m}",
+                    "test_set": test_set_name,
+                    "id": f"p{p.get('id', '?')}_q{q.get('id', '?')}_m{m}_{test_index}",
                     "prompt_id": p.get("id"),
                     "question_id": q.get("id"),
                     "model_id": m,
@@ -769,9 +752,15 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
                     "question_tag": q.get("tag", ""),
                     "question": user_prompt,
                     "answer": expected_answer,
-                    "model_reply": first_reply,
-                    "multi_answers": multi_answers,
+                    "test_index": test_index + 1,
+                    "test_count": test_count,
                 }
+                if isinstance(reply, dict) and reply.get("success"):
+                    result["model_reply"] = reply["content"]
+                elif isinstance(reply, dict) and not reply.get("success"):
+                    result["model_reply"] = None
+                    result["error_type"] = reply.get("error_type")
+                    result["error_msg"] = reply.get("error_msg")
                 return result
 
             with ThreadPoolExecutor(max_workers=min(max(1, concurrency), 20)) as executor:
@@ -786,9 +775,10 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
                         yield f"data: {json.dumps({'type': 'status', 'message': reason}, ensure_ascii=False)}\n\n"
                         if all_results:
                             try:
-                                for r in all_results:
-                                    r["is_cancelled"] = True
-                                save_results_to_test_set(test_set, all_results)
+                                for rst_name, rst_results in results_by_set.items():
+                                    for r in rst_results:
+                                        r["is_cancelled"] = True
+                                    save_results_to_test_set(rst_name, rst_results)
                                 yield f"data: {json.dumps({'type': 'done', 'message': '测试已中断，部分结果已保存', 'total_results': len(all_results)}, ensure_ascii=False)}\n\n"
                             except (OSError, IOError) as e:
                                 log_debug(f"中断保存结果失败: {e}")
@@ -817,16 +807,22 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
 
                     with results_lock:
                         all_results.append(result)
+                        ts_name = result["test_set"]
+                        if ts_name not in results_by_set:
+                            results_by_set[ts_name] = []
+                        results_by_set[ts_name].append(result)
                     completed += 1
 
                     if completed % INCREMENTAL_SAVE_STEP == 0:
                         try:
-                            save_results_to_test_set(test_set, all_results, incremental=True)
+                            for rst_name, rst_results in results_by_set.items():
+                                save_results_to_test_set(rst_name, rst_results, incremental=True)
                         except (OSError, IOError) as e:
                             log_debug(f"Incremental save failed: {e}")
 
                     sse_data = {
                         'type': 'result',
+                        'test_set': result['test_set'],
                         'id': result['id'],
                         'prompt_id': result['prompt_id'],
                         'question_id': result['question_id'],
@@ -835,9 +831,8 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
                         'question': result['question'],
                         'expected_answer': result['answer'],
                         'ai_answer': result['model_reply'] or '',
-                        'multi_answers': result.get('multi_answers', []),
-                        'test_count': len(result.get('multi_answers', [])),
-                        'requested_test_count': test_count,
+                        'test_index': result['test_index'],
+                        'test_count': result['test_count'],
                         'completed': completed,
                         'total': total_tasks,
                     }
@@ -848,12 +843,13 @@ def run_tests_cartesian(test_set, prompts, questions, models, concurrency, test_
         finally:
             disconnected.set()
 
-        # Save results
+        # Save results per test set
         try:
-            save_results_to_test_set(test_set, all_results)
-            incr_path = resolve_test_set_path(test_set, "测试结果", INCREMENTAL_FILE)
-            if os.path.exists(incr_path):
-                os.remove(incr_path)
+            for rst_name, rst_results in results_by_set.items():
+                save_results_to_test_set(rst_name, rst_results)
+                incr_path = resolve_test_set_path(rst_name, "测试结果", INCREMENTAL_FILE)
+                if os.path.exists(incr_path):
+                    os.remove(incr_path)
         except (OSError, IOError) as e:
             log_debug(f"保存结果失败: {e}")
             yield f"data: {json.dumps({'type': 'status', 'message': f'保存结果失败: {e}'}, ensure_ascii=False)}\n\n"
