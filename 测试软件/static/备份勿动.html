@@ -1863,45 +1863,21 @@
             z-index: 1;
             overflow: visible;
         }
-        .comfy-lines-svg path {
-            shape-rendering: geometricPrecision;
-        }
         .comfy-line {
             fill: none;
             stroke-width: 2.5;
             stroke-linecap: round;
             pointer-events: stroke;
             cursor: pointer;
-            opacity: .6;
-            transition: opacity .15s,stroke-width .15s;
+            opacity: 0.6;
         }
         .comfy-line:hover {
             opacity: 1;
             stroke-width: 3.5;
         }
-        .comfy-line.selected {
-            opacity: 1;
-            stroke-width: 4;
-            filter: drop-shadow(0 0 4px rgba(59,130,246,.55));
-        }
         .comfy-line.temp {
             stroke-dasharray: 6 4;
             opacity: 0.8;
-        }
-        .comfy-line-label {
-            text-rendering: geometricPrecision;
-            paint-order: stroke fill;
-            stroke: #fff;
-            stroke-width: 1px;
-            stroke-linejoin: round;
-            pointer-events: all;
-            cursor: pointer;
-            user-select: none;
-            transition: stroke-width .15s ease;
-        }
-        .comfy-line-label.selected,
-        .comfy-line-label.hover {
-            stroke-width: 2px;
         }
         .comfy-line.s-prompt {
             stroke: #4F8CFF;
@@ -2613,27 +2589,27 @@
         <aside class="sidebar">
             <div class="sidebar-header">
                 <div class="sidebar-title">筛选</div>
-                <button class="settings-toggle" id="setFilterBtn" style="width:100%;justify-content:center;font-size:11px;">
+                <button class="settings-toggle" id="setFilterBtn" onclick="App.toggleSetFilterPanel()" style="width:100%;justify-content:center;font-size:11px;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3" /></svg>
                     测试集筛选
                 </button>
                 <div id="setFilterPanel" style="display:none;margin-top:6px;"></div>
             </div>
             <div class="tab-header">
-                <button class="tab-btn active" data-tab="prompts">提示词</button>
-                <button class="tab-btn" data-tab="questions">问题</button>
+                <button class="tab-btn active" data-tab="prompts" onclick="App.switchSidebarTab('prompts')">提示词</button>
+                <button class="tab-btn" data-tab="questions" onclick="App.switchSidebarTab('questions')">问题</button>
             </div>
             <div class="sidebar-content">
                 <div class="tab-panel active" id="tab-prompts">
                     <div style="padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;">
                         <div class="search-box">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                            <input type="text" id="promptSearch" placeholder="搜索提示词...">
+                            <input type="text" id="promptSearch" placeholder="搜索提示词..." oninput="App.renderPromptList()">
                         </div>
                         <div class="sidebar-actions">
-                            <button class="btn-ghost" data-action="selectAllPrompts">全选</button>
-                            <button class="btn-ghost" data-action="selectNonePrompts">清除</button>
-                            <button class="btn-ghost" data-action="undoSelection" style="flex:0 0 auto;padding:6px 8px;" title="撤销选择">↩</button>
+                            <button class="btn-ghost" onclick="App.selectAllPrompts()">全选</button>
+                            <button class="btn-ghost" onclick="App.selectNonePrompts()">清除</button>
+                            <button class="btn-ghost" onclick="App.undoSelection()" style="flex:0 0 auto;padding:6px 8px;" title="撤销选择">↩</button>
                         </div>
                     </div>
                     <div class="file-list" id="promptList"></div>
@@ -2642,12 +2618,12 @@
                     <div style="padding:8px 12px;border-bottom:1px solid var(--border);flex-shrink:0;">
                         <div class="search-box">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8" /><path d="M21 21l-4.35-4.35" /></svg>
-                            <input type="text" id="questionSearch" placeholder="搜索问题...">
+                            <input type="text" id="questionSearch" placeholder="搜索问题..." oninput="App.renderQuestionList()">
                         </div>
                         <div class="sidebar-actions">
-                            <button class="btn-ghost" data-action="selectAllQuestions">全选</button>
-                            <button class="btn-ghost" data-action="selectNoneQuestions">清除</button>
-                            <button class="btn-ghost" data-action="undoSelection" style="flex:0 0 auto;padding:6px 8px;" title="撤销选择">↩</button>
+                            <button class="btn-ghost" onclick="App.selectAllQuestions()">全选</button>
+                            <button class="btn-ghost" onclick="App.selectNoneQuestions()">清除</button>
+                            <button class="btn-ghost" onclick="App.undoSelection()" style="flex:0 0 auto;padding:6px 8px;" title="撤销选择">↩</button>
                         </div>
                     </div>
                     <div class="file-list" id="questionList"></div>
@@ -2671,7 +2647,7 @@
                             <div class="config-grid">
                                 <div class="form-group">
                                     <label>测试集目录</label>
-                                    <input type="text" class="form-input" id="testSetDir" placeholder="D:/测试集">
+                                    <input type="text" class="form-input" id="testSetDir" placeholder="D:/测试集" onblur="App.onTestSetDirChange()">
                                 </div>
                             </div>
                         </div>
@@ -2681,25 +2657,25 @@
                                 <div class="form-group">
                                     <label>API Key</label>
                                     <input type="password" class="form-input" id="apiKey" placeholder="输入您的 API Key">
-                                    <button class="settings-toggle" style="width:100%;justify-content:center" id="paramsToggle">
+                                    <button class="settings-toggle" style="width:100%;justify-content:center" id="paramsToggle" onclick="App.toggleParamsModal()">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
                                         参数设置
                                     </button>
                                 </div>
                                 <div class="form-group">
                                     <label>Base URL</label>
-                                    <input type="text" class="form-input" id="baseUrl" placeholder="https://api.openai.com">
-                                    <button class="settings-toggle" style="width:100%;justify-content:center;background:rgba(0,0,0,0.018)" data-action="refreshModels">
+                                    <input type="text" class="form-input" id="baseUrl" placeholder="https://api.openai.com" onblur="App.onBaseUrlBlur()">
+                                    <button class="settings-toggle" style="width:100%;justify-content:center;background:rgba(0,0,0,0.018)" onclick="App.refreshModels()">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="flex-shrink:0;"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
                                         刷新模型列表
                                     </button>
                                 </div>
                                 <div class="form-group">
                                     <label>模型</label>
-                                    <button class="btn btn-secondary" id="openModelBtn" style="padding:11px 14px;text-align:left;font-size:14px;">选择模型 (<span id="selectedModelCount">0</span>)</button>
+                                    <button class="btn btn-secondary" id="openModelBtn" onclick="App.openModelModal()" style="padding:11px 14px;text-align:left;font-size:14px;">选择模型 (<span id="selectedModelCount">0</span>)</button>
                                     <div style="display:flex;gap:8px">
-                                        <button class="btn btn-primary" id="runBtn" style="flex:1">开始测试</button>
-                                        <button class="btn btn-secondary" id="stopBtn" style="flex:1" disabled>终止测试</button>
+                                        <button class="btn btn-primary" id="runBtn" onclick="App.runTests()" style="flex:1">开始测试</button>
+                                        <button class="btn btn-secondary" id="stopBtn" onclick="App.stopTests()" style="flex:1" disabled>终止测试</button>
                                     </div>
                                 </div>
                             </div>
@@ -2715,27 +2691,27 @@
                                 关联管理
                             </div>
                              <div class="canvas-toolbar">
-                                <button class="btn btn-secondary" id="canvasUndoBtn" title="撤回" disabled>
+                                <button class="btn btn-secondary" id="canvasUndoBtn" onclick="App.canvasUndo()" title="撤回" disabled>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H13"/></svg>
                                 </button>
-                                <button class="btn btn-secondary" id="canvasRedoBtn" title="重做" disabled>
+                                <button class="btn btn-secondary" id="canvasRedoBtn" onclick="App.canvasRedo()" title="重做" disabled>
                                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14"><path d="M15 14l5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H11"/></svg>
                                 </button>
                                 <span style="width:1px;height:14px;background:var(--border);flex-shrink:0;"></span>
-                                <button class="btn btn-secondary btn-prompt" data-action="addNode" data-param="prompt">+ 提示词</button>
-                                <button class="btn btn-secondary btn-question" data-action="addNode" data-param="question">+ 问题</button>
-                                <button class="btn btn-secondary btn-model" data-action="addNode" data-param="model">+ 模型</button>
+                                <button class="btn btn-secondary btn-prompt" onclick="App.addNode('prompt')">+ 提示词</button>
+                                <button class="btn btn-secondary btn-question" onclick="App.addNode('question')">+ 问题</button>
+                                <button class="btn btn-secondary btn-model" onclick="App.addNode('model')">+ 模型</button>
                                 <span style="width:1px;height:14px;background:var(--border);flex-shrink:0;"></span>
-                                <button class="btn btn-secondary" data-action="clearCanvas">清空</button>
-                                 <button class="btn btn-primary" data-action="saveCanvas">保存</button>
+                                <button class="btn btn-secondary" onclick="App.clearCanvas()">清空</button>
+                                 <button class="btn btn-primary" onclick="App.saveCanvas()">保存</button>
                                  <span style="width:1px;height:14px;background:var(--border);flex-shrink:0;"></span>
-                                 <button class="btn btn-secondary archive-btn" data-action="saveArchive" title="存档当前关联配置">
+                                 <button class="btn btn-secondary archive-btn" onclick="App.saveArchive()" title="存档当前关联配置">
                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                                      存档
                                  </button>
                                  <div class="custom-select" id="archiveSelectorWrap">
                                      <input type="hidden" id="archiveSelector" value="">
-                                     <button class="custom-select-trigger" data-action="toggleDropdown" data-param="archiveSelector">
+                                     <button class="custom-select-trigger" onclick="App.toggleDropdown('archiveSelector')">
                                          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
                                          <span class="custom-select-text">读取存档</span>
                                          <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg>
@@ -2758,41 +2734,41 @@
                 <div class="ai-toolbar">
                     <div class="custom-select" id="historySelectorWrap">
                         <input type="hidden" id="historySelector" value="">
-                         <button class="custom-select-trigger" data-action="toggleDropdown" data-param="historySelector" title="历史结果">
+                        <button class="custom-select-trigger" onclick="App.toggleDropdown('historySelector')" title="历史结果">
                             <svg class="custom-select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                             <span class="custom-select-text">当前运行</span>
                             <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg>
                         </button>
                         <div class="custom-select-dropdown" id="historySelectorDropdown"></div>
                     </div>
-                    <button id="historyRetryBtn" class="ai-retry-btn" style="display:none;">重新加载</button>
+                    <button id="historyRetryBtn" class="ai-retry-btn" style="display:none;" onclick="App.retryLoadHistory()">重新加载</button>
                     <div class="custom-select" id="resultFilterStatusWrap">
                         <input type="hidden" id="resultFilterStatus" value="all">
-                         <button class="custom-select-trigger" data-action="toggleDropdown" data-param="resultFilterStatus" title="状态筛选">
+                        <button class="custom-select-trigger" onclick="App.toggleDropdown('resultFilterStatus')" title="状态筛选">
                             <svg class="custom-select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
                             <span class="custom-select-text">全部</span>
                             <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg>
                         </button>
                         <div class="custom-select-dropdown" id="resultFilterStatusDropdown">
-                            <div class="custom-select-option selected" data-dropdown="resultFilterStatus" data-value="all" data-label="全部">全部</div>
-                            <div class="custom-select-option" data-dropdown="resultFilterStatus" data-value="success" data-label="成功">成功</div>
-                            <div class="custom-select-option" data-dropdown="resultFilterStatus" data-value="error" data-label="失败">失败</div>
+                            <div class="custom-select-option selected" data-value="all" onclick="App.selectDropdownOption('resultFilterStatus', 'all', '全部')">全部</div>
+                            <div class="custom-select-option" data-value="success" onclick="App.selectDropdownOption('resultFilterStatus', 'success', '成功')">成功</div>
+                            <div class="custom-select-option" data-value="error" onclick="App.selectDropdownOption('resultFilterStatus', 'error', '失败')">失败</div>
                         </div>
                     </div>
                     <div class="custom-select" id="resultFilterModelWrap">
                         <input type="hidden" id="resultFilterModel" value="">
-                         <button class="custom-select-trigger" data-action="toggleDropdown" data-param="resultFilterModel" title="模型筛选">
+                        <button class="custom-select-trigger" onclick="App.toggleDropdown('resultFilterModel')" title="模型筛选">
                             <svg class="custom-select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="8" height="8" rx="2"/><rect x="14" y="2" width="8" height="8" rx="2"/><rect x="2" y="14" width="8" height="8" rx="2"/><rect x="14" y="14" width="8" height="8" rx="2"/></svg>
                             <span class="custom-select-text">所有模型</span>
                             <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg>
                         </button>
                         <div class="custom-select-dropdown" id="resultFilterModelDropdown">
-                            <div class="custom-select-option selected" data-dropdown="resultFilterModel" data-value="" data-label="所有模型">所有模型</div>
+                            <div class="custom-select-option selected" data-value="" onclick="App.selectDropdownOption('resultFilterModel', '', '所有模型')">所有模型</div>
                         </div>
                     </div>
                     <div class="ai-search-wrap">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                        <input type="text" class="ai-search-input" id="resultFilterText" placeholder="搜索...">
+                        <input type="text" class="ai-search-input" id="resultFilterText" placeholder="搜索..." oninput="App.applyStreamFilter()">
                     </div>
                     <span class="ai-stream-status" id="aiStreamStatus">等待中</span>
                 </div>
@@ -2810,8 +2786,8 @@
         <div class="confirm-dialog">
             <div class="confirm-dialog-msg" id="confirmDialogMsg"></div>
             <div class="confirm-dialog-btns">
-                <button class="btn btn-secondary" data-dialog="confirm" data-result="false" style="flex:1;">取消</button>
-                <button class="btn btn-primary" data-dialog="confirm" data-result="true" style="flex:1;">确定</button>
+                <button class="btn btn-secondary" onclick="App._confirmResult(false)" style="flex:1;">取消</button>
+                <button class="btn btn-primary" onclick="App._confirmResult(true)" style="flex:1;">确定</button>
             </div>
         </div>
     </div>
@@ -2820,8 +2796,8 @@
             <div class="prompt-dialog-title" id="promptDialogTitle">请输入存档名称：</div>
             <input type="text" class="prompt-dialog-input" id="promptDialogInput" placeholder="输入名称...">
             <div class="prompt-dialog-btns">
-                <button class="btn btn-secondary" data-dialog="prompt" data-result="false" style="flex:1;">取消</button>
-                <button class="btn btn-primary" data-dialog="prompt" data-result="true" style="flex:1;">确定</button>
+                <button class="btn btn-secondary" onclick="App._promptResult(false)" style="flex:1;">取消</button>
+                <button class="btn btn-primary" onclick="App._promptResult(true)" style="flex:1;">确定</button>
             </div>
         </div>
     </div>
@@ -2832,7 +2808,7 @@
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
                     参数设置
                 </div>
-                <button class="params-modal-close">&times;</button>
+                <button class="params-modal-close" onclick="App.toggleParamsModal()">&times;</button>
             </div>
             <div class="params-modal-body">
                 <div class="params-modal-grid">
@@ -2842,12 +2818,12 @@
                             <div class="custom-slider" id="modal-temperature">
                                 <div class="slider-track"><div class="slider-fill" style="width:35%"></div></div>
                                 <div class="slider-thumb" style="left:35%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="0" max="2" value="0.7" data-slider="temperature">
+                                <input type="range" class="slider-native" step="0.05" min="0" max="2" value="0.7" oninput="App.onModalSliderChange('temperature', this.value)" onchange="App.onModalSliderCommit('temperature', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="temperature" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-temperatureInput" step="0.05" min="0" max="2" value="0.7">
-                                <button class="stepper-btn" data-stepper="temperature" data-delta="0.05">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('temperature', -0.05)">-</button>
+                                <input type="number" class="stepper-value" id="modal-temperatureInput" step="0.05" min="0" max="2" value="0.7" onchange="App.onModalNumberChange('temperature', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('temperature', 0.05)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2857,12 +2833,12 @@
                             <div class="custom-slider" id="modal-concurrency">
                                 <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
                                 <div class="slider-thumb" style="left:0%"></div>
-                                <input type="range" class="slider-native" step="1" min="1" max="10" value="1" data-slider="concurrency">
+                                <input type="range" class="slider-native" step="1" min="1" max="10" value="1" oninput="App.onModalSliderChange('concurrency', this.value)" onchange="App.onModalSliderCommit('concurrency', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="concurrency" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-concurrencyInput" step="1" min="1" max="10" value="1">
-                                <button class="stepper-btn" data-stepper="concurrency" data-delta="1">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('concurrency', -1)">-</button>
+                                <input type="number" class="stepper-value" id="modal-concurrencyInput" step="1" min="1" max="10" value="1" onchange="App.onModalNumberChange('concurrency', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('concurrency', 1)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2872,12 +2848,12 @@
                             <div class="custom-slider" id="modal-testCount">
                                 <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
                                 <div class="slider-thumb" style="left:0%"></div>
-                                <input type="range" class="slider-native" step="1" min="1" max="10" value="1" data-slider="testCount">
+                                <input type="range" class="slider-native" step="1" min="1" max="10" value="1" oninput="App.onModalSliderChange('testCount', this.value)" onchange="App.onModalSliderCommit('testCount', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="testCount" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-testCountInput" step="1" min="1" max="10" value="1">
-                                <button class="stepper-btn" data-stepper="testCount" data-delta="1">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('testCount', -1)">-</button>
+                                <input type="number" class="stepper-value" id="modal-testCountInput" step="1" min="1" max="10" value="1" onchange="App.onModalNumberChange('testCount', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('testCount', 1)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2887,12 +2863,12 @@
                             <div class="custom-slider" id="modal-maxRetries">
                                 <div class="slider-track"><div class="slider-fill" style="width:22%"></div></div>
                                 <div class="slider-thumb" style="left:22%"></div>
-                                <input type="range" class="slider-native" step="1" min="1" max="10" value="3" data-slider="maxRetries">
+                                <input type="range" class="slider-native" step="1" min="1" max="10" value="3" oninput="App.onModalSliderChange('maxRetries', this.value)" onchange="App.onModalSliderCommit('maxRetries', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="maxRetries" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-maxRetriesInput" step="1" min="1" max="10" value="3">
-                                <button class="stepper-btn" data-stepper="maxRetries" data-delta="1">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('maxRetries', -1)">-</button>
+                                <input type="number" class="stepper-value" id="modal-maxRetriesInput" step="1" min="1" max="10" value="3" onchange="App.onModalNumberChange('maxRetries', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('maxRetries', 1)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2902,12 +2878,12 @@
                             <div class="custom-slider" id="modal-contextSize">
                                 <div class="slider-track"><div class="slider-fill" style="width:6%"></div></div>
                                 <div class="slider-thumb" style="left:6%"></div>
-                                <input type="range" class="slider-native" step="1024" min="0" max="128000" value="8192" data-slider="contextSize">
+                                <input type="range" class="slider-native" step="1024" min="0" max="128000" value="8192" oninput="App.onModalSliderChange('contextSize', this.value)" onchange="App.onModalSliderCommit('contextSize', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="contextSize" data-delta="-1024">-</button>
-                                <input type="number" class="stepper-value" id="modal-contextSizeInput" step="1024" min="0" max="128000" value="8192">
-                                <button class="stepper-btn" data-stepper="contextSize" data-delta="1024">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('contextSize', -1024)">-</button>
+                                <input type="number" class="stepper-value" id="modal-contextSizeInput" step="1024" min="0" max="128000" value="8192" onchange="App.onModalNumberChange('contextSize', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('contextSize', 1024)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2917,12 +2893,12 @@
                             <div class="custom-slider" id="modal-topP">
                                 <div class="slider-track"><div class="slider-fill" style="width:100%"></div></div>
                                 <div class="slider-thumb" style="left:100%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="1.0" data-slider="topP">
+                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="1.0" oninput="App.onModalSliderChange('topP', this.value)" onchange="App.onModalSliderCommit('topP', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="topP" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-topPInput" step="0.05" min="0" max="1" value="1.0">
-                                <button class="stepper-btn" data-stepper="topP" data-delta="0.05">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('topP', -0.05)">-</button>
+                                <input type="number" class="stepper-value" id="modal-topPInput" step="0.05" min="0" max="1" value="1.0" onchange="App.onModalNumberChange('topP', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('topP', 0.05)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2932,12 +2908,12 @@
                             <div class="custom-slider" id="modal-minP">
                                 <div class="slider-track"><div class="slider-fill" style="width:5%"></div></div>
                                 <div class="slider-thumb" style="left:5%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="0.05" data-slider="minP">
+                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="0.05" oninput="App.onModalSliderChange('minP', this.value)" onchange="App.onModalSliderCommit('minP', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="minP" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-minPInput" step="0.05" min="0" max="1" value="0.05">
-                                <button class="stepper-btn" data-stepper="minP" data-delta="0.05">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('minP', -0.05)">-</button>
+                                <input type="number" class="stepper-value" id="modal-minPInput" step="0.05" min="0" max="1" value="0.05" onchange="App.onModalNumberChange('minP', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('minP', 0.05)">+</button>
                             </div>
                         </div>
                     </div>
@@ -2947,19 +2923,19 @@
                             <div class="custom-slider" id="modal-topK">
                                 <div class="slider-track"><div class="slider-fill" style="width:39%"></div></div>
                                 <div class="slider-thumb" style="left:39%"></div>
-                                <input type="range" class="slider-native" step="1" min="1" max="100" value="40" data-slider="topK">
+                                <input type="range" class="slider-native" step="1" min="1" max="100" value="40" oninput="App.onModalSliderChange('topK', this.value)" onchange="App.onModalSliderCommit('topK', this.value)">
                             </div>
                             <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="topK" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-topKInput" step="1" min="1" max="100" value="40">
-                                <button class="stepper-btn" data-stepper="topK" data-delta="1">+</button>
+                                <button class="stepper-btn" onclick="App.stepperChange('topK', -1)">-</button>
+                                <input type="number" class="stepper-value" id="modal-topKInput" step="1" min="1" max="100" value="40" onchange="App.onModalNumberChange('topK', this.value)">
+                                <button class="stepper-btn" onclick="App.stepperChange('topK', 1)">+</button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;padding:16px 0 0;border-top:1px solid var(--border);">
                     <label class="toggle-switch">
-                        <input type="checkbox" id="modal-streaming" checked>
+                        <input type="checkbox" id="modal-streaming" checked onchange="App.onConfigChange()">
                         <span class="toggle-track"></span>
                         <span class="toggle-label">流式输出</span>
                     </label>
@@ -2969,7 +2945,7 @@
                         <span class="toggle-label">/v1 自动补全</span>
                     </label>
                     <label class="toggle-switch">
-                        <input type="checkbox" id="autoConnectToggle" checked>
+                        <input type="checkbox" id="autoConnectToggle" checked onchange="App.onConfigChange()">
                         <span class="toggle-track"></span>
                         <span class="toggle-label">自动关联节点</span>
                     </label>
@@ -2982,12 +2958,12 @@
         <div class="model-modal">
             <div class="model-modal-header">
                 <span class="model-modal-title">选择模型</span>
-                <button class="model-modal-close">&times;</button>
+                <button class="model-modal-close" onclick="App.closeModelModal()">&times;</button>
             </div>
             <div class="model-modal-body" id="modelCheckboxList"></div>
             <div class="model-modal-footer">
-                <button class="btn btn-secondary">取消</button>
-                <button class="btn btn-primary">确定</button>
+                <button class="btn btn-secondary" onclick="App.closeModelModal()">取消</button>
+                <button class="btn btn-primary" onclick="App.confirmModelSelection()">确定</button>
             </div>
         </div>
     </div>
@@ -3016,11 +2992,10 @@
                     return div.innerHTML;
                 };
                 toast.innerHTML =
-                    `<span style="flex:1">${escape(message)}</span><button class="toast-close">&times;</button>`;
+                    `<span style="flex:1">${escape(message)}</span><button class="toast-close" onclick="App.dismissToast(${id})">&times;</button>`;
                 container.appendChild(toast);
                 requestAnimationFrame(() => { toast.classList.add('show'); });
                 const dismissFn = () => App.dismissToast(id);
-                toast.querySelector('.toast-close').addEventListener('click', dismissFn);
                 if (duration > 0) { setTimeout(dismissFn, duration); }
             }
 
@@ -3057,16 +3032,6 @@
                 };
             }
 
-            function attrEscape(str) {
-                return String(str).replace(/&/g, '&amp;').replace(/'/g, '&#39;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            }
-
-            function handleError(context, error) {
-                const msg = error?.message || error || '未知错误';
-                console.error(`[${context}]`, error);
-                showToast(friendlyError(msg), 'error');
-            }
-
             function generateId() {
                 if (typeof crypto !== 'undefined' && crypto.randomUUID) {
                     return crypto.randomUUID();
@@ -3098,7 +3063,6 @@
                 availableModels: [],
                 allResults: {},
                 abortController: null,
-                _activeJobId: null,
                 isRunning: false,
                 openGroups: new Set(),
                 canvasState: { nodes: [], connections: [], history: [] },
@@ -3141,10 +3105,6 @@
 
                 NODE_W: 170,
                 GRID: 20,
-                _activeSnapAnims: new Set(),
-                _snapDataInterval: null,
-                _snapRenderRaf: null,
-                _snapDataHz: 240,
 
                 showToast,
                 dismissToast,
@@ -3213,7 +3173,8 @@
                             body: JSON.stringify(config)
                         });
                         if (res.ok && !silent) { showToast('配置已保存', 'success'); }
-                    } catch (error) { handleError('saveConfig', error); }
+                    } catch (error) { console.error('Failed to save config:', error);
+                        showToast('配置保存失败', 'error'); }
                 },
 
                 async onBaseUrlBlur() {
@@ -3352,11 +3313,21 @@
                             });
                         }
 
+                        console.log('Total prompts:', this.prompts.length, 'Total questions:', this.questions.length);
                         const testSetCounts = {};
                         this.questions.forEach(q => {
                             const ts = q.testSet || '(undefined)';
                             testSetCounts[ts] = (testSetCounts[ts] || 0) + 1;
                         });
+                        console.log('[loadAllTestSets] testSet distribution in questions:', JSON.stringify(testSetCounts));
+                        const qWithoutTestSet = this.questions.filter(q => !q.testSet);
+                        if (qWithoutTestSet.length > 0) {
+                            console.warn('[loadAllTestSets] WARNING: questions without testSet:', qWithoutTestSet.length, qWithoutTestSet.slice(0, 3));
+                        }
+                        const qWithoutFile = this.questions.filter(q => !q.file);
+                        if (qWithoutFile.length > 0) {
+                            console.warn('[loadAllTestSets] WARNING: questions without file:', qWithoutFile.length, qWithoutFile.slice(0, 3));
+                        }
                         this.openGroups.clear();
                         this.onTestSetChange();
                         this.computeCurrentTags();
@@ -3365,7 +3336,8 @@
                             showToast(`加载完成：${this.prompts.length} 个提示词，${this.questions.length} 个问题`, 'success');
                         }
                     } catch (error) {
-                        handleError('loadAllTestSets', error);
+                        console.error('Failed to load test sets:', error);
+                        this.showToast('加载测试集失败，请检查后端服务是否运行', 'error');
                     }
                 },
 
@@ -3402,13 +3374,10 @@
                             toast.id = `toast-${id}`;
                             const esc = (t) => { const d = document.createElement('div'); d.textContent = t; return d.innerHTML; };
                             toast.innerHTML = `<span style="flex:1">${esc(msg)}</span>` +
-                                `<button class="toast-close" style="font-weight:600;color:var(--accent);opacity:1;margin-right:4px;">撤销</button>` +
-                                `<button class="toast-close">&times;</button>`;
+                                `<button class="toast-close" onclick="App.undoRemovedSelections()" style="font-weight:600;color:var(--accent);opacity:1;margin-right:4px;">撤销</button>` +
+                                `<button class="toast-close" onclick="App.dismissToast(${id})">&times;</button>`;
                             container.appendChild(toast);
                             requestAnimationFrame(() => { toast.classList.add('show'); });
-                            const btns = toast.querySelectorAll('.toast-close');
-                            if (btns[0]) btns[0].addEventListener('click', () => { App.undoRemovedSelections(); });
-                            if (btns[1]) btns[1].addEventListener('click', () => { this.dismissToast(id); });
                             setTimeout(() => { this.dismissToast(id); }, 8000);
                         }
                         this._lastRemovedSelections = removedKeys;
@@ -3425,8 +3394,11 @@
                     for (const key of rk.prompts) { this.selectedPrompts.add(key); }
                     for (const key of rk.questions) { this.selectedQuestions.add(key); }
                     this._lastRemovedSelections = null;
-                    document.querySelectorAll('.toast.warning').forEach(t => {
-                        t.classList.remove('show'); setTimeout(() => { if (t.parentNode) t.remove(); }, 300);
+                    document.querySelectorAll('.toast.warning .toast-close').forEach(el => {
+                        const t = el.closest('.toast');
+                        if (t && t.querySelector('button[onclick*="undoRemovedSelections"]')) {
+                            t.classList.remove('show'); setTimeout(() => t.remove(), 300);
+                        }
                     });
                     this.syncCanvasFromSelection();
                     this.renderPromptList();
@@ -3501,6 +3473,14 @@
                 },
 
                 initDropdowns() {
+                    document.addEventListener('click', (e) => {
+                        if (!e.target.closest('.custom-select')) {
+                            document.querySelectorAll('.custom-select-dropdown.show').forEach(d => {
+                                d.classList.remove('show');
+                                d.previousElementSibling?.classList.remove('open');
+                            });
+                        }
+                    });
                 },
 
                 stepperChange(param, delta) {
@@ -3553,20 +3533,22 @@
                         '<div style="font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">测试集</div>';
                     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-bottom:12px;">';
                     html += '<span class="set-chip' + (this.selectedTestSets.size === this.testSetNames.length ?
-                        ' active' : '') + '" data-ts="">全部</span>';
+                        ' active' : '') + '" onclick="App.toggleSetFilter(\'\')">全部</span>';
                     html += this.testSetNames.map(n => {
                         const act = this.selectedTestSets.has(n) ? ' active' : '';
-                        return '<span class="set-chip' + act + '" data-ts="' + attrEscape(n) + '">' + this.escapeHtml(n) + '</span>';
+                        return '<span class="set-chip' + act + '" onclick="App.toggleSetFilter(\'' + n.replace(/'/g,
+                            "\\'") + '\')">' + this.escapeHtml(n) + '</span>';
                     }).join('');
                     html += '</div>';
                     html +=
                         '<div style="font-size:10px;font-weight:600;color:var(--text-muted);margin-bottom:6px;">标签</div>';
                     html += '<div style="display:flex;flex-wrap:wrap;gap:4px;">';
                     html += '<span class="tag-chip' + (this.activeTags.size === 0 ? ' active' : '') +
-                        '" data-tag="">全部</span>';
+                        '" onclick="App.toggleTagFromFilter(\'\')" style="cursor:pointer;">全部</span>';
                     html += this.allTags.map(tag => {
                         const act = this.activeTags.has(tag) ? ' active' : '';
-                        return '<span class="tag-chip' + act + '" data-tag="' + attrEscape(tag) + '">' + this.escapeHtml(tag) + '</span>';
+                        return '<span class="tag-chip' + act + '" onclick="App.toggleTagFromFilter(\'' + tag.replace(/'/g,
+                            "\\'") + '\')" style="cursor:pointer;">' + this.escapeHtml(tag) + '</span>';
                     }).join('');
                     html += '</div>';
                     panel.innerHTML = html;
@@ -3656,21 +3638,23 @@
                     }
                 },
 
-                _renderGroupedList(opts) {
-                    const container = document.getElementById(opts.containerId);
-                    const searchText = document.getElementById(opts.searchId).value.toLowerCase();
-                    const filtered = opts.source.filter(item => this.matchesTestSet(item) && this.matchesTag(item) &&
-                        this.matchesSearch(item, searchText));
+                renderPromptList() {
+                    const container = document.getElementById('promptList');
+                    const searchText = document.getElementById('promptSearch').value.toLowerCase();
+                    const filtered = this.prompts.filter(p => this.matchesTestSet(p) && this.matchesTag(p) && this
+                        .matchesSearch(p, searchText));
                     const groups = {};
-                    filtered.forEach(item => {
-                        const ts = item.testSet || '未知';
-                        if (!groups[ts]) groups[ts] = opts.initGroup();
-                        opts.groupItem(groups[ts], item);
+                    filtered.forEach(p => {
+                        const ts = p.testSet || '未知';
+                        if (!groups[ts]) groups[ts] = {};
+                        const tag = p.tag || '未分类';
+                        if (!groups[ts][tag]) groups[ts][tag] = [];
+                        groups[ts][tag].push(p);
                     });
 
-                    const entries = Object.entries(groups);
-                    if (entries.length === 0) {
-                        container.innerHTML = '<div class="empty-state"><p>' + opts.emptyText + '</p></div>';
+                    const tsEntries = Object.entries(groups);
+                    if (tsEntries.length === 0) {
+                        container.innerHTML = '<div class="empty-state"><p>暂无提示词</p></div>';
                         return;
                     }
                     const emptyEl = container.querySelector('.empty-state');
@@ -3680,11 +3664,12 @@
                     container.querySelectorAll('.entry-group').forEach(el => {
                         groupMap.set(el.dataset.groupId, el);
                     });
-                    const desiredIds = new Set(entries.map(([ts]) => opts.groupPrefix + ts));
+                    const desiredIds = new Set(tsEntries.map(([ts]) => 'p_' + ts));
 
-                    entries.forEach(([testSet, groupData]) => {
-                        const groupId = opts.groupPrefix + testSet;
+                    tsEntries.forEach(([testSet, tags]) => {
+                        const groupId = 'p_' + testSet;
                         const isOpen = this.openGroups.has(groupId);
+                        const tagEntries = Object.entries(tags);
 
                         const existingEl = groupMap.get(groupId);
                         if (existingEl) {
@@ -3692,11 +3677,11 @@
                             const nameSpan = existingEl.querySelector('.entry-group-name');
                             if (nameSpan) {
                                 const countSpan = nameSpan.querySelector('.entry-group-count');
-                                if (countSpan) countSpan.textContent = opts.getCount(groupData);
+                                if (countSpan) countSpan.textContent = tagEntries.length;
                             }
                             const itemsContainer = existingEl.querySelector('.entry-group-items');
                             if (itemsContainer) {
-                                opts.syncItems(itemsContainer, testSet, groupData);
+                                this._syncPromptItems(itemsContainer, testSet, tagEntries);
                             }
                             container.appendChild(existingEl);
                         } else {
@@ -3705,16 +3690,16 @@
                             div.dataset.groupId = groupId;
                             const header = document.createElement('div');
                             header.className = 'entry-group-header';
-                            header.dataset.groupKey = groupId;
+                            header.dataset.groupKey = 'p_' + testSet;
                             header.innerHTML =
-                                `<span class="entry-group-name">${this.escapeHtml(testSet)}<span class="entry-group-count">${opts.getCount(groupData)}</span></span>
+                                `<span class="entry-group-name">${this.escapeHtml(testSet)}<span class="entry-group-count">${tagEntries.length}</span></span>
                             <svg class="entry-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
-                            header.addEventListener('click', () => App.toggleEntryGroup(groupId));
+                            header.addEventListener('click', () => App.toggleEntryGroup('p_' + testSet));
                             const itemsContainer = document.createElement('div');
                             itemsContainer.className = 'entry-group-items';
                             div.appendChild(header);
                             div.appendChild(itemsContainer);
-                            opts.syncItems(itemsContainer, testSet, groupData);
+                            this._syncPromptItems(itemsContainer, testSet, tagEntries);
                             container.appendChild(div);
                         }
                     });
@@ -3724,40 +3709,70 @@
                     });
                 },
 
-                renderPromptList() {
-                    this._renderGroupedList({
-                        containerId: 'promptList',
-                        searchId: 'promptSearch',
-                        emptyText: '暂无提示词',
-                        source: this.prompts,
-                        groupPrefix: 'p_',
-                        initGroup: () => ({}),
-                        groupItem: (g, p) => {
-                            const tag = p.tag || '未分类';
-                            if (!g[tag]) g[tag] = [];
-                            g[tag].push(p);
-                        },
-                        getCount: (g) => Object.keys(g).length,
-                        syncItems: (container, testSet, groupData) => {
-                            const tagEntries = Object.entries(groupData);
-                            this._syncPromptItems(container, testSet, tagEntries);
+                renderQuestionList() {
+                    const container = document.getElementById('questionList');
+                    const searchText = document.getElementById('questionSearch').value.toLowerCase();
+                    const filtered = this.questions.filter(q => this.matchesTestSet(q) && this.matchesTag(q) && this
+                        .matchesSearch(q, searchText));
+                    const groups = {};
+                    filtered.forEach(q => {
+                        const ts = q.testSet || '未知';
+                        if (!groups[ts]) groups[ts] = [];
+                        groups[ts].push(q);
+                    });
+
+                    if (Object.keys(groups).length === 0) {
+                        container.innerHTML = '<div class="empty-state"><p>暂无问题</p></div>';
+                        return;
+                    }
+                    const emptyEl = container.querySelector('.empty-state');
+                    if (emptyEl) emptyEl.remove();
+
+                    const groupMap = new Map();
+                    container.querySelectorAll('.entry-group').forEach(el => {
+                        groupMap.set(el.dataset.groupId, el);
+                    });
+                    const desiredIds = new Set(Object.keys(groups).map(ts => 'q_' + ts));
+
+                    Object.entries(groups).forEach(([testSet, items]) => {
+                        const groupId = 'q_' + testSet;
+                        const isOpen = this.openGroups.has(groupId);
+
+                        const existingEl = groupMap.get(groupId);
+                        if (existingEl) {
+                            existingEl.className = 'entry-group' + (isOpen ? ' open' : '');
+                            const nameSpan = existingEl.querySelector('.entry-group-name');
+                            if (nameSpan) {
+                                const countSpan = nameSpan.querySelector('.entry-group-count');
+                                if (countSpan) countSpan.textContent = items.length;
+                            }
+                            const itemsContainer = existingEl.querySelector('.entry-group-items');
+                            if (itemsContainer) {
+                                this._syncQuestionItems(itemsContainer, items);
+                            }
+                            container.appendChild(existingEl);
+                        } else {
+                            const div = document.createElement('div');
+                            div.className = 'entry-group' + (isOpen ? ' open' : '');
+                            div.dataset.groupId = groupId;
+                            const header = document.createElement('div');
+                            header.className = 'entry-group-header';
+                            header.dataset.groupKey = 'q_' + testSet;
+                            header.innerHTML =
+                                `<span class="entry-group-name">${this.escapeHtml(testSet)}<span class="entry-group-count">${items.length}</span></span>
+                            <svg class="entry-group-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>`;
+                            header.addEventListener('click', () => App.toggleEntryGroup('q_' + testSet));
+                            const itemsContainer = document.createElement('div');
+                            itemsContainer.className = 'entry-group-items';
+                            div.appendChild(header);
+                            div.appendChild(itemsContainer);
+                            this._syncQuestionItems(itemsContainer, items);
+                            container.appendChild(div);
                         }
                     });
-                },
 
-                renderQuestionList() {
-                    this._renderGroupedList({
-                        containerId: 'questionList',
-                        searchId: 'questionSearch',
-                        emptyText: '暂无问题',
-                        source: this.questions,
-                        groupPrefix: 'q_',
-                        initGroup: () => [],
-                        groupItem: (g, q) => g.push(q),
-                        getCount: (g) => g.length,
-                        syncItems: (container, testSet, groupData) => {
-                            this._syncQuestionItems(container, groupData);
-                        }
+                    container.querySelectorAll('.entry-group').forEach(el => {
+                        if (!desiredIds.has(el.dataset.groupId)) el.remove();
                     });
                 },
 
@@ -3946,7 +3961,9 @@
                 togglePromptByTestSetTag(testSet, tag) {
                     this.saveUndoSnapshot();
                     const matching = this.prompts.filter(p => p.testSet === testSet && (p.tag || '未分类') === tag);
+                    console.log('[togglePromptByTestSetTag] testSet:', testSet, 'tag:', tag, 'matching prompts:', matching.length);
                     if (matching.length === 0) {
+                        console.log('[togglePromptByTestSetTag] No matching prompts for testSet:', testSet, 'tag:', tag);
                         return;
                     }
                     const anySelected = matching.some(p => this.selectedPrompts.has(`p_${p.testSet || '未分类'}_${p.id}_${p.file || ''}`));
@@ -3971,18 +3988,23 @@
                 autoSelectQuestions(promptKey) {
                     const prompt = this.prompts.find(p => `p_${p.testSet || '未分类'}_${p.id}_${p.file || ''}` === promptKey);
                     if (!prompt) {
+                        console.log('[autoSelectQuestions] prompt not found for key:', promptKey);
                         return;
                     }
                     const defaultFiles = prompt.default_questions || [];
+                    console.log('[autoSelectQuestions] promptKey:', promptKey, 'prompt.testSet:', prompt.testSet, 'defaultFiles:', JSON.stringify(defaultFiles));
                     if (defaultFiles.length === 0) return;
                     this.questions.forEach(q => {
+                        console.log('[autoSelectQuestions]   q.testSet:', q.testSet, 'q.file:', q.file, 'q.id:', q.id, 'prompt.testSet:', prompt.testSet);
                         if (!q.testSet || !prompt.testSet || q.testSet !== prompt.testSet) {
+                            console.log('[autoSelectQuestions]     SKIP - testSet mismatch');
                             return;
                         }
                         const match = defaultFiles.some(df => {
                             const dfName = df.replace(/\\/g, '/').split('/').pop();
                             return dfName === q.file;
                         });
+                        console.log('[autoSelectQuestions]     match:', match);
                         if (match) {
                             this.selectedQuestions.add(`q_${q.testSet || '未分类'}_${q.id}_${q.file || ''}`);
                         }
@@ -4462,10 +4484,10 @@
                     const dropdown = document.getElementById('archiveSelectorDropdown');
                     if (!dropdown) return;
                     const saves = await this._getLinkSaves();
-                    let html = '<div class="custom-select-option selected" data-dropdown="archiveSelector" data-value="" data-label="读取存档">读取存档</div>';
+                    let html = '<div class="custom-select-option selected" data-value="" onclick="App.selectDropdownOption(\'archiveSelector\', \'\', \'读取存档\')">读取存档</div>';
                     saves.forEach(s => {
                         const date = new Date(s.timestamp).toLocaleString('zh-CN');
-                        html += `<div class="custom-select-option" data-dropdown="archiveSelector" data-value="${this.escapeHtml(s.id)}" data-label="${this.escapeHtml(s.name)}">${this.escapeHtml(s.name)} (${date})</div>`;
+                        html += `<div class="custom-select-option" data-value="${this.escapeHtml(s.id)}" onclick="App.selectDropdownOption('archiveSelector', '${this.escapeHtml(s.id)}', '${this.escapeHtml(s.name)}')">${this.escapeHtml(s.name)} (${date})</div>`;
                     });
                     dropdown.innerHTML = html;
                 },
@@ -4682,7 +4704,6 @@
                 },
 
                 _lastRenderScale: 1,
-                _forceRerenderPending: false,
                 applyViewTransform() {
                     const world = document.getElementById('comfyCanvasWorld');
                     if (world) world.style.transform = `translate(${this.panX}px,${this.panY}px)`;
@@ -4691,12 +4712,11 @@
                     const nodes = document.getElementById('comfyCanvasNodes');
                     if (nodes) nodes.style.transform = `scale(${this.scale})`;
                     const scaleDiff = Math.abs(this.scale - this._lastRenderScale);
-                    if (scaleDiff > 0.02) {
+                    if (scaleDiff > 0.1) {
                         this._lastRenderScale = this.scale;
                         this._forceRerender();
                     }
                     this.updateNodePositions();
-                    this.renderLines();
                     this.updateCoordDisplay();
                 },
 
@@ -4712,19 +4732,12 @@
 
 
                 _forceRerender() {
-                    if (this._forceRerenderPending) return;
-                    this._forceRerenderPending = true;
-                    requestAnimationFrame(() => {
-                        this._forceRerenderPending = false;
-                        const nodes = document.getElementById('comfyCanvasNodes');
-                        if (!nodes) return;
-                        nodes.style.willChange = 'transform';
-                        const parent = nodes.parentNode;
-                        const next = nodes.nextSibling;
-                        parent.removeChild(nodes);
-                        parent.insertBefore(nodes, next);
-                        requestAnimationFrame(() => { nodes.style.willChange = ''; });
-                    });
+                    const nodes = document.getElementById('comfyCanvasNodes');
+                    if (!nodes) return;
+                    const parent = nodes.parentNode;
+                    const next = nodes.nextSibling;
+                    parent.removeChild(nodes);
+                    parent.insertBefore(nodes, next);
                 },
 
                 updateNodePositions() {
@@ -4814,7 +4827,7 @@
                     const canvas = document.getElementById('associationCanvas');
                     if (!canvas) return;
                     document.querySelectorAll('.comfy-node').forEach(el => {
-                        this._cancelSnapAnim(el);
+                        el.getAnimations().forEach(anim => anim.cancel());
                     });
 
                     let nodesContainer = document.getElementById('comfyCanvasNodes');
@@ -4867,13 +4880,13 @@
                         let bodyHtml;
                         if (isAggregate) {
                             bodyHtml =
-                                `<span class="comfy-node-val">${self.escapeHtml(node.display || node.value || '')}</span><span class="comfy-node-clear" data-clear="${node.id}">×</span>`;
+                                `<span class="comfy-node-val">${self.escapeHtml(node.display || node.value || '')}</span><span class="comfy-node-clear" onclick="event.stopPropagation();App.clearNodeValue('${node.id}')">×</span>`;
                         } else if (!node.value) {
                             bodyHtml = `<span class="comfy-node-empty">点击选择…</span>`;
                         } else {
                             const warnIcon = node._notFound ? '<span class="comfy-node-warn" title="该文件已不存在">⚠</span>' : '';
                             bodyHtml =
-                                `<span class="comfy-node-val">${self.escapeHtml(node.value)}</span>${warnIcon}<span class="comfy-node-clear" data-clear="${node.id}">×</span>`;
+                                `<span class="comfy-node-val">${self.escapeHtml(node.value)}</span>${warnIcon}<span class="comfy-node-clear" onclick="event.stopPropagation();App.clearNodeValue('${node.id}')">×</span>`;
                         }
 
                         const hasSocketIn = node.type === 'question' || node.type === 'model';
@@ -4881,13 +4894,13 @@
                         const socketOutClass = node.type === 'prompt' ? 's-question' : 
                                                node.type === 'question' ? 's-model' : `s-${typeClass}`;
                         const socketInHtml = hasSocketIn ?
-                            `<div class="comfy-socket in s-${typeClass}" data-node="${node.id}" data-type="${node.type}" data-dir="in"><div class="comfy-socket-inner"></div></div>` :
+                            `<div class="comfy-socket in s-${typeClass}" data-node="${node.id}" data-type="${node.type}" data-dir="in" onmousedown="event.stopPropagation();App.startSocketDrag(event,'${node.id}','${node.type}','in','${typeClass}')"><div class="comfy-socket-inner"></div></div>` :
                             '';
                         const socketOutHtml = hasSocketOut ?
-                            `<div class="comfy-socket out ${socketOutClass}" data-node="${node.id}" data-type="${node.type}" data-dir="out"><div class="comfy-socket-inner"></div></div>` :
+                            `<div class="comfy-socket out ${socketOutClass}" data-node="${node.id}" data-type="${node.type}" data-dir="out" onmousedown="event.stopPropagation();App.startSocketDrag(event,'${node.id}','${node.type}','out','${socketOutClass.replace('s-', '')}')"><div class="comfy-socket-inner"></div></div>` :
                             '';
                         const closeBtnHtml =
-                            `<div class="comfy-node-close" data-remove="${node.id}">&times;</div>`;
+                            `<div class="comfy-node-close" onclick="App.removeNode('${node.id}')">&times;</div>`;
 
                         const ownColor = { prompt: '#4F8CFF', question: '#20C997', model: '#FBBF24' } [typeClass];
                         const outSocketColor = hasSocketOut ? { prompt: '#20C997', question: '#FBBF24' } [typeClass] : null;
@@ -4897,8 +4910,8 @@
 
                         nodeEl.innerHTML = `
                         ${closeBtnHtml}
-                        <div class="comfy-node-header ${typeClass}" ${headerGradient ? `style="${headerGradient}"` : ''} data-drag="${node.id}">${icon}${label}</div>
-                        <div class="comfy-node-body" data-selector="${node.id}" data-selector-type="${node.type}">
+                        <div class="comfy-node-header ${typeClass}" ${headerGradient ? `style="${headerGradient}"` : ''} onmousedown="App.startNodeDrag(event,'${node.id}')">${icon}${label}</div>
+                        <div class="comfy-node-body" onclick="App.openNodeSelector('${node.id}','${node.type}')">
                             ${bodyHtml}
                         </div>
                         ${socketInHtml}
@@ -5004,157 +5017,53 @@
                     this.debouncedAutoSave();
                 },
 
-                _cancelSnapAnim(el) {
-                    if (!el._snapAnim) return;
-                    const anim = el._snapAnim;
-                    anim.cancelled = true;
-                    this._activeSnapAnims.delete(anim);
-                    el._snapAnim = null;
-                },
-
-                // ── Frame-sequence snap animation ──
-                _animateNodeToGrid(el, node, worldX, worldY) {
-                    this._cancelSnapAnim(el);
+                // 抖动 + 吸附 动画辅助函数（屏幕坐标系）
+                _animateNodeToGrid(el, worldX, worldY, nodeId) {
+                    const self = this;
+                    const targetX = worldX;
+                    const targetY = worldY;
 
                     const currentTransform = el.style.transform;
                     const match = currentTransform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
-                    const currentX = match ? parseFloat(match[1]) : worldX;
-                    const currentY = match ? parseFloat(match[2]) : worldY;
+                    const currentX = match ? parseFloat(match[1]) : targetX;
+                    const currentY = match ? parseFloat(match[2]) : targetY;
 
-                    if (node) { node.x = currentX; node.y = currentY; }
+                    const jitterAmount = 4;
+                    const rand = () => (Math.random() - 0.5) * 2 * jitterAmount;
 
-                    if (Math.abs(worldX - currentX) < 0.01 && Math.abs(worldY - currentY) < 0.01) {
-                        el.style.transform = 'translate(' + worldX + 'px,' + worldY + 'px)';
-                        if (node) { node.x = worldX; node.y = worldY; }
-                        this.renderLines();
-                        return;
-                    }
+                    const jitterFrames = [
+                        { transform: `translate(${currentX}px, ${currentY}px)` },
+                        { transform: `translate(${currentX + rand()}px, ${currentY + rand()}px)`, offset: 0.25 },
+                        { transform: `translate(${currentX + rand()}px, ${currentY + rand()}px)`, offset: 0.5 },
+                        { transform: `translate(${currentX + rand()}px, ${currentY + rand()}px)`, offset: 0.75 },
+                        { transform: `translate(${currentX}px, ${currentY}px)`, offset: 1 }
+                    ];
 
-                    const baseMs = 100;
-                    const tailMs = 50;
-                    const totalMs = baseMs + tailMs;
-                    const sampleStepMs = 1;
-                    const dx = worldX - currentX;
-                    const dy = worldY - currentY;
-                    const dist = Math.sqrt(dx * dx + dy * dy);
-                    const ux = dx / dist;
-                    const uy = dy / dist;
-                    const overshootAmount = 0.15;
-                    const peakX = worldX + ux * dist * overshootAmount;
-                    const peakY = worldY + uy * dist * overshootAmount;
-                    const peakRatio = 0.5;
+                    const snapFrames = [
+                        { transform: `translate(${currentX}px, ${currentY}px)` },
+                        { transform: `translate(${targetX}px, ${targetY}px)` }
+                    ];
 
-                    const frames = [];
-                    for (let tMs = 0; tMs <= totalMs; tMs += sampleStepMs) {
-                        let x, y;
-                        if (tMs < baseMs) {
-                            const t = tMs / baseMs;
-                            x = currentX + dx * t;
-                            y = currentY + dy * t;
-                        } else if (tMs < totalMs) {
-                            const tailT = (tMs - baseMs) / tailMs;
-                            if (tailT <= peakRatio) {
-                                const t = tailT / peakRatio;
-                                x = worldX + (peakX - worldX) * t;
-                                y = worldY + (peakY - worldY) * t;
-                            } else {
-                                const t = (tailT - peakRatio) / (1 - peakRatio);
-                                x = peakX + (worldX - peakX) * t;
-                                y = peakY + (worldY - peakY) * t;
-                            }
-                        } else {
-                            x = worldX;
-                            y = worldY;
-                        }
-                        frames.push({ x: x, y: y });
-                    }
-
-                    const animState = {
-                        frames: frames,
-                        frameIndex: 0,
-                        startTime: null,
-                        totalMs: totalMs,
-                        targetX: worldX,
-                        targetY: worldY,
-                        cancelled: false,
-                        node: node,
-                        el: el,
-                        dirty: false
+                    const jitterTiming = {
+                        duration: 30,
+                        easing: 'ease-in-out',
+                        fill: 'forwards'
                     };
-                    el._snapAnim = animState;
 
-                    this._activeSnapAnims.add(animState);
-                    if (this._snapDataInterval === null) {
-                        const intervalMs = 1000 / this._snapDataHz;
-                        this._snapDataInterval = setInterval(this._snapDataTick, intervalMs);
-                    }
-                    if (this._snapRenderRaf === null) {
-                        this._snapRenderRaf = requestAnimationFrame(this._snapRenderTick);
-                    }
-                },
+                    const snapTiming = {
+                        duration: 200,
+                        easing: 'cubic-bezier(0.34, 2.0, 0.64, 1)',
+                        fill: 'forwards'
+                    };
 
-                _snapDataTick: function() {
-                    const self = window.App;
-                    if (self._activeSnapAnims.size === 0) {
-                        clearInterval(self._snapDataInterval);
-                        self._snapDataInterval = null;
-                        return;
-                    }
-                    const now = performance.now();
-                    const sampleStepMs = 1;
-                    const snapshot = Array.from(self._activeSnapAnims);
-                    for (const anim of snapshot) {
-                        if (anim.cancelled) {
-                            self._activeSnapAnims.delete(anim);
-                            continue;
-                        }
-                        if (anim.startTime === null) {
-                            anim.startTime = now;
-                        }
-                        const elapsed = now - anim.startTime;
-                        const idx = Math.floor(elapsed / sampleStepMs);
-                        if (idx >= anim.frames.length) {
-                            if (anim.node) {
-                                anim.node.x = anim.targetX;
-                                anim.node.y = anim.targetY;
-                            }
-                            anim.frameIndex = anim.frames.length;
-                            anim.dirty = true;
-                            anim.el._snapAnim = null;
-                            self._activeSnapAnims.delete(anim);
-                            continue;
-                        }
-                        const f = anim.frames[idx];
-                        if (anim.node) {
-                            anim.node.x = f.x;
-                            anim.node.y = f.y;
-                        }
-                        anim.frameIndex = idx;
-                        anim.dirty = true;
-                    }
-                },
-
-                _snapRenderTick: function() {
-                    const self = window.App;
-                    self._snapRenderRaf = null;
-                    let anyDirty = false;
-                    const snapshot = Array.from(self._activeSnapAnims);
-                    for (const anim of snapshot) {
-                        if (anim.cancelled) continue;
-                        if (!anim.dirty) continue;
-                        const el = anim.el;
-                        const x = anim.node ? anim.node.x : anim.targetX;
-                        const y = anim.node ? anim.node.y : anim.targetY;
-                        el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
-                        anim.dirty = false;
-                        anyDirty = true;
-                    }
-                    if (anyDirty || self._activeSnapAnims.size > 0) {
-                        self.renderLines();
-                    }
-                    if (self._activeSnapAnims.size > 0) {
-                        self._snapRenderRaf = requestAnimationFrame(self._snapRenderTick);
-                    }
+                    const jitterAnimation = el.animate(jitterFrames, jitterTiming);
+                    jitterAnimation.onfinish = () => {
+                        const snapAnimation = el.animate(snapFrames, snapTiming);
+                        snapAnimation.onfinish = () => {
+                            el.style.transform = `translate(${worldX}px, ${worldY}px)`;
+                            el.getAnimations().forEach(anim => anim.cancel());
+                        };
+                    };
                 },
 
                 startNodeDrag(e, nodeId) {
@@ -5162,28 +5071,33 @@
                     e.stopPropagation();
                     this.canvasPanState = null;
 
-                    if (!this.selectedNodeIds.has(nodeId)) this.selectedNodeIds.clear();
+                    // 清除所有节点的过渡/动画，确保拖动立即响应
+                    document.querySelectorAll('.comfy-node').forEach(el => {
+                        el.style.transition = 'none';
+                        el.getAnimations().forEach(anim => anim.cancel());
+                    });
 
-                    const nodeEl = document.querySelector(`.comfy-node[data-node-id="${nodeId}"]`);
+                    if (!this.selectedNodeIds.has(nodeId)) {
+                        this.selectedNodeIds.clear();
+                    }
+                    const nodeEl = e.target.closest('.comfy-node');
                     if (!nodeEl) return;
                     const node = this.canvasState.nodes.find(n => n.id === nodeId);
                     if (!node) return;
-
-                    document.querySelectorAll('.comfy-node').forEach(el => {
-                        el.style.transition = 'none';
-                        this._cancelSnapAnim(el);
-                    });
-
+                    const origX = node.x || 0;
+                    const origY = node.y || 0;
                     const wp = this.getWorldPos(e.clientX, e.clientY);
 
                     const nodesToDrag = [];
                     if (this.selectedNodeIds.size > 1 && this.selectedNodeIds.has(nodeId)) {
                         this.selectedNodeIds.forEach(sid => {
                             const sn = this.canvasState.nodes.find(nn => nn.id === sid);
-                            if (sn) nodesToDrag.push({ id: sid, origX: sn.x || 0, origY: sn.y || 0 });
+                            if (sn) {
+                                nodesToDrag.push({ id: sid, origX: sn.x || 0, origY: sn.y || 0 });
+                            }
                         });
                     } else {
-                        nodesToDrag.push({ id: nodeId, origX: node.x || 0, origY: node.y || 0 });
+                        nodesToDrag.push({ id: nodeId, origX: origX, origY: origY });
                     }
 
                     this.dragState = { nodeId, startWorldX: wp.x, startWorldY: wp.y, nodes: nodesToDrag };
@@ -5202,10 +5116,16 @@
                             const dy = wp2.y - self.dragState.startWorldY;
                             for (const n of self.dragState.nodes) {
                                 const nodeObj = self.canvasState.nodes.find(nn => nn.id === n.id);
-                                const newX = n.origX + dx, newY = n.origY + dy;
-                                if (nodeObj) { nodeObj.x = newX; nodeObj.y = newY; }
+                                const newX = n.origX + dx;
+                                const newY = n.origY + dy;
+                                if (nodeObj) {
+                                    nodeObj.x = newX;
+                                    nodeObj.y = newY;
+                                }
                                 const el = document.querySelector(`.comfy-node[data-node-id="${n.id}"]`);
-                                if (el) el.style.transform = 'translate(' + newX + 'px,' + newY + 'px)';
+                                if (el) {
+                                    el.style.transform = `translate(${newX}px, ${newY}px)`;
+                                }
                             }
                             self.renderLines();
                         });
@@ -5213,38 +5133,38 @@
 
                     function onUp() {
                         let positionChanged = false;
-                        if (dragRafId) { cancelAnimationFrame(dragRafId); dragRafId = null; }
                         if (self.dragState && self.dragState.nodes) {
                             for (const n of self.dragState.nodes) {
                                 const nodeObj = self.canvasState.nodes.find(nn => nn.id === n.id);
                                 if (!nodeObj) continue;
-                                const visualX = nodeObj.x;
-                                const visualY = nodeObj.y;
+
                                 const snappedX = nodeObj.type === 'model'
-                                    ? Math.round((visualX + self.NODE_W) / self.GRID) * self.GRID - self.NODE_W
+                                    ? Math.round((nodeObj.x + self.NODE_W) / self.GRID) * self.GRID - self.NODE_W
                                     : nodeObj.type === 'question'
-                                    ? Math.round((visualX - 0.25 * self.GRID) / self.GRID) * self.GRID + 0.25 * self.GRID
-                                    : Math.round(visualX / self.GRID) * self.GRID;
-                                const snappedY = Math.round(visualY / self.GRID) * self.GRID;
-                                if (snappedX !== visualX || snappedY !== visualY) positionChanged = true;
+                                    ? Math.round((nodeObj.x - 0.25 * self.GRID) / self.GRID) * self.GRID + 0.25 * self.GRID
+                                    : Math.round(nodeObj.x / self.GRID) * self.GRID;
+                                const snappedY = Math.round(nodeObj.y / self.GRID) * self.GRID;
+                                if (snappedX !== n.origX || snappedY !== n.origY) {
+                                    positionChanged = true;
+                                }
                                 nodeObj.x = snappedX;
                                 nodeObj.y = snappedY;
+
                                 const el = document.querySelector(`.comfy-node[data-node-id="${n.id}"]`);
-                                if (el) {
-                                    el.classList.remove('dragging');
-                                    if (positionChanged) {
-                                        self._animateNodeToGrid(el, nodeObj, snappedX, snappedY);
-                                    } else {
-                                        el.style.transform = 'translate(' + snappedX + 'px,' + snappedY + 'px)';
-                                    }
-                                }
+                                if (!el) continue;
+
+                                el.classList.remove('dragging');
+
+                                self._animateNodeToGrid(el, snappedX, snappedY, n.id);
                             }
                         }
                         self.dragState = null;
                         self.isDragging = false;
-                        document.querySelectorAll('.comfy-node').forEach(el => { el.style.transition = ''; });
                         self.renderLines();
-                        if (positionChanged) self.saveCanvasSnapshot();
+                        if (positionChanged) {
+                            self.saveCanvasSnapshot();
+                            self.debouncedAutoSave();
+                        }
                         document.removeEventListener('mousemove', onMove);
                         document.removeEventListener('mouseup', onUp);
                     }
@@ -5524,25 +5444,19 @@
                     document.querySelectorAll('.comfy-sel-popup').forEach(el => el.remove());
                 },
 
-                async _fetchModels() {
-                    const response = await fetchWithTimeout('/api/v1/models', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ api_key: document.getElementById('apiKey').value })
-                    });
-                    if (!response.ok) {
-                        const text = await response.text();
-                        throw new Error('API错误: ' + response.status + ' - ' + text);
-                    }
-                    const models = await response.json();
-                    this.availableModels = models.map(m => m.id);
-                    return this.availableModels;
-                },
-
                 async loadModels() {
                     try {
-                        await this._fetchModels();
-                    } catch (e) { handleError('loadModels', e); }
+                        const apiKey = document.getElementById('apiKey').value;
+                        const response = await fetchWithTimeout('/api/v1/models', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: apiKey })
+                        });
+                        if (response.ok) {
+                            const models = await response.json();
+                            this.availableModels = models.map(m => m.id);
+                        }
+                    } catch (e) { console.error('Failed to load models:', e); this.showToast('加载模型列表失败: ' + friendlyError(e.message), 'error'); }
                 },
 
                 openModelModal() {
@@ -5550,13 +5464,23 @@
                     if (btn.disabled) return;
                     btn.disabled = true;
                     btn.classList.add('btn-loading');
-                    this._fetchModels()
-                        .then(() => {
+                    fetchWithTimeout('/api/v1/models', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: document.getElementById('apiKey').value })
+                        })
+                        .then(res => {
+                            if (!res.ok) return res.text().then(text => { throw new Error('API错误: ' + res
+                                    .status + ' - ' + text); });
+                            return res.json();
+                        })
+                        .then(models => {
+                            this.availableModels = models.map(m => m.id);
                             this._savedSelectedModels = JSON.parse(JSON.stringify(this.selectedModels));
                             this.renderModelCheckboxList();
                             document.getElementById('modelModal').classList.add('show');
                         })
-                        .catch(error => { handleError('openModelModal', error); })
+                        .catch(error => { showToast('加载模型失败: ' + friendlyError(error.message), 'error'); })
                         .finally(() => {
                             btn.disabled = false;
                             btn.classList.remove('btn-loading');
@@ -5564,15 +5488,25 @@
                 },
 
                 async refreshModels() {
-                    const btn = document.querySelector('[data-action="refreshModels"]');
+                    const btn = document.querySelector('[onclick*="refreshModels"]');
                     if (btn && btn.disabled) return;
                     if (btn) { btn.disabled = true; btn.classList.add('btn-loading'); }
                     await this.onBaseUrlBlur();
-                    this._fetchModels()
-                        .then(() => {
+                    fetchWithTimeout('/api/v1/models', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ api_key: document.getElementById('apiKey').value })
+                        })
+                        .then(res => {
+                            if (!res.ok) return res.text().then(text => { throw new Error('API错误: ' + res
+                                    .status + ' - ' + text); });
+                            return res.json();
+                        })
+                        .then(models => {
+                            this.availableModels = models.map(m => m.id);
                             showToast('模型列表已刷新，共 ' + this.availableModels.length + ' 个模型', 'success');
                         })
-                        .catch(error => { handleError('refreshModels', error); })
+                        .catch(error => { showToast('刷新模型失败: ' + friendlyError(error.message), 'error'); })
                         .finally(() => {
                             if (btn) { btn.disabled = false; btn.classList.remove('btn-loading'); }
                         });
@@ -5585,7 +5519,7 @@
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ models: this.selectedModels })
                         });
-                    } catch (e) { handleError('persistModels', e); }
+                    } catch (e) { console.error('Failed to persist models:', e); this.showToast('保存模型选择失败', 'error'); }
                 },
 
                 confirmModelSelection() {
@@ -5719,6 +5653,28 @@
                     stopBtn.disabled = false;
                     btn.innerHTML = '测试中...';
                     this.isRunning = true;
+                    this.abortController = new AbortController();
+
+                    document.getElementById('progressContainer').style.display = 'block';
+                    document.getElementById('progressText').textContent = '正在连接...';
+                    document.getElementById('progressPercent').textContent = '0%';
+                    this.allResults = {};
+                    document.getElementById('aiStreamContent').innerHTML = '';
+                    document.getElementById('aiStreamStatus').textContent = '等待中';
+                    this._testSetsCompleted = 0;
+                    this._totalTestSets = 0;
+                    this._allStreamItems = [];
+                    document.getElementById('resultCount').textContent = '0 题';
+                    const hs = document.getElementById('historySelector');
+                    if (hs && hs.value) {
+                        hs.value = '';
+                        const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
+                        if (textEl) textEl.textContent = '当前运行';
+                    }
+                    const modelFilter = document.getElementById('resultFilterModel');
+                    if (modelFilter) { modelFilter.value = ''; }
+                    const modelDropdown = document.getElementById('resultFilterModelDropdown');
+                    if (modelDropdown) { modelDropdown.innerHTML = '<div class="custom-select-option selected" data-value="" onclick="App.selectDropdownOption(\'resultFilterModel\', \'\', \'所有模型\')">所有模型</div>'; }
 
                     const bySet = {};
                     selPrompts.forEach(p => {
@@ -5743,56 +5699,75 @@
                         stopBtn.disabled = true;
                         btn.innerHTML = '开始测试';
                         this.isRunning = false;
+                        this.abortController = null;
                         return;
                     }
 
-                    const testSetsPayload = testSetNames.map(ts => ({
-                        name: ts,
-                        prompts: bySet[ts].prompts,
-                        questions: Array.from(bySet[ts].questions)
-                    }));
-                    const payload = {
-                        test_sets: testSetsPayload,
-                        models: this.selectedModels
-                    };
-
+                    const testCount = parseInt(document.getElementById('modal-testCountInput').value) || 1;
+                    this._totalTestSets = 1;
+                    let totalTasks = 0;
+                    testSetNames.forEach(ts => {
+                        const group = bySet[ts];
+                        totalTasks += group.prompts.length * Array.from(group.questions).length * this.selectedModels.length * testCount;
+                    });
+                    document.getElementById('progressContainer').dataset.total = totalTasks;
                     try {
-                        const submitResp = await fetch('/api/v1/test-job/submit', {
+                        const testSetsPayload = testSetNames.map(ts => ({
+                            name: ts,
+                            prompts: bySet[ts].prompts,
+                            questions: Array.from(bySet[ts].questions)
+                        }));
+                        const payload = {
+                            test_sets: testSetsPayload,
+                            models: this.selectedModels
+                        };
+                        const connTimer = setTimeout(() => {
+                            try { this.abortController.abort(new DOMException('连接服务器超时')); } catch (e) {}
+                        }, 60000);
+                        const response = await fetch('/api/v1/run-tests', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify(payload),
+                            signal: this.abortController.signal
                         });
-                        if (!submitResp.ok) {
-                            const err = await submitResp.json();
-                            throw new Error(err.error || '提交测试任务失败');
+                        clearTimeout(connTimer);
+                        if (!response.ok) {
+                            let errMsg = response.statusText;
+                            try { const errBody = await response.json(); errMsg = errBody.error || errBody.message || errMsg; } catch (e) {}
+                            throw new Error(errMsg);
                         }
-                        const { job_id, total_tasks } = await submitResp.json();
-
-                        localStorage.setItem('ft_active_job_id', job_id);
-                        this._activeJobId = job_id;
-                        this.allResults = {};
-                        this._allStreamItems = [];
-                        document.getElementById('aiStreamContent').innerHTML = '';
-                        document.getElementById('aiStreamStatus').textContent = '生成中';
-                        document.getElementById('aiStreamStatus').classList.add('active');
-                        document.getElementById('resultCount').textContent = '0 题';
-                        document.getElementById('progressContainer').style.display = 'block';
-                        document.getElementById('progressContainer').dataset.total = total_tasks;
-                        document.getElementById('progressText').textContent = '正在连接...';
-                        document.getElementById('progressPercent').textContent = '0%';
-
-                        const hs = document.getElementById('historySelector');
-                        if (hs && hs.value) {
-                            hs.value = '';
-                            const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
-                            if (textEl) textEl.textContent = '当前运行';
+                        if (!response.body) throw new Error('服务器返回空响应体');
+                        const reader = response.body.getReader();
+                        const decoder = new TextDecoder();
+                        let buffer = '';
+                        let sseTimeout = null;
+                        while (true) {
+                            const readPromise = reader.read();
+                            const timeoutPromise = new Promise((_, reject) =>
+                                sseTimeout = setTimeout(() => reject(new Error('SSE读取超时')), this._sseChunkTimeout)
+                            );
+                            const { done, value } = await Promise.race([readPromise, timeoutPromise]);
+                            clearTimeout(sseTimeout);
+                            sseTimeout = null;
+                            if (done) break;
+                            buffer += decoder.decode(value, { stream: true });
+                            const lines = buffer.split('\n');
+                            buffer = lines.pop() || '';
+                            for (const line of lines) {
+                                if (line.startsWith('data: ')) {
+                                    try { const data = JSON.parse(line.slice(6));
+                                        this.handleStreamData(data); } catch (e) { console.warn(
+                                            'SSE parse error:', e, line.slice(0, 200)); }
+                                } else if (line.startsWith('data:')) {
+                                    try { const data = JSON.parse(line.slice(5));
+                                        this.handleStreamData(data); } catch (e) { console.warn(
+                                            'SSE parse error:', e, line.slice(0, 200)); }
+                                }
+                            }
                         }
-
-                        this.abortController = new AbortController();
-                        await this._connectJobStream(job_id);
                     } catch (error) {
-                        if (error.name === 'AbortError') { showToast('测试已终止', 'warning'); }
-                        else { showToast('测试失败: ' + friendlyError(error.message), 'error'); }
+                        if (error.name === 'AbortError') { showToast('测试已终止', 'warning'); } else { showToast(
+                            '测试失败: ' + friendlyError(error.message), 'error'); }
                     } finally {
                         btn.disabled = false;
                         btn.classList.remove('btn-loading');
@@ -5803,84 +5778,23 @@
                     }
                 },
 
-                async _connectJobStream(jobId) {
-                    const response = await fetch(`/api/v1/test-job/stream/${jobId}`, {
-                        signal: this.abortController.signal
-                    });
-                    if (!response.ok) throw new Error('连接任务流失败');
-                    if (!response.body) throw new Error('服务器返回空响应体');
-                    const reader = response.body.getReader();
-                    const decoder = new TextDecoder();
-                    let buffer = '';
-                    while (true) {
-                        const { done, value } = await reader.read();
-                        if (done) break;
-                        buffer += decoder.decode(value, { stream: true });
-                        const lines = buffer.split('\n');
-                        buffer = lines.pop() || '';
-                        for (const line of lines) {
-                            if (line.startsWith('data: ')) {
-                                try { const data = JSON.parse(line.slice(6)); this.handleStreamData(data); } catch (e) {}
-                            }
-                        }
-                    }
-                },
-
-                async _recoverActiveJob(jobId) {
-                    try {
-                        const resp = await fetch(`/api/v1/test-job/status/${jobId}`);
-                        if (!resp.ok) {
-                            localStorage.removeItem('ft_active_job_id');
-                            return;
-                        }
-                        const st = await resp.json();
-                        if (st.status === 'running') {
-                            this._activeJobId = jobId;
-                            this.isRunning = true;
-                            this.allResults = {};
-                            this._allStreamItems = [];
-                            document.getElementById('aiStreamContent').innerHTML = '';
-                            document.getElementById('progressContainer').style.display = 'block';
-                            document.getElementById('progressContainer').dataset.total = st.total;
-                            document.getElementById('progressText').textContent = `已恢复 ${st.completed}/${st.total} 个任务...`;
-                            document.getElementById('runBtn').disabled = true;
-                            document.getElementById('stopBtn').disabled = false;
-                            document.getElementById('runBtn').innerHTML = '测试中...';
-                            document.getElementById('aiStreamStatus').textContent = '生成中';
-                            document.getElementById('aiStreamStatus').classList.add('active');
-
-                            this.abortController = new AbortController();
-                            this._connectJobStream(jobId).catch(() => {});
-                        } else if (st.status === 'completed') {
-                            localStorage.removeItem('ft_active_job_id');
-                            await this.loadHistoryResults();
-                            const entries = this.historyResultsList;
-                            if (entries.length > 0) {
-                                const newest = entries[entries.length - 1];
-                                const hs = document.getElementById('historySelector');
-                                if (hs) hs.value = newest.path || newest.name || '';
-                                await this.loadHistoryResult();
-                            }
-                        } else {
-                            localStorage.removeItem('ft_active_job_id');
-                        }
-                    } catch (e) {
-                        localStorage.removeItem('ft_active_job_id');
-                    }
-                },
-
                 async stopTests() {
-                    if (this._activeJobId) {
-                        try {
-                            await fetch(`/api/v1/test-job/stop/${this._activeJobId}`, { method: 'POST' });
-                        } catch (e) {}
+                    let backendStopped = false;
+                    try {
+                        const resp = await fetchWithTimeout('/api/v1/stop-tests', { method: 'POST' }, 10000);
+                        backendStopped = resp.ok;
+                    } catch (err) {
+                        console.error('stop-tests failed:', err);
+                        showToast('向后端发送停止信号失败', 'error');
                     }
                     if (this.abortController) {
                         this.abortController.abort();
                     }
-                    localStorage.removeItem('ft_active_job_id');
-                    this._activeJobId = null;
-                    showToast('测试已终止', 'warning');
+                    if (backendStopped) {
+                        showToast('测试已终止', 'warning');
+                    } else {
+                        showToast('已断开前端连接，但后端可能仍在运行', 'warning');
+                    }
                 },
 
                 handleStreamData(data) {
@@ -5890,49 +5804,42 @@
                     const progressPercent = document.getElementById('progressPercent');
 
                     if (data.type === 'result') {
+                        const key = `${data.model_id || '?'}_${data.prompt_id || '?'}_${data.question_id || '?'}_${data.test_index || 0}`;
+                        if (!this.allResults[key]) { this.allResults[key] = []; }
+                        this.allResults[key].push(data);
                         this.addAiStreamItem(data);
-                        this._updateModelFilterOptions(data.model_id || '');
-                    } else if (data.type === 'progress') {
-                        const total = parseInt(progressContainer.dataset.total || data.total || 0);
+                        const total = parseInt(progressContainer.dataset.total || 0);
+                        const completed = data.completed || Object.values(this.allResults).flat().length;
+                        const percent = total > 0 ? Math.round(completed / total * 100) : 0;
+                        progressFill.style.width = percent + '%';
+                        progressPercent.textContent = percent + '%';
+                        document.getElementById('resultCount').textContent = `${completed} 题`;
+                    } else if (data.type === 'done') {
+                        progressText.textContent = data.message;
+                        this._testSetsCompleted = (this._testSetsCompleted || 0) + 1;
+                        if (this._testSetsCompleted >= this._totalTestSets) {
+                            document.getElementById('runBtn').disabled = false;
+                            document.getElementById('stopBtn').disabled = true;
+                            document.getElementById('runBtn').innerHTML = '开始测试';
+                        }
+                        document.getElementById('aiStreamStatus').textContent = '完成';
+                        document.getElementById('aiStreamStatus').classList.remove('active');
+                    } else if (data.type === 'error') {
+                        const errorMsg = data.error_msg || '未知错误';
+                        showToast(`任务出错: ${errorMsg}`, 'error');
+                        const total = parseInt(progressContainer.dataset.total || 0);
                         const completed = data.completed || 0;
                         const percent = total > 0 ? Math.round(completed / total * 100) : 0;
                         progressFill.style.width = percent + '%';
                         progressPercent.textContent = percent + '%';
                         document.getElementById('resultCount').textContent = `${completed} 题`;
-                        progressText.textContent = `已完成 ${completed}/${total}`;
-                    } else if (data.type === 'done') {
-                        progressText.textContent = data.message || '测试完成';
-                        document.getElementById('runBtn').disabled = false;
-                        document.getElementById('stopBtn').disabled = true;
-                        document.getElementById('runBtn').innerHTML = '开始测试';
-                        document.getElementById('aiStreamStatus').textContent = '完成';
-                        document.getElementById('aiStreamStatus').classList.remove('active');
-                        this.isRunning = false;
-                        this._activeJobId = null;
-                        localStorage.removeItem('ft_active_job_id');
-
-                        this.loadHistoryResults().then(() => {
-                            const entries = this.historyResultsList;
-                            if (entries.length > 0) {
-                                const newest = entries[entries.length - 1];
-                                const hs = document.getElementById('historySelector');
-                                if (hs) {
-                                    hs.value = newest.path || newest.name || '';
-                                    const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
-                                    if (textEl) textEl.textContent = `[${newest.testSet}] ${newest.name}`;
-                                }
-                                this.loadHistoryResult();
-                            }
-                        });
                     } else if (data.type === 'status') {
-                        if (data.status === 'stopped') {
-                            progressText.textContent = data.message || '已终止';
-                        }
-                        if (data.message && data.message.includes('正在生成')) {
+                        progressText.textContent = data.message;
+                        if (data.message.includes('正在生成')) {
                             document.getElementById('aiStreamStatus').textContent = '生成中';
                             document.getElementById('aiStreamStatus').classList.add('active');
                         }
-                        if (data.message && data.message.includes('已终止')) {
+                        if (data.message.includes('已终止')) {
                             document.getElementById('runBtn').disabled = false;
                             document.getElementById('stopBtn').disabled = true;
                             document.getElementById('runBtn').innerHTML = '开始测试';
@@ -6017,7 +5924,7 @@
                     opt.className = 'custom-select-option';
                     opt.dataset.value = modelId;
                     opt.textContent = modelId;
-                    opt.addEventListener('click', () => this.selectDropdownOption('resultFilterModel', modelId, modelId));
+                    opt.onclick = () => this.selectDropdownOption('resultFilterModel', modelId, modelId);
                     dropdown.appendChild(opt);
                 },
 
@@ -6036,15 +5943,16 @@
                         .flatMap(r => r.value);
                     const dropdown = document.getElementById('historySelectorDropdown');
                     if (dropdown) {
-                        dropdown.innerHTML = '<div class="custom-select-option selected" data-dropdown="historySelector" data-value="" data-label="当前运行">当前运行</div>' +
+                        dropdown.innerHTML = '<div class="custom-select-option selected" data-value="" onclick="App.selectDropdownOption(\'historySelector\', \'\', \'当前运行\')">当前运行</div>' +
                             this.historyResultsList.map((r, idx) => {
                                 const key = r.path || r.name || 'result_' + idx;
                                 const text = `[${r.testSet}] ${r.name}`;
-                                return `<div class="custom-select-option" data-dropdown="historySelector" data-value="${this.escapeHtml(key)}" data-label="${this.escapeHtml(text)}">${this.escapeHtml(text)}</div>`;
+                                return `<div class="custom-select-option" data-value="${this.escapeHtml(key)}" onclick="App.selectDropdownOption('historySelector', '${this.escapeHtml(key)}', '${this.escapeHtml(text)}')">${this.escapeHtml(text)}</div>`;
                             }).join('');
                     }
                     } catch (error) {
-                        handleError('loadHistoryResults', error);
+                        console.error('Failed to load history results:', error);
+                        this.showToast('加载历史结果失败', 'error');
                         const retryBtn = document.getElementById('historyRetryBtn');
                         if (retryBtn) retryBtn.style.display = '';
                     }
@@ -6157,14 +6065,11 @@
                     this.renderPromptList();
                     this.renderQuestionList();
                     this.loadHistoryResults();
-                    const activeJobId = localStorage.getItem('ft_active_job_id');
-                    if (activeJobId) { await this._recoverActiveJob(activeJobId); }
                     this.canvasState.history = [];
                     this.canvasHistoryIndex = -1;
                     this.saveCanvasSnapshot();
                     try { await this.renderArchiveSelector(); } catch (e) { console.error('加载存档失败', e); }
                     this.initDropdowns();
-                    _bindEvents();
                     ['temperature', 'concurrency', 'testCount', 'maxRetries', 'contextSize', 'topP', 'minP', 'topK'].forEach(p => this.updateSliderVisual(p));
                     const overlay = document.getElementById('loadingOverlay');
                     if (overlay) {
@@ -6209,7 +6114,8 @@
                             document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
                         }
                     } catch (error) {
-                        handleError('loadConfig', error);
+                        console.error('Failed to load config:', error);
+                        showToast('无法连接服务器，请检查后端', 'error');
                     }
                 },
 
@@ -6219,208 +6125,73 @@
                 debouncedAutoSave: debounce(function() { this.saveCanvas(); }, 500)
             };
 
-            function _bindEvents() {
-                const byId = (id) => document.getElementById(id);
-                const on = (el, ev, fn) => { if (el) el.addEventListener(ev, fn); };
-
-                on(byId('setFilterBtn'), 'click', () => App.toggleSetFilterPanel());
-                on(byId('promptSearch'), 'input', debounce(() => App.renderPromptList(), 300));
-                on(byId('questionSearch'), 'input', debounce(() => App.renderQuestionList(), 300));
-                on(byId('testSetDir'), 'blur', () => App.onTestSetDirChange());
-                on(byId('baseUrl'), 'blur', () => App.onBaseUrlBlur());
-                on(byId('resultFilterText'), 'input', debounce(() => App.applyStreamFilter(), 300));
-                on(byId('paramsToggle'), 'click', () => App.toggleParamsModal());
-                on(byId('openModelBtn'), 'click', () => App.openModelModal());
-                on(byId('runBtn'), 'click', () => App.runTests());
-                on(byId('stopBtn'), 'click', () => App.stopTests());
-                on(byId('canvasUndoBtn'), 'click', () => App.canvasUndo());
-                on(byId('canvasRedoBtn'), 'click', () => App.canvasRedo());
-                on(byId('historyRetryBtn'), 'click', () => App.retryLoadHistory());
-                on(byId('modal-streaming'), 'change', () => App.onConfigChange());
-                on(byId('autoConnectToggle'), 'change', () => App.onConfigChange());
-
-                $$('.tab-btn').forEach(el => {
-                    on(el, 'click', () => App.switchSidebarTab(el.dataset.tab));
-                });
-
-                $$('[data-action]').forEach(el => {
-                    const action = el.dataset.action;
-                    const param = el.dataset.param;
-                    if (typeof App[action] === 'function') {
-                        on(el, 'click', (e) => param !== undefined ? App[action](param) : App[action](e));
-                    }
-                });
-
-                $$('[data-dialog]').forEach(el => {
-                    const dialog = el.dataset.dialog;
-                    const result = el.dataset.result;
-                    if (dialog === 'confirm') {
-                        on(el, 'click', () => App._confirmResult(result === 'true'));
-                    } else if (dialog === 'prompt') {
-                        on(el, 'click', () => App._promptResult(result === 'true'));
-                    }
-                });
-
-                $$('[data-stepper]').forEach(el => {
-                    const param = el.dataset.stepper;
-                    const delta = parseFloat(el.dataset.delta);
-                    on(el, 'click', () => App.stepperChange(param, delta));
-                });
-
-                $$('.slider-native[data-slider]').forEach(el => {
-                    const param = el.dataset.slider;
-                    on(el, 'input', () => App.onModalSliderChange(param, el.value));
-                    on(el, 'change', () => App.onModalSliderCommit(param, el.value));
-                });
-
-                $$('.stepper-value[id^="modal-"][id$="Input"]').forEach(el => {
-                    const param = el.id.slice(6, -5);
-                    on(el, 'change', () => App.onModalNumberChange(param, el.value));
-                });
-
-                on(byId('paramsModal'), 'click', function(e) {
-                    if (e.target === this) App.toggleParamsModal();
-                });
-                on(byId('modelModal'), 'click', function(e) {
-                    if (e.target === this) App.closeModelModal();
-                });
-
-                const mm = byId('modelModal');
-                if (mm) {
-                    const mmClose = mm.querySelector('.model-modal-close');
-                    if (mmClose) on(mmClose, 'click', () => App.closeModelModal());
-                    const mmBtns = mm.querySelectorAll('.model-modal-footer .btn');
-                    if (mmBtns.length >= 2) {
-                        on(mmBtns[0], 'click', () => App.closeModelModal());
-                        on(mmBtns[1], 'click', () => App.confirmModelSelection());
+            document.addEventListener('mousemove', function(e) {
+                if (App.isDragging) return;
+                if (App.canvasBoxState) {
+                    const wp = App.getWorldPos(e.clientX, e.clientY);
+                    App.canvasBoxState.curX = wp.x;
+                    App.canvasBoxState.curY = wp.y;
+                    const lx = Math.min(App.canvasBoxState.startX, wp.x);
+                    const ly = Math.min(App.canvasBoxState.startY, wp.y);
+                    const rx = Math.max(App.canvasBoxState.startX, wp.x);
+                    const ry = Math.max(App.canvasBoxState.startY, wp.y);
+                    const overlay = document.getElementById('boxSelectOverlay');
+                    if (overlay) {
+                        overlay.style.left = (lx * App.scale + App.panX) + 'px';
+                        overlay.style.top = (ly * App.scale + App.panY) + 'px';
+                        overlay.style.width = ((rx - lx) * App.scale) + 'px';
+                        overlay.style.height = ((ry - ly) * App.scale) + 'px';
                     }
                 }
+                if (App.canvasPanState) {
+                    App.closeAllSelectors();
+                    App.panX = App.canvasPanState.origPanX + (e.clientX - App.canvasPanState.startX);
+                    App.panY = App.canvasPanState.origPanY + (e.clientY - App.canvasPanState.startY);
+                    App.clampPan();
+                    App.applyViewTransform();
+                }
+            });
 
-                document.addEventListener('mousemove', function(e) {
-                    if (App.isDragging) return;
-                    if (App.canvasBoxState) {
-                        const wp = App.getWorldPos(e.clientX, e.clientY);
-                        App.canvasBoxState.curX = wp.x;
-                        App.canvasBoxState.curY = wp.y;
-                        const lx = Math.min(App.canvasBoxState.startX, wp.x);
-                        const ly = Math.min(App.canvasBoxState.startY, wp.y);
-                        const rx = Math.max(App.canvasBoxState.startX, wp.x);
-                        const ry = Math.max(App.canvasBoxState.startY, wp.y);
-                        const overlay = document.getElementById('boxSelectOverlay');
-                        if (overlay) {
-                            overlay.style.left = (lx * App.scale + App.panX) + 'px';
-                            overlay.style.top = (ly * App.scale + App.panY) + 'px';
-                            overlay.style.width = ((rx - lx) * App.scale) + 'px';
-                            overlay.style.height = ((ry - ly) * App.scale) + 'px';
-                        }
-                    }
-                    if (App.canvasPanState) {
-                        App.closeAllSelectors();
-                        App.panX = App.canvasPanState.origPanX + (e.clientX - App.canvasPanState.startX);
-                        App.panY = App.canvasPanState.origPanY + (e.clientY - App.canvasPanState.startY);
-                        App.clampPan();
-                        App.applyViewTransform();
-                    }
-                });
+            document.addEventListener('mouseup', function() {
+                if (App.canvasPanState) {
+                    const c = document.getElementById('comfyCanvasContainer');
+                    if (c) c.classList.remove('grabbing');
+                    App.canvasPanState = null;
+                    App.debouncedAutoSave();
+                }
+                if (App.canvasBoxState) {
+                    App.finalizeBoxSelect();
+                }
+            });
 
-                document.addEventListener('mouseup', function() {
-                    if (App.canvasPanState) {
-                        const c = document.getElementById('comfyCanvasContainer');
-                        if (c) c.classList.remove('grabbing');
-                        App.canvasPanState = null;
-                        App.debouncedAutoSave();
-                    }
-                    if (App.canvasBoxState) {
-                        App.finalizeBoxSelect();
-                    }
-                });
+            document.getElementById('paramsModal').addEventListener('click', function(e) {
+                if (e.target === this) App.toggleParamsModal();
+            });
 
-                document.addEventListener('click', function(e) {
-                    const selItem = e.target.closest('.comfy-sel-item');
-                    if (selItem) {
-                        const nodeId = selItem.dataset.nodeId;
-                        const type = selItem.dataset.type;
-                        const idx = parseInt(selItem.dataset.index, 10);
-                        App.onSelectorPick(nodeId, type, idx);
-                        return;
-                    }
-                    const clearBtn = e.target.closest('[data-clear]');
-                    if (clearBtn) {
-                        e.stopPropagation();
-                        App.clearNodeValue(clearBtn.dataset.clear);
-                        return;
-                    }
-                    const removeBtn = e.target.closest('[data-remove]');
-                    if (removeBtn) {
-                        App.removeNode(removeBtn.dataset.remove);
-                        return;
-                    }
-                    const selectorBody = e.target.closest('[data-selector]');
-                    if (selectorBody) {
-                        const nid = selectorBody.dataset.selector;
-                        const ntype = selectorBody.dataset.selectorType;
-                        App.openNodeSelector(nid, ntype);
-                        return;
-                    }
-                    const setChip = e.target.closest('[data-ts]');
-                    if (setChip) {
-                        const name = setChip.dataset.ts;
-                        if (name !== undefined) App.toggleSetFilter(name);
-                        return;
-                    }
-                    const tagChip = e.target.closest('[data-tag]');
-                    if (tagChip) {
-                        const tag = tagChip.dataset.tag;
-                        if (tag !== undefined) App.toggleTagFromFilter(tag);
-                        return;
-                    }
-                    const dropOpt = e.target.closest('[data-dropdown]');
-                    if (dropOpt) {
-                        const id = dropOpt.dataset.dropdown;
-                        const val = dropOpt.dataset.value;
-                        const label = dropOpt.dataset.label || val;
-                        App.selectDropdownOption(id, val, label);
-                        return;
-                    }
-                    if (!e.target.closest('.comfy-sel-popup') && !e.target.closest('.comfy-node-body') && !e.target.closest('.comfy-socket')) {
-                        App.closeAllSelectors();
-                        document.querySelectorAll('.custom-select-dropdown.show').forEach(d => {
-                            d.classList.remove('show');
-                            d.previousElementSibling?.classList.remove('open');
-                        });
-                    }
-                });
+            document.addEventListener('click', function(e) {
+                const selItem = e.target.closest('.comfy-sel-item');
+                if (selItem) {
+                    const nodeId = selItem.dataset.nodeId;
+                    const type = selItem.dataset.type;
+                    const index = parseInt(selItem.dataset.index, 10);
+                    App.onSelectorPick(nodeId, type, index);
+                    return;
+                }
+                if (!e.target.closest('.comfy-sel-popup') && !e.target.closest('.comfy-node-body') && !e.target.closest(
+                        '.comfy-socket')) {
+                    App.closeAllSelectors();
+                }
+            });
 
-                document.addEventListener('mousedown', function(e) {
-                    const dragHeader = e.target.closest('[data-drag]');
-                    if (dragHeader) {
-                        e.preventDefault();
-                        App.startNodeDrag(e, dragHeader.dataset.drag);
-                        return;
-                    }
-                    const socket = e.target.closest('.comfy-socket');
-                    if (socket) {
-                        e.stopPropagation();
-                        const nodeId = socket.dataset.node;
-                        const type = socket.dataset.type;
-                        const dir = socket.dataset.dir;
-                        const typeClass = socket.classList.contains('s-prompt') ? 'prompt' :
-                            socket.classList.contains('s-question') ? 'question' : 'model';
-                        App.startSocketDrag(e, nodeId, type, dir, typeClass);
-                        return;
-                    }
-                });
-
-                document.addEventListener('keydown', function(e) {
-                    if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-                        e.preventDefault();
-                        App.canvasUndo();
-                    } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-                        e.preventDefault();
-                        App.canvasRedo();
-                    }
-                });
-            }
+            document.addEventListener('keydown', function(e) {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+                    e.preventDefault();
+                    App.canvasUndo();
+                } else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
+                    e.preventDefault();
+                    App.canvasRedo();
+                }
+            });
 
             App.init();
         })();

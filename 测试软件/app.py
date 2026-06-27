@@ -2,6 +2,7 @@ import os
 import json
 import requests
 import threading
+import queue
 import re
 import uuid
 import sys
@@ -60,8 +61,8 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIR = os.path.join(BASE_DIR, "data")
 
 config_lock = threading.Lock()
-stop_generation = 0
-stop_lock = threading.Lock()
+active_jobs = {}
+active_jobs_lock = threading.Lock()
 
 default_config = {
     "api_key": "",
@@ -490,11 +491,13 @@ def handle_canvas_state():
     return jsonify({"status": "ok"})
 
 
-@app.route("/api/v1/stop-tests", methods=["POST"])
-def stop_tests():
-    global stop_generation
-    with stop_lock:
-        stop_generation += 1
+@app.route("/api/v1/test-job/stop/<job_id>", methods=["POST"])
+def stop_test_job(job_id):
+    with active_jobs_lock:
+        job = active_jobs.get(job_id)
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+    job.stop()
     return jsonify({"status": "ok"})
 
 
@@ -589,10 +592,9 @@ def _handle_non_streaming_response(response, attempt):
     return None
 
 
-def call_ai(system_prompt, user_prompt, model=None, max_retries=None, timeout=None, run_gen=None):
+def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
+    """Single AI call - no retry. Returns {success, content?} or {rate_limited: True}."""
     with config_lock:
-        if max_retries is None:
-            max_retries = config.get("max_retries", 3)
         if timeout is None:
             timeout = config.get("timeout", 60)
         api_key = config.get("api_key", "")
@@ -611,61 +613,310 @@ def call_ai(system_prompt, user_prompt, model=None, max_retries=None, timeout=No
 
     payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size)
 
-    for attempt in range(max_retries):
-        if should_stop(run_gen):
-            return None
-        try:
-            req_payload = dict(payload)
+    try:
+        req_payload = dict(payload)
+        if streaming:
+            req_payload["stream"] = True
+        response = requests.post(
+            f"{base_url}/chat/completions",
+            headers=headers,
+            json=req_payload,
+            stream=streaming,
+            timeout=timeout,
+        )
+        if response.status_code == 200:
             if streaming:
-                req_payload["stream"] = True
-            response = requests.post(
-                f"{base_url}/chat/completions",
-                headers=headers,
-                json=req_payload,
-                stream=streaming,
-                timeout=timeout,
-            )
-            if response.status_code == 200:
-                if streaming:
-                    result = _handle_streaming_response(response, attempt)
-                else:
-                    result = _handle_non_streaming_response(response, attempt)
-                if result:
-                    return result
-            elif response.status_code == 429:
-                if should_stop(run_gen): return {"success": False, "error_type": "cancelled", "error_msg": "已取消"}
-                time.sleep(2**attempt)
-            elif 400 <= response.status_code < 500:
-                log_debug(f"AI请求客户端错误，status={response.status_code}，不重试")
-                return {"success": False, "error_type": "client_error", "error_msg": f"HTTP {response.status_code}: {response.text[:200]}"}
+                result = _handle_streaming_response(response, 0)
             else:
-                log_debug(
-                    f"AI请求失败，status={response.status_code}, response={response.text}"
-                )
-                if should_stop(run_gen): return {"success": False, "error_type": "cancelled", "error_msg": "已取消"}
-                time.sleep(2**attempt)
-        except requests.exceptions.Timeout:
-            log_debug(f"AI请求超时，attempt={attempt}")
-            if should_stop(run_gen): return {"success": False, "error_type": "cancelled", "error_msg": "已取消"}
-            time.sleep(2**attempt)
+                result = _handle_non_streaming_response(response, 0)
+            if result:
+                return result
+            return {"success": False, "error": "Empty AI response"}
+        elif response.status_code == 429:
+            return {"rate_limited": True}
+        elif 400 <= response.status_code < 500:
+            log_debug(f"AI请求客户端错误，status={response.status_code}，不重试")
+            return {"success": False, "error": f"HTTP {response.status_code}: {response.text[:200]}"}
+        else:
+            log_debug(f"AI请求失败，status={response.status_code}，将重试")
+            return {"retry": True}
+    except requests.exceptions.Timeout:
+        log_debug(f"AI请求超时，将重试")
+        return {"retry": True}
+    except Exception as e:
+        log_debug(f"AI请求异常: {e}")
+        return {"success": False, "error": str(e)}
+
+
+# ============ Test Job System ============
+
+def _run_single_task(task):
+    """Wrap system prompt and call AI. Returns raw result dict from call_ai_atomic."""
+    system_prompt = task.prompt.get("content", "")
+    if system_prompt:
+        prompt_type = task.prompt.get("type", "content")
+        if prompt_type != "instruction":
+            wrapper = "以下是被测试的文件内容：\n\n{content}\n\n请根据以上文件内容回答用户的问题。"
+            system_prompt = wrapper.replace("{content}", system_prompt)
+    user_prompt = task.question.get("question", "")
+    return call_ai_atomic(system_prompt, user_prompt, model=task.model)
+
+
+class TestTask:
+    __slots__ = ('seq', 'test_set_name', 'prompt', 'question', 'model', 'test_index',
+                 'status', 'retry_count', 'backoff_until', 'result')
+
+    def __init__(self, seq, test_set_name, prompt, question, model, test_index):
+        self.seq = seq
+        self.test_set_name = test_set_name
+        self.prompt = prompt
+        self.question = question
+        self.model = model
+        self.test_index = test_index
+        self.status = "pending"
+        self.retry_count = 0
+        self.backoff_until = 0
+        self.result = None
+
+
+class TestJob:
+    def __init__(self, job_id, test_sets, models, concurrency, test_count):
+        self.job_id = job_id
+        self.tasks = []
+        self.pending = []
+        self.rate_limited = []
+        self.results = {}
+        self.results_by_set = {}
+        self.concurrency = concurrency
+        self.test_count = test_count
+        self.status = "running"
+        self.stop_event = threading.Event()
+        self.subscribers = []
+        self.total = 0
+        self.completed = 0
+        self.failed = 0
+        self.executor = None
+        self.futures = {}
+        self.lock = threading.Lock()
+        self.write_lock = threading.Lock()
+
+        seq = 0
+        for ts in test_sets:
+            name = ts["name"]
+            prompts = ts.get("prompts", [])
+            questions = ts.get("questions", [])
+            for p in prompts:
+                for q in questions:
+                    for m in models:
+                        for i in range(test_count):
+                            seq += 1
+                            task = TestTask(seq, name, p, q, m, i)
+                            self.tasks.append(task)
+        self.total = len(self.tasks)
+        self.pending = list(self.tasks)
+
+    def _get_backoff(self, retry_count):
+        if retry_count < 6:
+            return 2 ** (retry_count + 1)
+        return 60
+
+    def add_subscriber(self, q):
+        with self.lock:
+            for seq in sorted(self.results.keys()):
+                q.put(("result", self.results[seq]))
+            q.put(("progress", {"completed": self.completed, "total": self.total, "failed": self.failed}))
+            self.subscribers.append(q)
+
+    def remove_subscriber(self, q):
+        with self.lock:
+            self.subscribers = [s for s in self.subscribers if s is not q]
+
+    def _broadcast(self, event_type, data):
+        with self.lock:
+            dead = []
+            for s in self.subscribers:
+                try:
+                    s.put_nowait((event_type, data))
+                except queue.Full:
+                    dead.append(s)
+            for d in dead:
+                self.subscribers.remove(d)
+
+    def _find_task(self, seq):
+        for task in self.tasks:
+            if task.seq == seq:
+                return task
+        return None
+
+    def _build_result_item(self, task, result):
+        item = {
+            "test_set": task.test_set_name,
+            "id": f"p{task.prompt.get('id', '?')}_q{task.question.get('id', '?')}_m{task.model}_{task.test_index}",
+            "prompt_id": task.prompt.get("id"),
+            "question_id": task.question.get("id"),
+            "model_id": task.model,
+            "prompt_tag": task.prompt.get("tag", ""),
+            "question_tag": task.question.get("tag", ""),
+            "question": task.question.get("question", ""),
+            "expected_answer": task.question.get("answer", ""),
+            "test_index": task.test_index + 1,
+            "test_count": self.test_count,
+        }
+        if result.get("success"):
+            item["ai_answer"] = result["content"]
+        else:
+            item["ai_answer"] = None
+            item["error_type"] = result.get("error", "")
+            item["error_msg"] = result.get("error", "")
+        return item
+
+    def run_scheduler(self):
+        try:
+            with self.lock:
+                self.executor = ThreadPoolExecutor(max_workers=self.concurrency)
+
+            while self.status == "running":
+                self._collect_futures()
+                self._check_rate_limited()
+                self._dispatch_tasks()
+
+                if self._is_done():
+                    self.status = "completed"
+                    self._broadcast("status", {"status": "completed", "message": "测试完成"})
+                    break
+
+                if self.stop_event.is_set():
+                    self.status = "stopped"
+                    self._broadcast("status", {"status": "stopped", "message": "测试已终止"})
+                    break
+
+                time.sleep(0.05)
         except Exception as e:
-            log_debug(f"AI请求异常: {e}")
-            if should_stop(run_gen): return {"success": False, "error_type": "cancelled", "error_msg": "已取消"}
-            time.sleep(2**attempt)
-    return {"success": False, "error_type": "api_error", "error_msg": "API请求失败"}
+            log_debug(f"Scheduler error for job {self.job_id}: {e}")
+            self.status = "error"
+            self._broadcast("status", {"status": "error", "message": str(e)})
+        finally:
+            self._finalize()
+
+    def _collect_futures(self):
+        with self.lock:
+            done_seqs = [seq for seq, f in self.futures.items() if f.done()]
+
+        for seq in done_seqs:
+            with self.lock:
+                future = self.futures.pop(seq, None)
+            if future is None:
+                continue
+            try:
+                result = future.result(timeout=0)
+            except Exception as e:
+                result = {"success": False, "error": str(e)}
+
+            task = self._find_task(seq)
+            if task is None:
+                continue
+
+            if result.get("rate_limited") or result.get("retry"):
+                task.retry_count += 1
+                if task.retry_count > 12:
+                    task.status = "error"
+                    task.result = {"success": False, "error": "Exceeded retry limit after 12 retries"}
+                    self.completed += 1
+                    self.failed += 1
+                else:
+                    backoff = self._get_backoff(task.retry_count)
+                    task.backoff_until = time.time() + backoff
+                    task.status = "rate_limited"
+                    self.rate_limited.append(task)
+                    log_debug(f"Task {seq} rate limited, retry {task.retry_count}, backoff {backoff}s")
+                    continue
+            elif result.get("success"):
+                task.status = "done"
+                task.result = result
+                self.completed += 1
+            else:
+                task.status = "error"
+                task.result = result
+                self.completed += 1
+                self.failed += 1
+
+            item = self._build_result_item(task, result)
+            with self.lock:
+                self.results[seq] = item
+                ts_name = task.test_set_name
+                if ts_name not in self.results_by_set:
+                    self.results_by_set[ts_name] = []
+                self.results_by_set[ts_name].append(item)
+
+            self._broadcast("result", item)
+            self._broadcast("progress", {"completed": self.completed, "total": self.total, "failed": self.failed})
+
+            if self.completed % INCREMENTAL_SAVE_STEP == 0:
+                self._incremental_save()
+
+    def _check_rate_limited(self):
+        now = time.time()
+        ready = []
+        with self.lock:
+            for task in self.rate_limited:
+                if task.backoff_until <= now:
+                    ready.append(task)
+            for task in ready:
+                self.rate_limited.remove(task)
+                task.status = "pending"
+                self.pending.insert(0, task)
+
+    def _dispatch_tasks(self):
+        with self.lock:
+            available = self.concurrency - len(self.futures)
+            for _ in range(available):
+                if not self.pending:
+                    break
+                task = self.pending.pop(0)
+                task.status = "running"
+                future = self.executor.submit(_run_single_task, task)
+                self.futures[task.seq] = future
+
+    def _is_done(self):
+        with self.lock:
+            return (not self.pending and not self.rate_limited and not self.futures)
+
+    def _incremental_save(self):
+        with self.write_lock:
+            for ts_name, results in self.results_by_set.items():
+                save_results_to_test_set(ts_name, list(results), incremental=True)
+
+    def _finalize(self):
+        with self.write_lock:
+            for ts_name, results in self.results_by_set.items():
+                save_results_to_test_set(ts_name, list(results))
+                incr_path = resolve_test_set_path(ts_name, "测试结果", INCREMENTAL_FILE)
+                if os.path.exists(incr_path):
+                    try:
+                        os.remove(incr_path)
+                    except OSError:
+                        pass
+
+        self._broadcast("done", {"status": self.status, "message": "测试完成" if self.status == "completed" else "测试已终止"})
+
+        if self.executor:
+            try:
+                self.executor.shutdown(wait=False)
+            except Exception:
+                pass
+
+        with active_jobs_lock:
+            active_jobs.pop(self.job_id, None)
+
+    def stop(self):
+        self.stop_event.set()
 
 
-# ============ NEW: Run Tests (Cartesian Product) ============
-
-@app.route("/api/v1/run-tests", methods=["POST"])
-def run_tests():
-    global stop_generation
+@app.route("/api/v1/test-job/submit", methods=["POST"])
+def submit_test_job():
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid request"}), 400
-
-    with stop_lock:
-        current_gen = stop_generation
 
     with config_lock:
         concurrency = config.get("concurrency", 1)
@@ -673,6 +924,7 @@ def run_tests():
 
     test_sets = data.get("test_sets", [])
     models = data.get("models", [])
+
     if not models:
         with config_lock:
             models = [config.get("model", "gpt-4o")]
@@ -684,179 +936,96 @@ def run_tests():
         if not validate_test_set_name(ts.get("name", "")):
             return jsonify({"error": f"Invalid test_set name: {ts.get('name')}"}), 400
 
-    return run_tests_cartesian(test_sets, models, concurrency, test_count, current_gen)
+    job_id = uuid.uuid4().hex
+    job = TestJob(job_id, test_sets, models, concurrency, test_count)
 
-
-def should_stop(run_gen):
-    with stop_lock:
-        return stop_generation != run_gen
-
-def run_tests_cartesian(test_sets, models, concurrency, test_count, current_gen):
-    MAX_TASKS = 10000
-    task_queue = []
-    for ts in test_sets:
-        name = ts["name"]
-        prompts = ts.get("prompts", [])
-        questions = ts.get("questions", [])
-        for p in prompts:
-            for q in questions:
-                for m in models:
-                    for i in range(test_count):
-                        task_queue.append((name, p, q, m, i))
-
-    total_tasks = len(task_queue)
-    if total_tasks == 0:
+    if job.total == 0:
         return jsonify({"error": "No test items (cartesian product is empty)"}), 400
-    if total_tasks > MAX_TASKS:
-        return jsonify({"error": f"任务数 {total_tasks} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
+
+    MAX_TASKS = 10000
+    if job.total > MAX_TASKS:
+        return jsonify({"error": f"任务数 {job.total} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
+
+    with active_jobs_lock:
+        active_jobs[job_id] = job
+
+    thread = threading.Thread(target=job.run_scheduler, name=f"Job-{job_id[:8]}")
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({"job_id": job_id, "total_tasks": job.total})
+
+
+@app.route("/api/v1/test-job/stream/<job_id>", methods=["GET"])
+def stream_test_job(job_id):
+    with active_jobs_lock:
+        job = active_jobs.get(job_id)
+    if job is None:
+        return jsonify({"error": "Job not found"}), 404
+
+    sub_queue = queue.Queue()
 
     def generate():
-        completed = 0
-        failed = 0
-        all_results = []
-        results_by_set = {}
-        results_lock = threading.Lock()
-        disconnected = threading.Event()
-
+        job.add_subscriber(sub_queue)
         try:
-            yield f"data: {json.dumps({'type': 'status', 'message': f'共 {total_tasks} 个测试任务, 并发数 {concurrency}, 正在生成...'}, ensure_ascii=False)}\n\n"
+            while True:
+                try:
+                    event_type, data = sub_queue.get(timeout=30)
+                except queue.Empty:
+                    yield f"data: {json.dumps({'type': 'heartbeat'}, ensure_ascii=False)}\n\n"
+                    if job.status != "running":
+                        break
+                    continue
 
-            def run_task(task):
-                test_set_name, p, q, m, test_index = task
-                if should_stop(current_gen):
-                    return None
-
-                system_prompt = p.get("content", "")
-                if system_prompt:
-                    prompt_type = p.get("type", "content")
-                    if prompt_type == "instruction":
-                        pass
-                    else:
-                        wrapper = "以下是被测试的文件内容：\n\n{content}\n\n请根据以上文件内容回答用户的问题。"
-                        system_prompt = wrapper.replace("{content}", system_prompt)
-
-                user_prompt = q.get("question", "")
-                expected_answer = q.get("answer", "")
-
-                reply = call_ai(system_prompt, user_prompt, model=m, run_gen=current_gen)
-                if reply is None:
-                    return None
-
-                result = {
-                    "test_set": test_set_name,
-                    "id": f"p{p.get('id', '?')}_q{q.get('id', '?')}_m{m}_{test_index}",
-                    "prompt_id": p.get("id"),
-                    "question_id": q.get("id"),
-                    "model_id": m,
-                    "prompt_tag": p.get("tag", ""),
-                    "question_tag": q.get("tag", ""),
-                    "question": user_prompt,
-                    "answer": expected_answer,
-                    "test_index": test_index + 1,
-                    "test_count": test_count,
-                }
-                if isinstance(reply, dict) and reply.get("success"):
-                    result["model_reply"] = reply["content"]
-                elif isinstance(reply, dict) and not reply.get("success"):
-                    result["model_reply"] = None
-                    result["error_type"] = reply.get("error_type")
-                    result["error_msg"] = reply.get("error_msg")
-                return result
-
-            with ThreadPoolExecutor(max_workers=min(max(1, concurrency), 20)) as executor:
-                futures = {executor.submit(run_task, task): task for task in task_queue}
-                for future in as_completed(futures):
-                    if should_stop(current_gen) or disconnected.is_set():
-                        if sys.version_info >= (3, 9):
-                            executor.shutdown(wait=False, cancel_futures=True)
-                        else:
-                            executor.shutdown(wait=False)
-                        reason = '测试已终止' if should_stop(current_gen) else '客户端已断开'
-                        yield f"data: {json.dumps({'type': 'status', 'message': reason}, ensure_ascii=False)}\n\n"
-                        if all_results:
-                            try:
-                                for rst_name, rst_results in results_by_set.items():
-                                    for r in rst_results:
-                                        r["is_cancelled"] = True
-                                    save_results_to_test_set(rst_name, rst_results)
-                                yield f"data: {json.dumps({'type': 'done', 'message': '测试已中断，部分结果已保存', 'total_results': len(all_results)}, ensure_ascii=False)}\n\n"
-                            except (OSError, IOError) as e:
-                                log_debug(f"中断保存结果失败: {e}")
-                                yield f"data: {json.dumps({'type': 'status', 'message': f'中断保存结果失败: {e}'}, ensure_ascii=False)}\n\n"
-                                yield f"data: {json.dumps({'type': 'done', 'message': '中断保存失败', 'total_results': len(all_results)}, ensure_ascii=False)}\n\n"
-                        else:
-                            yield f"data: {json.dumps({'type': 'done', 'message': '测试已中断，无结果', 'total_results': 0}, ensure_ascii=False)}\n\n"
-                        return
-                    try:
-                        result = future.result()
-                    except Exception as e:
-                        log_debug(f"Task failed: {e}")
-                        completed += 1
-                        failed += 1
-                        error_result = {
-                            "type": "error",
-                            "error_type": type(e).__name__,
-                            "error_msg": str(e),
-                            "completed": completed,
-                            "total": total_tasks,
-                        }
-                        yield f"data: {json.dumps(error_result, ensure_ascii=False)}\n\n"
-                        continue
-                    if result is None:
-                        continue
-
-                    with results_lock:
-                        all_results.append(result)
-                        ts_name = result["test_set"]
-                        if ts_name not in results_by_set:
-                            results_by_set[ts_name] = []
-                        results_by_set[ts_name].append(result)
-                    completed += 1
-
-                    if completed % INCREMENTAL_SAVE_STEP == 0:
-                        try:
-                            for rst_name, rst_results in results_by_set.items():
-                                save_results_to_test_set(rst_name, rst_results, incremental=True)
-                        except (OSError, IOError) as e:
-                            log_debug(f"Incremental save failed: {e}")
-
-                    sse_data = {
+                if event_type == "result":
+                    payload = {
                         'type': 'result',
-                        'test_set': result['test_set'],
-                        'id': result['id'],
-                        'prompt_id': result['prompt_id'],
-                        'question_id': result['question_id'],
-                        'model_id': result['model_id'],
-                        'prompt_tag': result['prompt_tag'],
-                        'question': result['question'],
-                        'expected_answer': result['answer'],
-                        'ai_answer': result['model_reply'] or '',
-                        'test_index': result['test_index'],
-                        'test_count': result['test_count'],
-                        'completed': completed,
-                        'total': total_tasks,
+                        'test_set': data['test_set'],
+                        'id': data['id'],
+                        'prompt_id': data['prompt_id'],
+                        'question_id': data['question_id'],
+                        'model_id': data['model_id'],
+                        'prompt_tag': data['prompt_tag'],
+                        'question_tag': data['question_tag'],
+                        'question': data['question'],
+                        'expected_answer': data['expected_answer'],
+                        'ai_answer': data['ai_answer'] or '',
+                        'test_index': data['test_index'],
+                        'test_count': data['test_count'],
                     }
-                    if 'error_type' in result:
-                        sse_data['error_type'] = result['error_type']
-                        sse_data['error_msg'] = result['error_msg']
-                    yield f"data: {json.dumps(sse_data, ensure_ascii=False)}\n\n"
+                    if data.get('error_type'):
+                        payload['error_type'] = data['error_type']
+                        payload['error_msg'] = data['error_msg']
+                    yield "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
+                elif event_type == "progress":
+                    yield f"data: {json.dumps({'type': 'progress', 'completed': data['completed'], 'total': data['total'], 'failed': data.get('failed', 0)}, ensure_ascii=False)}\n\n"
+                elif event_type == "done":
+                    yield f"data: {json.dumps({'type': 'done', 'status': data['status'], 'message': data['message']}, ensure_ascii=False)}\n\n"
+                    break
+                elif event_type == "status":
+                    yield f"data: {json.dumps({'type': 'status', 'status': data['status'], 'message': data['message']}, ensure_ascii=False)}\n\n"
+                    if data['status'] in ("completed", "stopped", "error"):
+                        break
+        except GeneratorExit:
+            pass
         finally:
-            disconnected.set()
-
-        # Save results per test set
-        try:
-            for rst_name, rst_results in results_by_set.items():
-                save_results_to_test_set(rst_name, rst_results)
-                incr_path = resolve_test_set_path(rst_name, "测试结果", INCREMENTAL_FILE)
-                if os.path.exists(incr_path):
-                    os.remove(incr_path)
-        except (OSError, IOError) as e:
-            log_debug(f"保存结果失败: {e}")
-            yield f"data: {json.dumps({'type': 'status', 'message': f'保存结果失败: {e}'}, ensure_ascii=False)}\n\n"
-
-        yield f"data: {json.dumps({'type': 'done', 'message': '测试完成', 'total_results': len(all_results)}, ensure_ascii=False)}\n\n"
+            job.remove_subscriber(sub_queue)
 
     return Response(generate(), mimetype="text/event-stream")
+
+
+@app.route("/api/v1/test-job/status/<job_id>", methods=["GET"])
+def get_test_job_status(job_id):
+    with active_jobs_lock:
+        job = active_jobs.get(job_id)
+    if job is None:
+        return jsonify({"status": "not_found"}), 404
+    return jsonify({
+        "status": job.status,
+        "completed": job.completed,
+        "total": job.total,
+        "failed": job.failed,
+    })
 
 
 INCREMENTAL_SAVE_STEP = 10  # 可从config读取（若需要）

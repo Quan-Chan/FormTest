@@ -1,0 +1,2380 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据流图</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+:root {
+  --bg-page: #f0f2f5; --bg-card: #ffffff; --bg-hover: #eef0f4; --bg-input: #f5f6f8;
+  --border: #dde0e5; --border-light: #c8ccd3;
+  --text-primary: #1a1d24; --text-secondary: #4a5568; --text-muted: #718096;
+  --accent: #3b82f6; --accent-hover: #2563eb; --accent-light: rgba(59,130,246,.15); --accent-bg: rgba(59,130,246,.08);
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.04); --shadow-md: 0 2px 8px rgba(0,0,0,.06); --shadow-lg: 0 4px 16px rgba(0,0,0,.08);
+  --radius-sm: 8px; --radius-md: 12px; --radius-lg: 16px;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100vh;overflow:hidden;font-family:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg-page);color:var(--text-primary)}
+
+.header{background:var(--bg-card);border-bottom:1px solid var(--border);padding:0 24px;height:56px;flex-shrink:0;display:flex;align-items:center;justify-content:space-between;z-index:100;box-shadow:var(--shadow-sm)}
+.header-brand{display:flex;align-items:center;gap:10px;font-size:15px;font-weight:600;color:var(--text-primary)}
+.header-brand svg{width:20px;height:20px;color:var(--accent)}
+.header-badge{font-size:11px;padding:4px 10px;background:var(--accent-bg);color:var(--accent);border-radius:20px;font-weight:500}
+.btn{padding:8px 14px;border-radius:var(--radius-sm);font-size:12px;font-weight:500;cursor:pointer;border:none;transition:all .2s;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-family:inherit;user-select:none}
+.btn:active{transform:scale(.97)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 3px var(--accent-light)}
+.btn svg{width:13px;height:13px}
+.btn-primary{background:var(--accent);color:#fff;border:1px solid #c8ced6;box-shadow:0 1px 3px rgba(59,130,246,.25)}
+.btn-primary:hover{background:#5294fa}
+.btn-primary:active{background:#1d4ed8}
+.btn-secondary{background:var(--bg-input);border:1px solid var(--border);color:var(--text-secondary)}
+.btn-secondary:hover{background:var(--bg-hover);border-color:var(--border-light);color:var(--text-primary)}
+.btn-secondary:active{background:var(--border)}
+.btn-danger{background:var(--bg-input);border:1px solid var(--border);color:#dc2626}
+.btn-danger:hover{background:#fef2f2;border-color:#fecaca}
+.btn-group{display:flex;gap:6px;align-items:center}
+.btn-group .sep{width:1px;height:14px;background:var(--border);flex-shrink:0}
+
+.toast-container{position:fixed;bottom:16px;left:16px;z-index:9999;display:flex;flex-direction:column-reverse;gap:8px;pointer-events:none}
+.toast{padding:10px 16px;border-radius:var(--radius-sm);font-size:13px;box-shadow:var(--shadow-md);transform:translateX(120%);opacity:0;transition:all .3s cubic-bezier(.4,0,.2,1);pointer-events:auto;max-width:400px;display:flex;align-items:center;gap:8px;line-height:1.5}
+.toast.show{transform:translateX(0);opacity:1}
+.toast.success{background:#ecfdf5;color:#065f46;border:1px solid #a7f3d0;border-left:3px solid #10b981}
+.toast.error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca;border-left:3px solid #ef4444}
+.toast.warning{background:#fffbeb;color:#92400e;border:1px solid #fde68a;border-left:3px solid #f59e0b}
+.toast-close{background:none;border:none;cursor:pointer;font-size:13px;opacity:.5;padding:2px 4px;border-radius:4px;color:inherit}
+.toast-close:hover{opacity:1}
+
+/*
+ * ARCHITECTURE:
+ *   .comfy-canvas          — viewport
+ *     canvas#comfyGridCvs   — grid lines drawn in screen-pixel space (no scaling artifacts)
+ *     .comfy-canvas-world   — transform: translate(panX, panY) only (GPU-composited pan)
+ *       svg#comfyLinesSvg   — NO transform of any kind (would cache as texture → blur)
+ *         g.comfy-conn-group → g.comfy-lines / g.comfy-labels
+ *           path.comfy-line — d attribute holds PRE-SCALED screen coords (re-rendered on zoom)
+ *           text.comfy-line-label — x/y/font-size all pre-scaled (re-rendered on zoom)
+ *       .comfy-canvas-nodes — transform: scale(scale) → re-render on zoom changes for crisp text
+ *         .comfy-node       — transform: translate(nodeX, nodeY) in world coords
+ */
+
+.comfy-canvas{contain:layout style paint;position:relative;overflow:hidden;cursor:grab;user-select:none;flex:1;min-height:0;background-color:#f8f9fb}
+#comfyGridCvs{position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:0}
+.comfy-canvas.grabbing{cursor:grabbing}
+.comfy-canvas-world{position:absolute;top:0;left:0;width:0;height:0;overflow:visible;will-change:transform}
+/* transform: scale mode — re-render text at new size on big zoom changes.
+   NOTE: nodesC.style.transform = scale() creates a compositor layer with
+   a cached texture. _forceRerender (called from applyViewTransform) drops
+   that cache on every zoom change so the browser re-rasterizes at the
+   current scale. Without _forceRerender, text/borders would blur. */
+.comfy-canvas-nodes{position:absolute;top:0;left:0;overflow:visible;pointer-events:none;z-index:2;transform-origin:0 0}
+.comfy-canvas-nodes .comfy-node{pointer-events:auto}
+.comfy-lines-svg{position:absolute;top:0;left:0;pointer-events:none;z-index:1;overflow:visible}
+/* shape-rendering: geometricPrecision tells the browser to prioritize
+   geometric accuracy over speed when rasterizing paths — avoids the
+   sub-pixel approximation that causes blur under transform scaling.
+   text-rendering: geometricPrecision does the same for label text. */
+.comfy-lines-svg path{shape-rendering:geometricPrecision}
+.comfy-line-label{text-rendering:geometricPrecision}
+.comfy-line{fill:none;stroke-width:2.5;stroke-linecap:round;pointer-events:stroke;cursor:pointer;opacity:.6;transition:opacity .15s,stroke-width .15s}
+.comfy-line:hover{opacity:1;stroke-width:3.5}
+.comfy-line.selected{opacity:1;stroke-width:4;filter:drop-shadow(0 0 4px rgba(59,130,246,.55))}
+.comfy-line.temp{stroke-dasharray:6 4;opacity:.8}
+.comfy-line.s-blue{stroke:#4F8CFF}.comfy-line.s-green{stroke:#20C997}.comfy-line.s-amber{stroke:#FBBF24}
+.comfy-line.s-rose{stroke:#F472B6}.comfy-line.s-teal{stroke:#2DD4BF}.comfy-line.s-violet{stroke:#A78BFA}
+.comfy-line.s-orange{stroke:#FB923C}.comfy-line.s-default{stroke:#6366f1}
+/* Connection label — sits on the line midpoint, layered above the path
+   (labelsGroup is appended after linesGroup in _doRenderLines). The
+   1px white stroke halo (paint-order: stroke fill) keeps the text
+   legible where the line passes underneath. font-size transitions
+   smoothly between default (10) and the selected/hover state (12). */
+.comfy-line-label{paint-order:stroke fill;stroke:#fff;stroke-width:1px;stroke-linejoin:round;pointer-events:all;cursor:pointer;user-select:none;transition:stroke-width .15s ease}
+/* Selected / hover: thicker halo only — NO font-size change. The base
+   font-size is set as an SVG attribute (10 * scale) in _doRenderLines
+   so labels scale with zoom (matching node text). A CSS font-size here
+   would override that attribute and break zoom scaling (label would
+   stay fixed-size while everything else zooms). */
+.comfy-line-label.selected,
+.comfy-line-label.hover{stroke-width:2px}
+.comfy-coord{position:absolute;bottom:6px;left:6px;z-index:50;font-size:11px;color:var(--text-muted);background:var(--bg-card);padding:4px 8px;border-radius:4px;border:1px solid var(--border);font-family:'Inter',monospace;user-select:none;line-height:1.4;cursor:pointer;transition:box-shadow .15s}
+.comfy-coord:hover{box-shadow:0 0 0 1px var(--accent-light)}
+.comfy-coord .coord-display{display:inline}
+.comfy-coord .coord-inputs{display:none;white-space:nowrap}
+.comfy-coord.coord-editing{user-select:text;cursor:default;box-shadow:0 0 0 1px var(--accent-light);min-width:146px}
+.comfy-coord.coord-editing .coord-display{display:none}
+.comfy-coord.coord-editing .coord-inputs{display:inline}
+.comfy-coord-input{width:38px;background:transparent;border:1px solid transparent;border-radius:3px;padding:0 2px;font-size:11px;font-family:inherit;color:var(--text-muted);outline:none;text-align:right;user-select:text;vertical-align:baseline;line-height:1.4}
+.comfy-coord-input:focus{border-color:var(--accent);background:var(--bg-input);color:var(--text-primary)}
+.comfy-coord .coord-sep{margin:0 1px;color:var(--text-muted)}
+.comfy-sel-overlay{position:absolute;border:2px dashed var(--accent);background:var(--accent-bg);pointer-events:none;z-index:100}
+
+.comfy-node{position:absolute;background:var(--bg-card);border-radius:12px;border:1px solid rgba(0,0,0,.18);box-sizing:border-box;box-shadow:0 6px 20px rgba(0,0,0,.06);cursor:default;transition:box-shadow .2s;user-select:none;z-index:2;will-change:transform;width:170px}
+.comfy-node.dragging{transition:none;cursor:grabbing;box-shadow:0 10px 30px rgba(0,0,0,.18);z-index:20}
+.comfy-node:hover{box-shadow:0 6px 20px rgba(0,0,0,.13)}
+.comfy-node.selected{outline:2px solid var(--accent);outline-offset:2px}
+.comfy-node-close{position:absolute;top:-10px;right:-10px;width:22px;height:22px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#999;font-size:14px;border-radius:50%;background:var(--bg-card);border:1px solid var(--border);transition:all .3s;z-index:3;visibility:hidden;opacity:0}
+.comfy-node:hover .comfy-node-close{visibility:visible;opacity:1}
+.comfy-node-body:hover .comfy-node-close{visibility:hidden;opacity:0}
+.comfy-node-close:hover{background:rgba(231,76,60,.12);color:#e74c3c;transform:scale(1.15)}
+.comfy-node-close:active{transform:scale(.95)}
+.comfy-node-header{height:34px;box-sizing:border-box;padding:10px 14px;color:#fff;font-size:12px;font-weight:500;letter-spacing:.3px;display:flex;align-items:center;gap:8px;border-radius:12px 12px 0 0;cursor:grab;user-select:none;overflow:hidden;line-height:1;transform:translateZ(0)}
+.comfy-node-header:active{cursor:grabbing}
+.comfy-node-header.h-blue{background:linear-gradient(135deg,#4F8CFF,#3B82F6);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node.dragging .comfy-node-header{cursor:grabbing}
+.comfy-node-header.h-green{background:linear-gradient(135deg,#20C997,#10B981);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-header.h-amber{background:linear-gradient(135deg,#FBBF24,#F59E0B);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-header.h-rose{background:linear-gradient(135deg,#F472B6,#EC4899);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-header.h-teal{background:linear-gradient(135deg,#2DD4BF,#14B8A6);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-header.h-violet{background:linear-gradient(135deg,#A78BFA,#8B5CF6);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-header.h-orange{background:linear-gradient(135deg,#FB923C,#F97316);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-header.h-default{background:linear-gradient(135deg,#6366f1,#4f46e5);text-shadow:0 1px 3px rgba(0,0,0,.35)}
+.comfy-node-body{height:44px;box-sizing:border-box;padding:12px 14px;font-size:13px;color:var(--text-primary);min-width:0;overflow:visible;display:flex;align-items:center;justify-content:flex-start;gap:8px;border:none;border-radius:0 0 12px 12px;cursor:pointer;transition:background .15s;position:relative}
+.comfy-node-body:hover{background:var(--bg-hover)}
+.comfy-node-val{flex:1 1 auto;overflow:hidden;white-space:pre-wrap;word-break:break-all;text-align:left;min-width:0;max-width:none;font-size:11px;line-height:1.35;max-height:2.7em;position:relative;scrollbar-width:thin;scrollbar-color:rgba(128,128,128,.15) transparent}
+.comfy-node-val::-webkit-scrollbar{width:2px!important;height:2px!important}
+.comfy-node-val::-webkit-scrollbar-track{background:transparent!important;border:none!important}
+.comfy-node-val::-webkit-scrollbar-thumb{background:rgba(128,128,128,.15)!important;border-radius:1px}
+.comfy-node-val::-webkit-scrollbar-thumb:hover{background:rgba(128,128,128,.3)!important}
+.comfy-node-val::-webkit-scrollbar-button{display:none!important}
+.comfy-node-val::-webkit-scrollbar-corner{display:none!important}
+.comfy-node-empty{color:var(--text-muted);font-style:italic;font-size:10px}
+.comfy-node-clear{flex-shrink:0;margin-left:auto;width:20px;height:20px;border-radius:50%;background:transparent;display:flex;align-items:center;justify-content:center;color:#bbb;font-size:12px;cursor:pointer;visibility:hidden;transition:all .15s;border:none;font-family:inherit}
+.comfy-node-body:hover .comfy-node-clear{visibility:visible}
+.comfy-node-clear:hover{background:rgba(231,76,60,.12);color:#e74c3c}
+.comfy-node-body.has-overflow::after{content:'…';position:absolute;left:124px;top:22px;font-size:11px;line-height:1.35;color:var(--text-primary);background:transparent;padding:0 2px;pointer-events:none}
+
+.comfy-socket{position:absolute;width:16px;height:16px;border-radius:50%;background:var(--bg-card);border:2px solid;top:50%;transform:translateY(-50%);z-index:4;cursor:crosshair;transition:transform .15s,box-shadow .15s}
+.comfy-socket:hover{transform:translateY(-50%) scale(1.35);box-shadow:0 0 10px rgba(59,130,246,.35)}
+.comfy-socket.dragging{transform:translateY(-50%) scale(1.6);box-shadow:0 0 16px rgba(59,130,246,.5)}
+.comfy-socket.in{left:-8px}.comfy-socket.out{right:-8px}
+.comfy-socket.s-blue{border-color:#4F8CFF}.comfy-socket.s-green{border-color:#20C997}.comfy-socket.s-amber{border-color:#FBBF24}
+.comfy-socket.s-rose{border-color:#F472B6}.comfy-socket.s-teal{border-color:#2DD4BF}.comfy-socket.s-violet{border-color:#A78BFA}
+.comfy-socket.s-orange{border-color:#FB923C}.comfy-socket.s-default{border-color:#6366f1}
+.comfy-socket-inner{width:8px;height:8px;border-radius:50%;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%)}
+.comfy-socket.s-blue .comfy-socket-inner{background:#4F8CFF}.comfy-socket.s-green .comfy-socket-inner{background:#20C997}
+.comfy-socket.s-amber .comfy-socket-inner{background:#FBBF24}.comfy-socket.s-rose .comfy-socket-inner{background:#F472B6}
+.comfy-socket.s-teal .comfy-socket-inner{background:#2DD4BF}.comfy-socket.s-violet .comfy-socket-inner{background:#A78BFA}
+.comfy-socket.s-orange .comfy-socket-inner{background:#FB923C}.comfy-socket.s-default .comfy-socket-inner{background:#6366f1}
+
+#inlineEdit{position:fixed;z-index:500;display:none}
+#inlineEdit input{background:#fff;border:2px solid var(--accent);border-radius:6px;padding:4px 8px;font-size:11px;width:130px;outline:none;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+#inlineEdit textarea{background:#fff;border:2px solid var(--accent);border-radius:6px;padding:4px 8px;font-size:11px;width:180px;min-height:28px;outline:none;font-family:inherit;box-shadow:0 2px 8px rgba(0,0,0,.1);resize:vertical}
+
+#ctx{position:fixed;background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:4px;display:none;z-index:400;min-width:100px;box-shadow:var(--shadow-lg)}
+#ctx button{display:block;width:100%;text-align:left;background:none;border:none;padding:6px 10px;color:var(--text-secondary);font-size:11px;cursor:pointer;border-radius:4px;font-family:inherit}
+#ctx button:hover{background:var(--bg-hover);color:var(--text-primary)}
+#ctx .sep2{border-top:1px solid var(--border);margin:3px 6px}
+#ctx .del{color:#dc2626}
+#ctx .del:hover{background:#fef2f2}
+
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:300;display:none;align-items:center;justify-content:center;backdrop-filter:blur(3px)}
+#modal.on{display:flex}
+#modalBox{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-md);padding:20px;width:300px;box-shadow:var(--shadow-lg)}
+#modalBox h3{font-size:14px;font-weight:600;margin-bottom:12px}
+#modalBox label{display:block;font-size:10px;color:var(--text-muted);margin-bottom:3px;text-transform:uppercase;letter-spacing:.4px}
+#modalBox input,#modalBox textarea{width:100%;background:var(--bg-input);border:1px solid var(--border);border-radius:6px;padding:6px 10px;color:var(--text-primary);font-size:12px;margin-bottom:10px;font-family:inherit;outline:none;transition:.15s}
+#modalBox input:focus,#modalBox textarea:focus{border-color:var(--accent);background:#fff;box-shadow:0 0 0 3px var(--accent-light)}
+#modalBox textarea{min-height:40px;resize:vertical}
+#modalBtns{display:flex;gap:8px;justify-content:flex-end}
+#modalBtns button{padding:5px 14px;border-radius:6px;font-size:11px;cursor:pointer;font-family:inherit;border:1px solid var(--border);background:var(--bg-input);color:var(--text-secondary);transition:.15s}
+#modalBtns button:hover{background:var(--bg-hover);color:var(--text-primary)}
+#modalBtns button.p{background:var(--accent);color:#fff;border-color:var(--accent)}
+#modalBtns button.p:hover{background:var(--accent-hover)}
+
+.layout{display:flex;flex-direction:column;height:100vh}
+.canvas-wrap{flex:1;display:flex;min-height:0}
+</style>
+</head>
+<body>
+
+<div class="layout">
+  <header class="header">
+    <div class="header-brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+      数据流图
+    </div>
+    <div class="btn-group">
+      <button class="btn btn-secondary" onclick="App.addNode()">+ 节点</button>
+      <button class="btn btn-secondary" onclick="App.clearAllNodes()" title="清除所有节点">清空</button>
+      <span class="sep"></span>
+      <button class="btn btn-secondary" onclick="App.doExport()">导出</button>
+      <button class="btn btn-secondary" onclick="App.doImport()">导入</button>
+      <span class="sep"></span>
+      <button class="btn btn-secondary" onclick="App.centerCanvasOnNodes()">适应</button>
+      <button class="btn btn-secondary" onclick="App.canvasUndo()" id="undoBtn" disabled title="Ctrl+Z">&#8617;</button>
+      <button class="btn btn-secondary" onclick="App.canvasRedo()" id="redoBtn" disabled title="Ctrl+Y">&#8618;</button>
+    </div>
+    <span class="header-badge" id="statusBadge">自动保存</span>
+  </header>
+  <div class="canvas-wrap">
+    <div id="canvasContainer" style="flex:1;min-height:0;display:flex;flex-direction:column;"></div>
+  </div>
+</div>
+
+<div id="inlineEdit"><input id="inlineInp" spellcheck="false" style="display:none"><textarea id="inlineTa" spellcheck="false" style="display:none"></textarea></div>
+
+<div id="ctx">
+  <button id="ctxEdit" onclick="App.ctxEdit()">编辑</button>
+  <button id="ctxDup" onclick="App.ctxDup()">复制</button>
+  <div class="sep2" id="ctxSep1"></div>
+  <button id="ctxProps" onclick="App.ctxProps()">属性</button>
+  <div class="sep2" id="ctxSep2"></div>
+  <button class="del" id="ctxDel" onclick="App.ctxDel()">删除</button>
+</div>
+
+<div id="modal">
+  <div id="modalBox">
+    <h3 id="mTitle">编辑节点</h3>
+    <label>标签</label>
+    <input id="mLabel" spellcheck="false">
+    <label>描述</label>
+    <textarea id="mDesc" rows="2" spellcheck="false"></textarea>
+    <label>颜色</label>
+    <div style="display:flex;gap:4px;margin-bottom:10px;flex-wrap:wrap" id="mColors"></div>
+    <div id="modalBtns">
+      <button onclick="App.closeModal()">取消</button>
+      <button class="p" onclick="App.saveModal()">保存</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+function debounce(fn, ms) {
+  let timer;
+  return function(...args) {
+    clearTimeout(timer);
+    const ctx = this;
+    timer = setTimeout(() => fn.apply(ctx, args), ms);
+  };
+}
+
+function showToast(msg, type = 'success', dur = 3000) {
+  const el = document.createElement('div');
+  el.className = 'toast ' + type;
+  const d = document.createElement('div'); d.textContent = msg;
+  el.appendChild(d);
+  document.getElementById('toastContainer').appendChild(el);
+  requestAnimationFrame(() => el.classList.add('show'));
+  setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, dur);
+}
+
+const NODE_W = 170;
+const GRID = 20;
+// Connection test radius (world coords). When the temp line's end point
+// is within this distance of a compatible socket's anchor, mouseup
+// creates a connection. 14 = slightly generous vs the socket's 16px
+// visual size, so the connection "clicks" even if the cursor is just
+// off-center. In world coords, so the hit area scales with zoom.
+const SOCKET_HIT_RADIUS = 14;
+const COLORS = ['blue','green','amber','rose','teal','violet','orange','default'];
+const COLOR_HEX = {blue:'#4F8CFF',green:'#20C997',amber:'#FBBF24',rose:'#F472B6',teal:'#2DD4BF',violet:'#A78BFA',orange:'#FB923C',default:'#6366f1'};
+
+const WORLD_CENTER_X = 0;
+const WORLD_CENTER_Y = 0;
+const COL_X = [WORLD_CENTER_X - 300, WORLD_CENTER_X, WORLD_CENTER_X + 300, WORLD_CENTER_X + 600];
+const START_Y = WORLD_CENTER_Y - 60;
+
+const App = window.App = {
+  canvasState: { nodes: [], connections: [], history: [] },
+  dragState: null,
+  isDragging: false,
+  socketDragState: null,
+  panX: 0,
+  panY: 0,
+  scale: 1,
+  selectedNodeIds: new Set(),
+  canvasPanState: null,
+  canvasBoxState: null,
+  canvasHistoryIndex: -1,
+  _canvasHistoryMax: 50,
+  _linesRaf: null,
+  _lastRenderScale: 1,
+  _forceRerenderPending: false,
+  _modalNodeId: null,
+  _inlineEditTarget: null,
+  _ctxNodeId: null,
+  _ctxConnKey: null,
+  // Currently selected connection key (string "from___to") or null.
+  // Single-selection: connections don't support multi-select. Clicking a
+  // connection selects it (clearing any node selection); clicking a node or
+  // canvas blank clears it. Delete key removes the selected connection.
+  selectedConnKey: null,
+
+  /* DOM element cache */
+  _nodeElMap: new Map(),
+  /* Cached container dimensions */
+  _cachedCW: 0,
+  _cachedCH: 0,
+
+  NODE_W: NODE_W,
+  GRID: GRID,
+
+  escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  },
+
+  _refreshContainerCache() {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (c) { this._cachedCW = c.clientWidth; this._cachedCH = c.clientHeight; }
+  },
+
+  getWorldPos(clientX, clientY) {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (!c) return { x: 0, y: 0 };
+    const rect = c.getBoundingClientRect();
+    return {
+      x: (clientX - rect.left - this.panX) / this.scale,
+      y: (clientY - rect.top - this.panY) / this.scale
+    };
+  },
+
+  // ── Undo / Save ──
+  saveCanvasSnapshot() {
+    const snapshot = {
+      nodes: JSON.parse(JSON.stringify(this.canvasState.nodes)),
+      connections: JSON.parse(JSON.stringify(this.canvasState.connections))
+    };
+    if (this.canvasHistoryIndex < this.canvasState.history.length - 1) {
+      this.canvasState.history = this.canvasState.history.slice(0, this.canvasHistoryIndex + 1);
+    }
+    this.canvasState.history.push(snapshot);
+    if (this.canvasState.history.length > this._canvasHistoryMax) {
+      this.canvasState.history.shift();
+    }
+    this.canvasHistoryIndex = this.canvasState.history.length - 1;
+    this.updateCanvasUndoButtons();
+    this.saveCanvas();
+  },
+
+  saveCanvas() {
+    try {
+      localStorage.setItem('flow_data', JSON.stringify({
+        nodes: this.canvasState.nodes,
+        connections: this.canvasState.connections,
+        viewport: { panX: this.panX, panY: this.panY, scale: this.scale }
+      }));
+    } catch (e) { /* ignore */ }
+  },
+
+  debouncedAutoSave: debounce(function() { this.saveCanvas(); }, 500),
+
+  canvasUndo() {
+    if (this.canvasHistoryIndex <= 0) return;
+    this.canvasHistoryIndex--;
+    this._restoreCanvasSnapshot(this.canvasState.history[this.canvasHistoryIndex]);
+    this.updateCanvasUndoButtons();
+  },
+
+  canvasRedo() {
+    if (this.canvasHistoryIndex >= this.canvasState.history.length - 1) return;
+    this.canvasHistoryIndex++;
+    this._restoreCanvasSnapshot(this.canvasState.history[this.canvasHistoryIndex]);
+    this.updateCanvasUndoButtons();
+  },
+
+  _restoreCanvasSnapshot(snapshot) {
+    this.canvasState.nodes = JSON.parse(JSON.stringify(snapshot.nodes));
+    this.canvasState.connections = JSON.parse(JSON.stringify(snapshot.connections));
+    this.selectedNodeIds.clear();
+    this.renderAssociationCanvas({ center: false });
+  },
+
+  updateCanvasUndoButtons() {
+    const undoBtn = document.getElementById('undoBtn');
+    const redoBtn = document.getElementById('redoBtn');
+    if (undoBtn) undoBtn.disabled = !(this.canvasHistoryIndex > 0);
+    if (redoBtn) redoBtn.disabled = !(this.canvasHistoryIndex < this.canvasState.history.length - 1);
+  },
+
+  // ── Canvas Events ──
+  onCanvasMouseDown(e) {
+    const container = document.getElementById('comfyCanvasContainer');
+    if (e.button === 0 && e.shiftKey) {
+      e.preventDefault();
+      if (this.canvasBoxState) { this.finalizeBoxSelect(); return; }
+      const wp = this.getWorldPos(e.clientX, e.clientY);
+      this.canvasBoxState = { startX: wp.x, startY: wp.y, curX: wp.x, curY: wp.y };
+      document.getElementById('boxSelectOverlay').style.display = 'block';
+    } else if (e.button === 0) {
+      // Clicking canvas blank (not on a node/line) clears connection selection.
+      this._clearConnSelection();
+      this._refreshContainerCache();
+      this.canvasPanState = { startX: e.clientX, startY: e.clientY, origPanX: this.panX, origPanY: this.panY };
+      container.classList.add('grabbing');
+    } else if (e.button === 1) {
+      e.preventDefault();
+      this._refreshContainerCache();
+      this.canvasPanState = { startX: e.clientX, startY: e.clientY, origPanX: this.panX, origPanY: this.panY };
+      container.classList.add('grabbing');
+    }
+  },
+
+  finalizeBoxSelect() {
+    if (!this.canvasBoxState) return;
+    const lx = Math.min(this.canvasBoxState.startX, this.canvasBoxState.curX);
+    const ly = Math.min(this.canvasBoxState.startY, this.canvasBoxState.curY);
+    const rx = Math.max(this.canvasBoxState.startX, this.canvasBoxState.curX);
+    const ry = Math.max(this.canvasBoxState.startY, this.canvasBoxState.curY);
+    this.selectedNodeIds.clear();
+    this.canvasState.nodes.forEach(n => {
+      const nx = n.x || 0, ny = n.y || 0;
+      if (nx + NODE_W >= lx && nx <= rx && ny + 80 >= ly && ny <= ry) this.selectedNodeIds.add(n.id);
+    });
+    this.canvasBoxState = null;
+    const overlay = document.getElementById('boxSelectOverlay');
+    if (overlay) overlay.style.display = 'none';
+    this.renderAssociationCanvas({ center: false });
+  },
+
+  onCanvasWheel(e) {
+    e.preventDefault();
+    const container = document.getElementById('comfyCanvasContainer');
+    const rect = container.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left, mouseY = e.clientY - rect.top;
+    const oldScale = this.scale;
+    const delta = e.deltaY > 0 ? 0.95 : 1.05;
+    this.scale = Math.min(5, Math.max(0.15, this.scale * delta));
+    const worldMouseX = (mouseX - this.panX) / oldScale;
+    const worldMouseY = (mouseY - this.panY) / oldScale;
+    this.panX = mouseX - worldMouseX * this.scale;
+    this.panY = mouseY - worldMouseY * this.scale;
+    this._refreshContainerCache();
+    this.clampPan();
+    if (this.canvasPanState) {
+      this.canvasPanState.origPanX = this.panX; this.canvasPanState.origPanY = this.panY;
+      this.canvasPanState.startX = e.clientX; this.canvasPanState.startY = e.clientY;
+    }
+    if (this.dragState) {
+      const wp = this.getWorldPos(e.clientX, e.clientY);
+      this.dragState.startWorldX = wp.x; this.dragState.startWorldY = wp.y;
+      for (const n of this.dragState.nodes) {
+        const cur = this.canvasState.nodes.find(nn => nn.id === n.id);
+        if (cur) { n.origX = cur.x; n.origY = cur.y; }
+      }
+    }
+    // No special handling for socketDragState here — it stores world
+    // coords (scale-invariant), so zoom doesn't invalidate it. The
+    // renderLines call below will recompute the temp line at the new
+    // scale automatically. This is the key benefit of data-driven
+    // rendering: zoom-during-drag just works.
+    this.applyViewTransform();
+    this.renderLines();
+    this.debouncedAutoSave();
+  },
+
+  // ── View Transform ──
+
+  /*
+   * KEY DESIGN: separate concerns for crisp text + performant panning
+   *
+   * 1. World div   → transform: translate(panX, panY)
+   *    Moves everything during pan — GPU compositor, no re-layout.
+   *    Pan does NOT change scale, so SVG paths (which hold pre-scaled
+   *    coords) stay correct without re-render.
+   *
+   * 2. Nodes div   → transform: scale(scale)
+   *    Force re-render on zoom changes to keep text crisp.
+   *    Only updated on zoom change, not on pan.
+   *
+   * 3. SVG content → path `d` / label x/y hold PRE-SCALED screen coords.
+   *    NO transform anywhere on the SVG side — neither CSS transform
+   *    on <svg> nor SVG transform on a <g>. Both would cause the browser
+   *    to cache the SVG as a GPU texture and stretch it on zoom (blur).
+   *    Instead, renderLines() rewrites path geometry at the current scale
+   *    every zoom change, so the browser rasterizes at 1:1 with pixels.
+   */
+  applyViewTransform() {
+    /* 1. Pan: GPU-composited translate on world div */
+    const world = document.getElementById('comfyCanvasWorld');
+    if (world) world.style.transform = 'translate(' + this.panX + 'px,' + this.panY + 'px)';
+
+    /* 2. Zoom: transform scale on nodes container, force re-render on big changes */
+    const nodesC = document.getElementById('comfyCanvasNodes');
+    if (nodesC) nodesC.style.transform = 'scale(' + this.scale + ')';
+
+    /* Force re-render when zoom changes to keep text crisp. CSS transform:
+       scale() on the nodes container rasterizes once and stretches the
+       texture — text and borders blur. _forceRerender drops the cached
+       texture so the browser re-rasterizes at the current scale. The
+       threshold is small (0.02 = 2%) so even gentle scroll-wheel zoom
+       keeps text crisp. */
+    const scaleDiff = Math.abs(this.scale - this._lastRenderScale);
+    if (scaleDiff > 0.02) {
+      this._lastRenderScale = this.scale;
+      this._forceRerender();
+    }
+
+    /* 3. SVG zoom — handled by re-rendering paths with pre-scaled
+       coordinates in _doRenderLines (called by renderLines below).
+       NO CSS transform on <svg>, NO SVG <g> transform — both would
+       cause texture caching / sub-pixel blur. Instead, path `d` attrs
+       hold final screen-pixel coordinates, so the browser rasterizes
+       at 1:1 with the display. renderLines is throttled via rAF. */
+    this.renderLines();
+
+    /* 4. Grid (Canvas — pixel-perfect, no sub-pixel artifacts) */
+    this._drawGrid();
+
+    this.updateCoordDisplay();
+  },
+
+  /*
+   * Grid drawn via Canvas 2D in screen-pixel space.
+   * Lines are snapped to integer pixels — no anti-aliasing bleed,
+   * no sub-pixel merging, no thickness flicker at any zoom level.
+   * Minor grid (step=20) shown when spacing >= 8px; major grid (step=100) always shown.
+   */
+  _drawGrid() {
+    const container = document.getElementById('comfyCanvasContainer');
+    if (!container) return;
+    const cvs = document.getElementById('comfyGridCvs');
+    if (!cvs) return;
+
+    const dpr = window.devicePixelRatio || 1;
+    const cw = container.clientWidth;
+    const ch = container.clientHeight;
+    if (cw === 0 || ch === 0) return;  /* layout not ready — will be retried */
+
+    const bufW = Math.round(cw * dpr);
+    const bufH = Math.round(ch * dpr);
+    if (cvs.width !== bufW || cvs.height !== bufH) {
+      cvs.width = bufW;
+      cvs.height = bufH;
+    }
+
+    const ctx = cvs.getContext('2d');
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, cw, ch);
+    ctx.lineWidth = 1;
+
+    const minorStep = GRID;  // 20
+    const majorStep = GRID * 5;  // 100
+    const minorScreenSpacing = minorStep * this.scale;
+    const majorScreenSpacing = majorStep * this.scale;
+
+    /* Major grid — always visible */
+    ctx.strokeStyle = 'rgba(200,204,213,0.6)';
+    ctx.beginPath();
+    const mFirstX = Math.floor((-this.panX / this.scale) / majorStep) * majorStep;
+    const mFirstY = Math.floor((-this.panY / this.scale) / majorStep) * majorStep;
+    for (let wx = mFirstX; ; wx += majorStep) {
+      const sx = Math.round(wx * this.scale + this.panX) + 0.5;
+      if (sx > cw) break;
+      ctx.moveTo(sx, 0); ctx.lineTo(sx, ch);
+    }
+    for (let wy = mFirstY; ; wy += majorStep) {
+      const sy = Math.round(wy * this.scale + this.panY) + 0.5;
+      if (sy > ch) break;
+      ctx.moveTo(0, sy); ctx.lineTo(cw, sy);
+    }
+    ctx.stroke();
+
+    /* Minor grid — only when lines are spaced >= 8px */
+    if (minorScreenSpacing >= 8) {
+      ctx.strokeStyle = 'rgba(200,204,213,0.35)';
+      ctx.beginPath();
+      const firstX = Math.floor((-this.panX / this.scale) / minorStep) * minorStep;
+      const firstY = Math.floor((-this.panY / this.scale) / minorStep) * minorStep;
+      for (let wx = firstX; ; wx += minorStep) {
+        const sx = Math.round(wx * this.scale + this.panX) + 0.5;
+        if (sx > cw) break;
+        ctx.moveTo(sx, 0); ctx.lineTo(sx, ch);
+      }
+      for (let wy = firstY; ; wy += minorStep) {
+        const sy = Math.round(wy * this.scale + this.panY) + 0.5;
+        if (sy > ch) break;
+        ctx.moveTo(0, sy); ctx.lineTo(cw, sy);
+      }
+      ctx.stroke();
+    }
+  },
+
+  _forceRerender() {
+    if (this._forceRerenderPending) return;
+    this._forceRerenderPending = true;
+    requestAnimationFrame(() => {
+      this._forceRerenderPending = false;
+      const nodes = document.getElementById('comfyCanvasNodes');
+      if (!nodes) return;
+      // Force the browser to re-rasterize the nodes layer. A simple
+      // removeChild + insertBefore is NOT enough — the compositor often
+      // keeps the cached texture. Toggling will-change forces a new
+      // compositor layer to be created with fresh rasterization at the
+      // current scale. We toggle it off again on the next frame so we
+      // don't accumulate layers.
+      nodes.style.willChange = 'transform';
+      const parent = nodes.parentNode;
+      const next = nodes.nextSibling;
+      parent.removeChild(nodes);
+      parent.insertBefore(nodes, next);
+      requestAnimationFrame(() => { nodes.style.willChange = ''; });
+    });
+  },
+
+  updateCoordDisplay() {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (!c) return;
+    const cx = Math.round((-this.panX + c.clientWidth / 2) / this.scale);
+    const cy = Math.round((-this.panY + c.clientHeight / 2) / this.scale);
+    const zp = Math.round(this.scale * 100);
+    const elX = document.getElementById('coordX');
+    const elY = document.getElementById('coordY');
+    const elZ = document.getElementById('coordZ');
+    if (elX && document.activeElement !== elX) elX.value = cx;
+    if (elY && document.activeElement !== elY) elY.value = cy;
+    if (elZ && document.activeElement !== elZ) elZ.value = zp + '%';
+    const dispEl = document.getElementById('coordDisplay');
+    if (dispEl) dispEl.textContent = cx + ', ' + cy + ' | ' + zp + '%';
+  },
+
+  _initCoordInputs() {
+    const self = this;
+    const coordEl = document.getElementById('comfyCoord');
+    const elX = document.getElementById('coordX');
+    const elY = document.getElementById('coordY');
+    const elZ = document.getElementById('coordZ');
+    const allInputs = [elX, elY, elZ].filter(Boolean);
+
+    // Click on coord display -> enter edit mode
+    if (coordEl) {
+      // Prevent canvas pan when interacting with coord
+      coordEl.addEventListener('mousedown', function(e) { e.stopPropagation(); });
+      coordEl.addEventListener('click', function(e) {
+        e.stopPropagation();
+        if (coordEl.classList.contains('coord-editing')) return;
+        if (e.target.tagName === 'INPUT') return;
+        coordEl.classList.add('coord-editing');
+        self.updateCoordDisplay(); // refresh input values
+      });
+    }
+
+    function endEdit() {
+      if (coordEl) coordEl.classList.remove('coord-editing');
+      self.updateCoordDisplay();
+    }
+
+    function onEnter(e) {
+      if (e.key === 'Enter') { e.preventDefault(); this.blur(); }
+      if (e.key === 'Tab') {
+        e.preventDefault();
+        if (this === elX && elY) { elY.focus(); elY.select(); }
+        else if (this === elY && elZ) { elZ.focus(); elZ.select(); }
+        else if (this === elZ && elX) { elX.focus(); elX.select(); }
+      }
+      if (e.key === 'Escape') { e.preventDefault(); endEdit(); }
+    }
+
+    function checkEndEdit() {
+      setTimeout(() => {
+        if (!allInputs.includes(document.activeElement)) endEdit();
+      }, 10);
+    }
+
+    function onXBlur() {
+      let v = parseInt(this.value);
+      if (!isNaN(v)) {
+        v = Math.min(5000, Math.max(-5000, v));
+        this.value = v;
+        const c = document.getElementById('comfyCanvasContainer');
+        if (c) { self.panX = -v * self.scale + c.clientWidth / 2; self.clampPan(); self.applyViewTransform(); self.renderLines(); }
+      }
+      checkEndEdit();
+    }
+    function onYBlur() {
+      let v = parseInt(this.value);
+      if (!isNaN(v)) {
+        v = Math.min(5000, Math.max(-5000, v));
+        this.value = v;
+        const c = document.getElementById('comfyCanvasContainer');
+        if (c) { self.panY = -v * self.scale + c.clientHeight / 2; self.clampPan(); self.applyViewTransform(); self.renderLines(); }
+      }
+      checkEndEdit();
+    }
+    function onZBlur() {
+      const raw = this.value.replace(/[%％]/g, '');
+      let v = parseInt(raw);
+      if (!isNaN(v)) {
+        v = Math.min(500, Math.max(15, v));
+        this.value = v + '%';
+        const c = document.getElementById('comfyCanvasContainer');
+        const newScale = v / 100;
+        if (c) {
+          const cxc = c.clientWidth / 2, cyc = c.clientHeight / 2;
+          const oldScale = self.scale;
+          self.scale = newScale;
+          self.panX = cxc - ((cxc - self.panX) / oldScale) * newScale;
+          self.panY = cyc - ((cyc - self.panY) / oldScale) * newScale;
+          self.clampPan(); self.applyViewTransform(); self.renderLines(); self._drawGrid();
+        }
+      }
+      checkEndEdit();
+    }
+    if (elX) { elX.addEventListener('keydown', onEnter); elX.addEventListener('blur', onXBlur); }
+    if (elY) { elY.addEventListener('keydown', onEnter); elY.addEventListener('blur', onYBlur); }
+    if (elZ) { elZ.addEventListener('keydown', onEnter); elZ.addEventListener('blur', onZBlur); }
+  },
+
+  /* Node click handler — supports Ctrl+click for multi-select */
+  _nodeClick(e, nodeId) {
+    if (e.ctrlKey || e.metaKey) {
+      if (this.selectedNodeIds.has(nodeId)) this.selectedNodeIds.delete(nodeId);
+      else this.selectedNodeIds.add(nodeId);
+    } else {
+      this.selectedNodeIds.clear();
+      this.selectedNodeIds.add(nodeId);
+    }
+    // Selecting a node clears connection selection.
+    this._clearConnSelection();
+    this.renderAssociationCanvas();
+  },
+
+  clearAllNodes() {
+    if (this.canvasState.nodes.length === 0) return;
+    if (!confirm('将清空页面节点信息，是否继续？')) return;
+    this.canvasState.nodes = [];
+    this.canvasState.connections = [];
+    this.selectedNodeIds.clear();
+    this._nodeElMap.forEach(el => el.remove());
+    this._nodeElMap.clear();
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+    showToast('已清空所有节点');
+  },
+
+  /* Clipboard for copy/paste */
+  _clipboard: [],
+
+  updateNodePositions() {
+    for (const node of this.canvasState.nodes) {
+      const el = this._nodeElMap.get(node.id);
+      if (!el) continue;
+      if (typeof node.x !== 'number' || isNaN(node.x)) node.x = WORLD_CENTER_X;
+      if (typeof node.y !== 'number' || isNaN(node.y)) node.y = WORLD_CENTER_Y;
+      el.style.transform = 'translate(' + node.x + 'px,' + node.y + 'px)';
+    }
+  },
+
+  clampPan() {
+    const cw = this._cachedCW, ch = this._cachedCH;
+    if (cw === 0) { this._refreshContainerCache(); return this.clampPan(); }
+    const ws = 10000 * this.scale, hs = 10000 * this.scale;
+    const maxX = cw > ws ? cw / 2 : ws / 2;
+    const minX = cw > ws ? cw / 2 : cw - ws / 2;
+    const maxY = ch > hs ? ch / 2 : hs / 2;
+    const minY = ch > hs ? ch / 2 : ch - hs / 2;
+    this.panX = Math.min(maxX, Math.max(minX, this.panX));
+    this.panY = Math.min(maxY, Math.max(minY, this.panY));
+  },
+
+  centerCanvasOnNodes() {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (!c || this.canvasState.nodes.length === 0) { this.centerCanvasOnOrigin(); return; }
+    if (c.clientWidth === 0 || c.clientHeight === 0) { setTimeout(() => this.centerCanvasOnNodes(), 50); return; }
+    let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+    this.canvasState.nodes.forEach(n => {
+      const nx = n.x || 0, ny = n.y || 0;
+      if (nx < minX) minX = nx; if (nx + NODE_W > maxX) maxX = nx + NODE_W;
+      if (ny < minY) minY = ny; if (ny + 80 > maxY) maxY = ny + 80;
+    });
+    const pad = 40, nodeW = maxX - minX, nodeH = maxY - minY;
+    if (nodeW === 0 && nodeH === 0) {
+      this.scale = 1;
+      this.panX = c.clientWidth / 2 - minX - NODE_W / 2;
+      this.panY = c.clientHeight / 2 - minY - 40;
+    } else {
+      const fitScaleX = nodeW > 0 ? (c.clientWidth - pad) / nodeW : 999;
+      const fitScaleY = nodeH > 0 ? (c.clientHeight - pad) / nodeH : 999;
+      const fitScale = Math.min(fitScaleX, fitScaleY);
+      this.scale = Math.min(1.5, Math.max(0.3, fitScale));
+      const cx = (minX + maxX) / 2, cy = (minY + maxY) / 2;
+      this.panX = c.clientWidth / 2 - cx * this.scale;
+      this.panY = c.clientHeight / 2 - cy * this.scale;
+    }
+    this._refreshContainerCache();
+    this.applyViewTransform();
+    this.renderLines();
+  },
+
+  centerCanvasOnOrigin() {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (!c) return;
+    if (c.clientWidth === 0 || c.clientHeight === 0) { setTimeout(() => this.centerCanvasOnOrigin(), 50); return; }
+    this.panX = c.clientWidth / 2 - WORLD_CENTER_X * this.scale;
+    this.panY = c.clientHeight / 2 - WORLD_CENTER_Y * this.scale;
+    this._refreshContainerCache();
+    this.clampPan();
+    this.applyViewTransform();
+    this.renderLines();
+  },
+
+  // ── Render Canvas ──
+  renderAssociationCanvas({ center = false } = {}) {
+    const canvas = document.getElementById('canvasContainer');
+    if (!canvas) return;
+
+    // Cancel any in-flight snap animations before re-rendering node positions
+    // from data. This prevents a stale RAF from overwriting the freshly
+    // applied transform from updateNodePositions().
+    this._nodeElMap.forEach(el => { this._cancelSnapAnim(el); });
+
+    let nodesContainer = document.getElementById('comfyCanvasNodes');
+    if (!nodesContainer) {
+      canvas.innerHTML =
+        '<div class="comfy-canvas" id="comfyCanvasContainer">' +
+          '<canvas id="comfyGridCvs"></canvas>' +
+          '<div class="comfy-canvas-world" id="comfyCanvasWorld">' +
+            '<svg class="comfy-lines-svg" id="comfyLinesSvg" style="overflow:visible"></svg>' +
+            '<div class="comfy-canvas-nodes" id="comfyCanvasNodes"></div>' +
+          '</div>' +
+          '<div class="comfy-sel-overlay" id="boxSelectOverlay" style="display:none;"></div>' +
+          '<div class="comfy-coord" id="comfyCoord">' +
+            '<span class="coord-display" id="coordDisplay">0, 0 | 100%</span>' +
+            '<span class="coord-inputs">' +
+              '<input class="comfy-coord-input" id="coordX" type="text">' +
+              '<span class="coord-sep">,</span>' +
+              '<input class="comfy-coord-input" id="coordY" type="text">' +
+              '<span class="coord-sep">|</span>' +
+              '<input class="comfy-coord-input" id="coordZ" type="text">' +
+            '</span>' +
+          '</div>' +
+        '</div>';
+      nodesContainer = document.getElementById('comfyCanvasNodes');
+      this._nodeElMap.clear();
+    } else {
+      const currentIds = new Set(this.canvasState.nodes.map(n => n.id));
+      this._nodeElMap.forEach((el, id) => {
+        if (!currentIds.has(id)) { el.remove(); this._nodeElMap.delete(id); }
+      });
+    }
+
+    const container = document.getElementById('comfyCanvasContainer');
+    const self = this;
+    this._refreshContainerCache();
+
+    this.canvasState.nodes.forEach(node => {
+      let nodeEl = this._nodeElMap.get(node.id);
+      const isNew = !nodeEl;
+      if (isNew) {
+        nodeEl = document.createElement('div');
+        nodeEl.dataset.nodeId = node.id;
+        this._nodeElMap.set(node.id, nodeEl);
+      }
+      nodeEl.className = 'comfy-node' + (this.selectedNodeIds.has(node.id) ? ' selected' : '') + (this.dragState && this.dragState.nodeId === node.id ? ' dragging' : '');
+
+      const color = node.color || 'default';
+      nodeEl.innerHTML =
+        '<div class="comfy-node-close" onmousedown="event.stopPropagation()" onclick="event.stopPropagation();App.removeNode(\'' + node.id + '\')">&times;</div>' +
+        '<div class="comfy-node-header h-' + color + '" onmousedown="App.startNodeDrag(event,\'' + node.id + '\')" ondblclick="event.stopPropagation();App.inlineEdit(\'nodeTitle\',\'' + node.id + '\')">' + self.escapeHtml(node.label || '未命名') + '</div>' +
+        '<div class="comfy-node-body" onclick="App._nodeClick(event,\'' + node.id + '\')" ondblclick="event.stopPropagation();App.inlineEdit(\'nodeDesc\',\'' + node.id + '\')">' +
+          '<span class="comfy-node-val">' + (node.desc ? self.escapeHtml(node.desc) : '<span class="comfy-node-empty">双击编辑</span>') + '</span>' +
+          '<span class="comfy-node-clear" onclick="event.stopPropagation();App.canvasState.nodes.find(n=>n.id===\'' + node.id + '\').desc=\'\';App.saveCanvasSnapshot();App.renderAssociationCanvas();">&times;</span>' +
+        '</div>' +
+        '<div class="comfy-socket in s-' + color + '" data-node="' + node.id + '" data-dir="in" onmousedown="event.stopPropagation();App.startSocketDrag(event,\'' + node.id + '\',\'in\',\'' + color + '\')"><div class="comfy-socket-inner"></div></div>' +
+        '<div class="comfy-socket out s-' + color + '" data-node="' + node.id + '" data-dir="out" onmousedown="event.stopPropagation();App.startSocketDrag(event,\'' + node.id + '\',\'out\',\'' + color + '\')"><div class="comfy-socket-inner"></div></div>';
+
+      if (isNew) nodesContainer.appendChild(nodeEl);
+    });
+
+    if (!nodesContainer.dataset.ctxBound) {
+      nodesContainer.dataset.ctxBound = '1';
+      nodesContainer.addEventListener('contextmenu', function(e) {
+        const nodeEl = e.target.closest('.comfy-node');
+        if (!nodeEl) return;
+        e.preventDefault(); e.stopPropagation();
+        App.showCtx(e.clientX, e.clientY, nodeEl.dataset.nodeId, null);
+      });
+    }
+
+    this.updateNodePositions();
+    this.applyViewTransform();
+    this.renderLines();
+
+    requestAnimationFrame(() => {
+      this._nodeElMap.forEach(el => {
+        const val = el.querySelector('.comfy-node-val');
+        const body = val ? val.closest('.comfy-node-body') : null;
+        if (!body || !val) return;
+        body.classList.toggle('has-overflow', val.scrollHeight > val.clientHeight + 1 && !val.isContentEditable);
+      });
+    });
+
+    container.onmousedown = (e) => this.onCanvasMouseDown(e);
+    container.onwheel = (e) => this.onCanvasWheel(e);
+    container.ondblclick = (e) => this._onCanvasDblClick(e);
+    container.oncontextmenu = () => false;
+    this._initCoordInputs();
+    this.updateCoordDisplay();
+  },
+
+  // ── Render Lines ──
+  renderLines() {
+    if (this._linesRaf) return;
+    this._linesRaf = requestAnimationFrame(() => { this._linesRaf = null; this._doRenderLines(); });
+  },
+
+  // Clear connection selection and refresh line rendering. Returns true
+  // if a selection was actually cleared (so callers can short-circuit).
+  // Centralizes the 4 scattered "if (selectedConnKey) { null; renderLines(); }"
+  // patterns that would otherwise live in canvas/node click / drag / delete.
+  _clearConnSelection() {
+    if (!this.selectedConnKey) return false;
+    this.selectedConnKey = null;
+    this.renderLines();
+    return true;
+  },
+
+  // Wire up all interaction handlers for a connection's path or label.
+  // Called ONLY at element creation. Uses dataset to find the paired
+  // element at event time (not at bind time), so order of creation
+  // (path before label or vice versa) doesn't matter, and we never
+  // hold stale references across re-renders.
+  _bindConnEl(el, k) {
+    el.onmousedown = e => { e.stopPropagation(); };
+    el.onclick = e => {
+      e.stopPropagation();
+      this.selectedConnKey = k;
+      this.selectedNodeIds.clear();
+      this.renderLines();
+      this._nodeElMap.forEach(n => { n.classList.remove('selected'); });
+    };
+    el.addEventListener('dblclick', e => { e.stopPropagation(); this.inlineEdit('edge', k); });
+    el.addEventListener('contextmenu', e => { e.preventDefault(); e.stopPropagation(); this.showCtx(e.clientX, e.clientY, null, k); });
+    // Hover → mirror .hover onto the paired element (path ↔ label).
+    // Look up the sibling by dataset key at event time. Both path
+    // (data-conn-key) and label (data-ck) share the same key value.
+    el.addEventListener('mouseenter', () => {
+      el.classList.add('hover');
+      const paired = el.tagName === 'path'
+        ? el.closest('svg').querySelector('text[data-ck="' + k + '"]')
+        : el.closest('svg').querySelector('path[data-conn-key="' + k + '"]');
+      if (paired) paired.classList.add('hover');
+    });
+    el.addEventListener('mouseleave', () => {
+      el.classList.remove('hover');
+      const paired = el.tagName === 'path'
+        ? el.closest('svg').querySelector('text[data-ck="' + k + '"]')
+        : el.closest('svg').querySelector('path[data-conn-key="' + k + '"]');
+      if (paired) paired.classList.remove('hover');
+    });
+  },
+
+  _doRenderLines() {
+    const svg = document.getElementById('comfyLinesSvg');
+    if (!svg) return;
+    /* Initialise SVG size once; overflow:visible lets negative coords render */
+    if (!svg.getAttribute('width')) {
+      svg.setAttribute('width', '1');
+      svg.setAttribute('height', '1');
+    }
+
+    // ── Data-driven line rendering ──
+    // All line geometry is computed HERE from the current data + scale.
+    // No intermediate state (no cached `d` strings, no pre-scaled coords
+    // stored on socketDragState). Every render call reads the live data
+    // and produces correct geometry at the current zoom. This is what
+    // makes zoom-during-socket-drag work: the temp line's endpoint is
+    // stored as a WORLD coord (scale-invariant), so zoom just triggers
+    // a re-render that multiplies by the new scale.
+    //
+    // Coordinate system:
+    //   - node.x / node.y        : world coords (data)
+    //   - socketDragState.toX/Y  : world coords (data)
+    //   - SVG path `d` coords    : world * scale  (pan is handled by
+    //                            .comfy-canvas-world's translate transform)
+    const s = this.scale;
+
+    const connKey = c => c.from + '___' + c.to;
+    let connGroup = svg.querySelector('.comfy-conn-group:not(.temp)');
+    if (!connGroup) {
+      connGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      connGroup.setAttribute('class', 'comfy-conn-group');
+      svg.appendChild(connGroup);
+    }
+    // Two child layers guarantee z-order: paths first, labels second. SVG
+    // paints later-appended elements on top, so labels always overlay the
+    // lines — this is what makes "label on the line midpoint" readable.
+    let linesGroup = connGroup.querySelector('.comfy-lines');
+    if (!linesGroup) {
+      linesGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      linesGroup.setAttribute('class', 'comfy-lines');
+      connGroup.appendChild(linesGroup);
+    }
+    let labelsGroup = connGroup.querySelector('.comfy-labels');
+    if (!labelsGroup) {
+      labelsGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      labelsGroup.setAttribute('class', 'comfy-labels');
+      connGroup.appendChild(labelsGroup);
+    }
+
+    const pathByKey = new Map();
+    linesGroup.querySelectorAll('path').forEach(p => { const k = p.dataset.connKey; if (k) pathByKey.set(k, p); });
+    const labelByKey = new Map();
+    labelsGroup.querySelectorAll('text').forEach(t => { const k = t.dataset.ck; if (k) labelByKey.set(k, t); });
+
+    /* O(1) node lookup */
+    const nodeMap = new Map();
+    this.canvasState.nodes.forEach(n => nodeMap.set(n.id, n));
+
+    // Helper: build a cubic-bezier `d` string from two world-coord endpoints.
+    // The control points extend horizontally by half the horizontal distance,
+    // producing the characteristic S-curve. All coords are pre-multiplied by
+    // `s` so the path holds screen-pixel coords (crisp at any zoom).
+    const buildPath = (wx1, wy1, wx2, wy2) => {
+      const x1 = wx1 * s, y1 = wy1 * s, x2 = wx2 * s, y2 = wy2 * s;
+      const dx = Math.abs(x2 - x1) * 0.5;
+      return 'M' + x1 + ',' + y1 + ' C' + (x1 + dx) + ',' + y1 + ' ' + (x2 - dx) + ',' + y2 + ' ' + x2 + ',' + y2;
+    };
+
+    this.canvasState.connections.forEach(conn => {
+      const k = connKey(conn);
+      const fromNode = nodeMap.get(conn.from);
+      const toNode = nodeMap.get(conn.to);
+      if (!fromNode || !toNode) return;
+      // Socket anchor points in world coords:
+      //   out socket = right edge of source node (x + NODE_W, y + 40)
+      //   in socket  = left edge of target node  (x, y + 40)
+      const d = buildPath((fromNode.x || 0) + NODE_W, (fromNode.y || 0) + 40,
+                          (toNode.x || 0),             (toNode.y || 0) + 40);
+      const isSelected = this.selectedConnKey === k;
+      const sw = 2.5 * s;
+      const pathCls = 'comfy-line s-' + (fromNode.color || 'default') + (isSelected ? ' selected' : '');
+
+      let path = pathByKey.get(k);
+      if (path) {
+        path.setAttribute('d', d);
+        path.setAttribute('class', pathCls);
+        path.setAttribute('stroke-width', sw);
+        pathByKey.delete(k);
+      } else {
+        path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.dataset.connKey = k;
+        path.setAttribute('d', d);
+        path.setAttribute('class', pathCls);
+        path.setAttribute('stroke-width', sw);
+        linesGroup.appendChild(path);
+        // Bind events only at creation — re-binding every render would
+        // leak listeners (addEventListener with fresh closures doesn't
+        // dedupe). _bindConnEl looks up the paired label by dataset at
+        // event time, so creation order doesn't matter.
+        this._bindConnEl(path, k);
+      }
+
+      // Label position = exact midpoint of the line (screen coords).
+      const midX = ((fromNode.x || 0) + NODE_W + (toNode.x || 0)) / 2 * s;
+      const midY = ((fromNode.y || 0) + 40 + (toNode.y || 0) + 40) / 2 * s;
+      let lbl = labelByKey.get(k);
+      if (conn.label) {
+        if (!lbl) {
+          lbl = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+          lbl.dataset.ck = k;
+          lbl.setAttribute('text-anchor', 'middle');
+          lbl.setAttribute('font-size', String(10 * s));
+          lbl.setAttribute('font-style', 'italic');
+          lbl.setAttribute('dominant-baseline', 'middle');
+          lbl.setAttribute('class', 'comfy-line-label');
+          lbl.setAttribute('fill', '#4a5568');
+          labelsGroup.appendChild(lbl);
+          this._bindConnEl(lbl, k);
+        } else {
+          lbl.setAttribute('font-size', String(10 * s));
+        }
+        lbl.setAttribute('x', midX);
+        lbl.setAttribute('y', midY);
+        lbl.textContent = conn.label;
+        lbl.classList.toggle('selected', isSelected);
+        labelByKey.delete(k);
+      } else if (lbl) {
+        lbl.remove();
+        labelByKey.delete(k);
+        lbl = null;
+      }
+    });
+
+    // Drop any path/label whose connection no longer exists.
+    pathByKey.forEach(p => p.remove());
+    labelByKey.forEach(p => p.remove());
+
+    // ── Temp line (socket drag) — also fully data-driven ──
+    // socketDragState holds: fromNode, fromDir, toWorldX, toWorldY.
+    // All are world coords (scale-invariant). We compute the path `d`
+    // here at the current scale, same as permanent lines. Zoom during
+    // drag just triggers renderLines → this re-runs → correct geometry.
+    const existingTemp = svg.querySelector('.comfy-conn-group.temp');
+    if (existingTemp) existingTemp.remove();
+
+    if (this.socketDragState) {
+      const sd = this.socketDragState;
+      const startX = (sd.node.x || 0) + (sd.dir === 'out' ? NODE_W : 0);
+      const startY = (sd.node.y || 0) + 40;
+      const d = buildPath(startX, startY, sd.toWorldX, sd.toWorldY);
+      const tempGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+      tempGroup.setAttribute('class', 'comfy-conn-group temp');
+      const tempLine = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      tempLine.setAttribute('d', d);
+      tempLine.setAttribute('stroke-width', 2.5 * s);
+      tempLine.setAttribute('class', 'comfy-line temp s-' + sd.colorClass);
+      tempGroup.appendChild(tempLine);
+      svg.appendChild(tempGroup);
+    }
+  },
+
+  // ── Animations ──
+  //
+  // Frame-sequence snap animation with two independent refresh streams.
+  //
+  // Why not WAAPI / CSS transitions:
+  //   An earlier implementation used el.animate() with fill:'forwards'. The
+  //   animation visually overrode el.style.transform, but only wrote the final
+  //   value back to el.style.transform inside its onfinish callback. If the
+  //   user grabbed the node mid-animation, the WAAPI animation was cancelled,
+  //   the visual snapped back to the (stale) pre-snap transform, while
+  //   nodeObj.x/y already held the snapped target — producing a data/visual
+  //   desync. The first mousemove then jumped the node to (snappedX+dx,
+  //   snappedY+dy), manifesting as "flash back to the aligned grid" and a
+  //   broken drag feel.
+  //
+  // Current design (frame sequence + two independent streams):
+  //   1. On drag end, compute the nearest grid line for each node.
+  //   2. Pre-compute a frame sequence — an explicit array of {x, y} positions
+  //      sampled at 1ms granularity. This array is the "script" of the
+  //      animation: every frame's target position is stored as data, not
+  //      computed on the fly.
+  //   3. Post-processing (overshoot, jitter, dance moves, etc.) is done by
+  //      directly mutating this array. Adding an effect = editing the array.
+  //   4. TWO INDEPENDENT STREAMS advance the animation:
+  //
+  //      DATA STREAM (setInterval @ 240Hz constant):
+  //        - Frequency is a hardcoded constant (240Hz), independent of the
+  //          browser's actual refresh rate. This is the key design decision:
+  //          the animation's heartbeat is browser-independent.
+  //        - Each tick: elapsed = performance.now() - startTime
+  //                     idx = floor(elapsed / 1ms)
+  //                     node.x/y = frames[idx]    (DATA ONLY, no DOM write)
+  //                     animState.dirty = true
+  //        - 240Hz covers all consumer displays (60/120/144/240Hz). On a
+  //          60Hz browser, 3 out of every 4 data ticks are "wasted" (their
+  //          values get overwritten before the next paint), but this is fine
+  //          — the cost is just a few object property writes, and the
+  //          guarantee is that node.x/y is always current when the browser
+  //          does paint.
+  //
+  //      RENDER STREAM (requestAnimationFrame, vsync-bound):
+  //        - Frequency = browser refresh rate (whatever it is).
+  //        - Each tick: for each dirty anim, sync node.x/y → el.style.transform,
+  //                     clear dirty, call renderLines() once (batched).
+  //        - Does NOT advance the animation — that's the data stream's job.
+  //        - If the browser drops a frame, this tick doesn't run, but the
+  //          data stream keeps updating node.x/y. Next paint picks up the
+  //          latest position. No animation slowdown.
+  //
+  //   5. Because the data stream uses time-based indexing (performance.now()),
+  //      the animation ALWAYS takes 150ms regardless of the data stream
+  //      frequency or the browser refresh rate.
+  //   6. Interrupt handling: if the user grabs the node mid-animation, simply
+  //      cancel (remove from active set, set cancelled flag). There is NO
+  //      sync issue, because the data stream writes node.x/y on every tick
+  //      and the render stream syncs it to DOM — node.x/y always equals the
+  //      displayed position. The next drag starts from wherever the node was
+  //      visually when grabbed.
+  //   7. Both streams self-stop when _activeSnapAnims becomes empty. Idle =
+  //      zero CPU. Background tabs: setInterval is throttled (browser-
+  //      dependent, typically ~1Hz), so the data stream effectively pauses;
+  //      RAF is also throttled. Both resume when the tab regains focus.
+  //
+  // Animation feel:
+  //   150ms total: 100ms linear slide (start → target) + 50ms overshoot tail
+  //   (target → 15% past target → target). The tail gives a subtle "bounce"
+  //   feel without being exaggerated.
+  //
+
+  // Set of currently-active snap animations. Each entry is the animState
+  // object also referenced by el._snapAnim. Using a Set (not an array) so
+  // add/remove is O(1) and duplicates are impossible.
+  _activeSnapAnims: new Set(),
+
+  // ── Two independent refresh streams ──
+  //
+  // 1. DATA STREAM (setInterval, fixed 240Hz constant):
+  //      Drives node.x/y updates. Frequency is a hardcoded constant (240Hz),
+  //      independent of the browser's actual refresh rate. This guarantees
+  //      the animation always advances at a smooth rate regardless of the
+  //      display. 240Hz is chosen because it covers all consumer displays
+  //      (60/120/144/240Hz) — even on a 240Hz screen, the data stream ticks
+  //      at the same rate, so no frames are starved.
+  //
+  // 2. RENDER STREAM (requestAnimationFrame, vsync-bound):
+  //      Syncs node.x/y → el.style.transform so the browser can paint it.
+  //      Frequency = browser refresh rate (whatever it is). This stream
+  //      doesn't decide WHEN the node moves — it only copies the latest
+  //      data position to the DOM so the browser's next paint picks it up.
+  //
+  // Why split:
+  //   - Data stream frequency is a constant → animation smoothness is
+  //     browser-independent. A 30Hz throttled background tab still gets
+  //     240 data updates per second (most are wasted, but the position
+  //     is always current when the browser does paint).
+  //   - Render stream follows vsync → no tearing, no wasted paints.
+  //   - The two are decoupled: dropping the render stream (e.g. tab hidden)
+  //     doesn't stop the data stream; the data stream can be cancelled
+  //     without affecting the render stream's idle state.
+  _snapDataInterval: null,        // setInterval handle for data stream
+  _snapRenderRaf: null,           // requestAnimationFrame handle for render stream
+
+  // Data stream frequency (Hz). Constant — never queried, never measured.
+  // Higher = smoother animation on high-refresh displays, more CPU.
+  // 240Hz covers all consumer displays without excessive CPU.
+  _snapDataHz: 240,
+
+  // ═══════════════════════════════════════════════════════════════════
+  // FRAME-SEQUENCE ANIMATION (data-driven, decoupled from rendering)
+  //
+  // Design:
+  //   1. _animateNodeToGrid pre-computes a frame sequence (an array of
+  //      {x, y} positions) ONCE when the animation starts. This sequence
+  //      is the "script" of the animation — every frame's target position
+  //      is explicitly stored.
+  //
+  //   2. Post-processing (overshoot, jitter, easing, dance moves, etc.)
+  //      is done by directly mutating/appending to this array. Because
+  //      positions are explicit data, any effect is just an array edit —
+  //      no function-logic gymnastics required.
+  //
+  //   3. _snapSchedulerTick advances the frame pointer based on elapsed
+  //      wall-clock time (performance.now()), NOT by counting RAF ticks.
+  //      This means the animation duration is fixed regardless of the
+  //      browser's actual RAF frequency. If the browser drops frames,
+  //      we just skip ahead to the correct frame for the current time.
+  //
+  //   4. Each tick writes BOTH node.x/y (data) AND el.style.transform (DOM).
+  //      The data write is the source of truth; the DOM write is what the
+  //      browser samples at vsync. They're kept in sync so that mid-
+  //      animation interruption always sees data === visual.
+  //
+  // Why frame sequence (not a time function):
+  //   - Explicit storage = debuggable. `console.log(frames)` shows the
+  //     entire trajectory.
+  //   - Post-processing = array edits. Adding overshoot = append a few
+  //     frames. Adding jitter = offset each element. Adding a dance move
+  //     = splice in a circle arc. All trivial, composable, inspectable.
+  //   - The "frame rate mismatch" concern is a non-issue: we use time to
+  //     INDEX into the array, so the array length doesn't need to match
+  //     the actual refresh rate. Browser drops frames → we skip ahead,
+  //     no slowdown.
+  // ═══════════════════════════════════════════════════════════════════
+
+  _animateNodeToGrid(el, node, worldX, worldY) {
+    // Cancel any in-flight snap animation on this element first.
+    this._cancelSnapAnim(el);
+
+    // Read the current visual position from el.style.transform (this is the
+    // true source of truth — WAAPI is no longer involved, so the style always
+    // reflects what the user sees).
+    const currentTransform = el.style.transform;
+    const match = currentTransform.match(/translate\(([^,]+)px,\s*([^)]+)px\)/);
+    const currentX = match ? parseFloat(match[1]) : worldX;
+    const currentY = match ? parseFloat(match[2]) : worldY;
+
+    // ── Data/visual sync at animation start ──
+    // Callers (e.g. onUp) typically write node.x/y = snapTarget BEFORE
+    // invoking this function, so at this moment we have a desync:
+    //   node.x        = snapTarget (e.g. 100)
+    //   el.style.transform = pre-snap visual position (e.g. 102)
+    // If we let this desync persist, the next renderLines() tick (queued
+    // by the caller right after this returns) computes line endpoints
+    // from node.x = 100, jumping the connection line + label to the
+    // snap target one frame early. Then the data stream's first tick
+    // overwrites node.x = frames[0].x = 102, and the next renderLines()
+    // jumps the line BACK to the start — manifesting as a single
+    // "shake" on connection lines and labels while the node itself
+    // stays still. Writing currentX/Y here makes data === visual at
+    // animation start, so the data stream's first frame write is a
+    // no-op and there is no visible discontinuity.
+    if (node) { node.x = currentX; node.y = currentY; }
+
+    // No distance to cover — pin to target and bail.
+    if (Math.abs(worldX - currentX) < 0.01 && Math.abs(worldY - currentY) < 0.01) {
+      el.style.transform = 'translate(' + worldX + 'px,' + worldY + 'px)';
+      if (node) { node.x = worldX; node.y = worldY; }
+      this.renderLines();
+      return;
+    }
+
+    // ── Animation timing (in milliseconds) ──
+    //   base phase (0 → baseMs): linear slide from start to target.
+    //   tail phase (baseMs → totalMs): overshoot — target → peak → target.
+    //   total = 150ms. Time is used to INDEX into the frame array, so the
+    //   actual playback duration is always 150ms regardless of RAF rate.
+    const baseMs = 100;
+    const tailMs = 50;
+    const totalMs = baseMs + tailMs;
+
+    // ── Build the frame sequence ──
+    // We sample the trajectory at a fixed granularity (one frame per
+    // millisecond-step). This gives plenty of resolution for any refresh
+    // rate (60Hz needs ~9 samples for 150ms, 240Hz needs ~36; we generate
+    // 150 samples, so there's always a sample near the needed time).
+    //
+    // Why 1ms granularity: it's fine-grained enough that the scheduler can
+    // always find a frame close to "where we should be right now", and the
+    // array is small (150 elements = ~2.4KB). Going finer (e.g. 0.5ms)
+    // wastes memory; going coarser (e.g. 16ms) would lose smoothness on
+    // high-refresh displays.
+    const sampleStepMs = 1;
+    const dx = worldX - currentX;
+    const dy = worldY - currentY;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    const ux = dx / dist;
+    const uy = dy / dist;
+    // Overshoot peak = target + 15% of (start→target) direction.
+    const overshootAmount = 0.15;
+    const peakX = worldX + ux * dist * overshootAmount;
+    const peakY = worldY + uy * dist * overshootAmount;
+    const peakRatio = 0.5; // peak at middle of tail
+
+    const frames = [];
+    for (let tMs = 0; tMs <= totalMs; tMs += sampleStepMs) {
+      let x, y;
+      if (tMs < baseMs) {
+        // Base phase: linear start → target.
+        const t = tMs / baseMs;
+        x = currentX + dx * t;
+        y = currentY + dy * t;
+      } else if (tMs < totalMs) {
+        // Tail phase: target → peak → target.
+        const tailT = (tMs - baseMs) / tailMs; // 0..1 within tail
+        if (tailT <= peakRatio) {
+          const t = tailT / peakRatio;
+          x = worldX + (peakX - worldX) * t;
+          y = worldY + (peakY - worldY) * t;
+        } else {
+          const t = (tailT - peakRatio) / (1 - peakRatio);
+          x = peakX + (worldX - peakX) * t;
+          y = peakY + (worldY - peakY) * t;
+        }
+      } else {
+        // Final frame: exactly on target (avoids float drift).
+        x = worldX;
+        y = worldY;
+      }
+      frames.push({ x: x, y: y });
+    }
+
+    // ── Post-processing hook ──
+    // This is where you'd mutate `frames` to add effects like jitter,
+    // dance moves, pauses, etc. The base trajectory is already complete
+    // and valid; any post-processing is optional and composable.
+    //
+    // Example (NOT enabled — uncomment to play):
+    //
+    //   // Add ±2px jitter to middle frames, tapering at both ends
+    //   for (let i = 0; i < frames.length; i++) {
+    //     const envelope = 1 - Math.abs(2 * i / frames.length - 1);
+    //     frames[i].x += (Math.random() - 0.5) * 4 * envelope;
+    //     frames[i].y += (Math.random() - 0.5) * 4 * envelope;
+    //   }
+    //
+    //   // Append a little dance at the end (3 small bounces)
+    //   for (let i = 0; i < 3; i++) {
+    //     frames.push({ x: worldX, y: worldY - 4 * (1 - i/3) });
+    //     frames.push({ x: worldX, y: worldY });
+    //   }
+
+    // ── Animation state ──
+    // startTime is set lazily on the first data tick. The data tick uses
+    // (performance.now() - startTime) to index into frames[], so playback
+    // duration is always totalMs regardless of the data stream frequency.
+    const animState = {
+      frames: frames,            // explicit frame sequence (the "script")
+      frameIndex: 0,             // current playback position
+      startTime: null,           // set on first data tick
+      totalMs: totalMs,          // total animation duration
+      targetX: worldX,
+      targetY: worldY,
+      cancelled: false,
+      node: node,
+      el: el,
+      dirty: false               // set true by data stream when node.x/y changes;
+                                 // cleared by render stream after syncing to DOM
+    };
+    el._snapAnim = animState;
+
+    // Register with the global scheduler. Start both streams if not already
+    // running:
+    //   - Data stream (setInterval @ 240Hz): advances frameIndex, updates
+    //     node.x/y, marks animState.dirty = true.
+    //   - Render stream (RAF): for each dirty anim, syncs node.x/y →
+    //     el.style.transform, clears dirty.
+    // Both streams self-stop when _activeSnapAnims becomes empty.
+    this._activeSnapAnims.add(animState);
+    if (this._snapDataInterval === null) {
+      const intervalMs = 1000 / this._snapDataHz;
+      this._snapDataInterval = setInterval(this._snapDataTick, intervalMs);
+    }
+    if (this._snapRenderRaf === null) {
+      this._snapRenderRaf = requestAnimationFrame(this._snapRenderTick);
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // DATA STREAM TICK (setInterval, 240Hz constant)
+  //
+  // This is the animation's heartbeat. It runs at a FIXED frequency (240Hz),
+  // independent of the browser's refresh rate. Each tick:
+  //   1. For every active animation, compute the current frame index from
+  //      real wall-clock time (performance.now() - startTime).
+  //   2. Update node.x/y to the frame's position (DATA ONLY — no DOM write).
+  //   3. Mark animState.dirty = true so the render stream knows to sync.
+  //   4. If the animation is complete, pin to target and remove from active set.
+  //
+  // Why data-only (no DOM write here):
+  //   - DOM writes are expensive (trigger style recalc / layout). Doing them
+  //     at 240Hz would waste CPU on overlapping writes the browser can't
+  //     paint anyway (60Hz browser = 4 data ticks per paint; only the last
+  //     write matters).
+  //   - The render stream (RAF) runs at the browser's actual paint rate and
+  //     picks up the latest node.x/y. This way we get 240Hz smooth data with
+  //     only ~60Hz DOM writes.
+  // ═══════════════════════════════════════════════════════════════════
+  _snapDataTick: function () {
+    const self = window.App;
+    if (self._activeSnapAnims.size === 0) {
+      // No active animations — stop the data stream (idle = zero CPU).
+      clearInterval(self._snapDataInterval);
+      self._snapDataInterval = null;
+      return;
+    }
+
+    const now = performance.now();
+    const sampleStepMs = 1;
+
+    // Snapshot the set — animState.cancelled may be flipped during the loop
+    // (e.g. by startNodeDrag grabbing a node), and Set iteration during
+    // mutation is fragile.
+    const snapshot = Array.from(self._activeSnapAnims);
+    for (const anim of snapshot) {
+      if (anim.cancelled) {
+        self._activeSnapAnims.delete(anim);
+        continue;
+      }
+
+      // Lazy-init startTime on the first data tick.
+      if (anim.startTime === null) {
+        anim.startTime = now;
+      }
+      const elapsed = now - anim.startTime;
+      const idx = Math.floor(elapsed / sampleStepMs);
+
+      if (idx >= anim.frames.length) {
+        // Animation complete — pin node.x/y to exact target. Mark dirty so
+        // the render stream does the final DOM write.
+        if (anim.node) {
+          anim.node.x = anim.targetX;
+          anim.node.y = anim.targetY;
+        }
+        anim.frameIndex = anim.frames.length;
+        anim.dirty = true;
+        anim.el._snapAnim = null;
+        self._activeSnapAnims.delete(anim);
+        continue;
+      }
+
+      // Update data position from the pre-computed frame.
+      const f = anim.frames[idx];
+      if (anim.node) {
+        anim.node.x = f.x;
+        anim.node.y = f.y;
+      }
+      anim.frameIndex = idx;
+      anim.dirty = true;  // tell render stream to sync this to DOM
+    }
+  },
+
+  // ═══════════════════════════════════════════════════════════════════
+  // RENDER STREAM TICK (requestAnimationFrame, vsync-bound)
+  //
+  // This runs at the browser's actual refresh rate. It does NOT advance the
+  // animation — that's the data stream's job. This tick only:
+  //   1. For every active animation marked dirty, sync node.x/y →
+  //      el.style.transform, then clear dirty.
+  //   2. Call renderLines() once (batched) so connection lines follow.
+  //
+  // If the browser drops a frame, this tick simply doesn't run that frame —
+  // but the data stream keeps updating node.x/y, so the next paint picks up
+  // the latest position. No animation slowdown.
+  // ═══════════════════════════════════════════════════════════════════
+  _snapRenderTick: function () {
+    const self = window.App;
+    self._snapRenderRaf = null;
+
+    let anyDirty = false;
+    const snapshot = Array.from(self._activeSnapAnims);
+    for (const anim of snapshot) {
+      if (anim.cancelled) continue;
+      if (!anim.dirty) continue;
+
+      // Sync data → DOM. Read the current node.x/y (already updated by the
+      // data stream) and write to el.style.transform.
+      const el = anim.el;
+      const x = anim.node ? anim.node.x : anim.targetX;
+      const y = anim.node ? anim.node.y : anim.targetY;
+      el.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+      anim.dirty = false;
+      anyDirty = true;
+    }
+
+    // If any animation was dirty, refresh connection lines once.
+    // (renderLines self-coalesces via _linesRaf, so this is cheap.)
+    if (anyDirty || self._activeSnapAnims.size > 0) {
+      self.renderLines();
+    }
+
+    // Keep the render stream running while there are active animations.
+    // When all animations complete, the data stream stops itself (see
+    // _snapDataTick), and we stop the render stream here.
+    if (self._activeSnapAnims.size > 0) {
+      self._snapRenderRaf = requestAnimationFrame(self._snapRenderTick);
+    }
+  },
+
+  // Cancel any in-flight snap animation on the given element.
+  // After this returns, el._snapAnim is null and the element's transform /
+  // node.x/y are guaranteed to be in sync (because the animation wrote both
+  // on every frame, so whatever values are currently set are mutually
+  // consistent).
+  _cancelSnapAnim(el) {
+    if (!el._snapAnim) return;
+    const anim = el._snapAnim;
+    anim.cancelled = true;
+    // Remove from the global scheduler — it will skip this anim on its next
+    // tick (or never see it if we delete now). Deleting now is O(1) and keeps
+    // the active set tidy.
+    this._activeSnapAnims.delete(anim);
+    el._snapAnim = null;
+  },
+
+  // ── Node Drag ──
+  startNodeDrag(e, nodeId) {
+    e.preventDefault();
+    e.stopPropagation();
+    this.canvasPanState = null;
+
+    /* Ctrl+click: toggle selection without clearing others */
+    if (e.ctrlKey || e.metaKey) {
+      if (this.selectedNodeIds.has(nodeId)) this.selectedNodeIds.delete(nodeId);
+      else this.selectedNodeIds.add(nodeId);
+      this.renderAssociationCanvas();
+      return;
+    }
+
+    if (!this.selectedNodeIds.has(nodeId)) this.selectedNodeIds.clear();
+
+    const nodeEl = this._nodeElMap.get(nodeId);
+    if (!nodeEl) return;
+    const node = this.canvasState.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    // Cancel any in-flight snap animations on ALL nodes (not just the one
+    // being grabbed) so that, e.g., a multi-node snap that is still running
+    // when the user grabs a different node also stops cleanly. Because the
+    // animation keeps node.x/y in sync with el.style.transform on every
+    // frame, cancellation here leaves every node in a consistent state —
+    // node.x/y is exactly the visual position. The new drag then starts
+    // from wherever the node was visually when grabbed. No flash-back.
+    this._nodeElMap.forEach(el => {
+      el.style.transition = 'none';
+      this._cancelSnapAnim(el);
+    });
+
+    // Grabbing a node clears connection selection (consistent with _nodeClick).
+    this._clearConnSelection();
+
+    const wp = this.getWorldPos(e.clientX, e.clientY);
+
+    const nodesToDrag = [];
+    if (this.selectedNodeIds.size > 1 && this.selectedNodeIds.has(nodeId)) {
+      this.selectedNodeIds.forEach(sid => {
+        const sn = this.canvasState.nodes.find(nn => nn.id === sid);
+        if (sn) nodesToDrag.push({ id: sid, origX: sn.x || 0, origY: sn.y || 0 });
+      });
+    } else {
+      nodesToDrag.push({ id: nodeId, origX: node.x || 0, origY: node.y || 0 });
+    }
+
+    this.dragState = { nodeId, startWorldX: wp.x, startWorldY: wp.y, nodes: nodesToDrag };
+    this.isDragging = true;
+    nodeEl.classList.add('dragging');
+    const self = this;
+    let dragRafId = null;
+
+    function onMove(e2) {
+      if (!self.dragState) return;
+      if (dragRafId) return;
+      dragRafId = requestAnimationFrame(() => {
+        dragRafId = null;
+        const wp2 = self.getWorldPos(e2.clientX, e2.clientY);
+        const dx = wp2.x - self.dragState.startWorldX;
+        const dy = wp2.y - self.dragState.startWorldY;
+        for (const n of self.dragState.nodes) {
+          const nodeObj = self.canvasState.nodes.find(nn => nn.id === n.id);
+          const newX = n.origX + dx, newY = n.origY + dy;
+          if (nodeObj) { nodeObj.x = newX; nodeObj.y = newY; }
+          const el = self._nodeElMap.get(n.id);
+          if (el) el.style.transform = 'translate(' + newX + 'px,' + newY + 'px)';
+        }
+        self.renderLines();
+      });
+    }
+
+    function onUp() {
+      let positionChanged = false;
+      if (dragRafId) { cancelAnimationFrame(dragRafId); dragRafId = null; }
+      if (self.dragState && self.dragState.nodes) {
+        for (const n of self.dragState.nodes) {
+          const nodeObj = self.canvasState.nodes.find(nn => nn.id === n.id);
+          if (!nodeObj) continue;
+          // Capture the CURRENT visual position BEFORE overwriting with the
+          // snap target. The previous code compared snappedX to n.origX
+          // (the position BEFORE drag), which meant dragging within a single
+          // grid cell (e.g. 100→102, both snap to 100) would set
+          // positionChanged = false and SKIP the animation entirely —
+          // causing the node to teleport to the snap target with no visible
+          // movement. This is the "near-teleport" bug.
+          //
+          // The correct comparison is: does the node need to MOVE from its
+          // current visual position to reach the snap target? If yes
+          // (even by 1px), the animation should run.
+          const visualX = nodeObj.x;
+          const visualY = nodeObj.y;
+          const snappedX = Math.round(visualX / GRID) * GRID;
+          const snappedY = Math.round(visualY / GRID) * GRID;
+          // positionChanged = "the snap target differs from where the node
+          // currently is". This is what determines whether an animation is
+          // needed. Also gates saveCanvasSnapshot below — if the node is
+          // already on the grid (no snap needed), no snapshot is warranted.
+          if (snappedX !== visualX || snappedY !== visualY) positionChanged = true;
+          nodeObj.x = snappedX;
+          nodeObj.y = snappedY;
+          const el = self._nodeElMap.get(n.id);
+          if (el) {
+            el.classList.remove('dragging');
+            // Pass nodeObj so the animation can keep node.x/y in sync with
+            // the visual position on every frame. This is what makes
+            // mid-animation interruption safe.
+            if (positionChanged) {
+              self._animateNodeToGrid(el, nodeObj, snappedX, snappedY);
+            } else {
+              el.style.transform = 'translate(' + snappedX + 'px,' + snappedY + 'px)';
+            }
+          }
+        }
+      }
+      self.dragState = null;
+      self.isDragging = false;
+      self._nodeElMap.forEach(el => { el.style.transition = ''; });
+      self.renderLines();
+      if (positionChanged) self.saveCanvasSnapshot();
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      window.removeEventListener('blur', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    window.addEventListener('blur', onUp);
+  },
+
+  // ── Socket Drag (data-driven, minimal design) ──
+  //
+  // Data model (socketDragState):
+  //   { nodeId, dir, colorClass, node, toWorldX, toWorldY }
+  //
+  //   - Start point = fromNode's socket anchor (computed live from node.x/y)
+  //   - End point   = toWorldX/Y (world coords, updated on mousemove)
+  //   - Influence   = bezier control point (computed live in buildPath)
+  //
+  // Nothing else is stored. The line shape is regenerated every render.
+  // Connection test on mouseup: is the end point within SOCKET_HIT_RADIUS
+  // of any compatible socket? Pure geometry, no DOM hit-testing.
+
+  startSocketDrag(e, nodeId, dir, colorClass) {
+    e.preventDefault();
+    const nodeEl = this._nodeElMap.get(nodeId);
+    if (!nodeEl) return;
+    const fromSocket = nodeEl.querySelector('.comfy-socket.' + dir);
+    if (fromSocket) fromSocket.classList.add('dragging');
+
+    const node = this.canvasState.nodes.find(n => n.id === nodeId);
+    if (!node) return;
+
+    const wp = this.getWorldPos(e.clientX, e.clientY);
+    this.socketDragState = {
+      nodeId, dir, colorClass, node,
+      toWorldX: wp.x, toWorldY: wp.y
+    };
+    const self = this;
+
+    function onMove(e2) {
+      if (!self.socketDragState) return;
+      const wp = self.getWorldPos(e2.clientX, e2.clientY);
+      self.socketDragState.toWorldX = wp.x;
+      self.socketDragState.toWorldY = wp.y;
+      self.renderLines();
+    }
+
+    function onUp() {
+      if (self.socketDragState) {
+        const sd = self.socketDragState;
+        // Connection test: does the end point fall within
+        // SOCKET_HIT_RADIUS of a compatible socket on another node?
+        const hit = self._findSocketHit(sd.toWorldX, sd.toWorldY, sd.nodeId, sd.dir);
+        if (hit) {
+          let fromId, toId;
+          if (sd.dir === 'out' && hit.dir === 'in') { fromId = sd.nodeId; toId = hit.nodeId; }
+          else if (sd.dir === 'in' && hit.dir === 'out') { fromId = hit.nodeId; toId = sd.nodeId; }
+          if (fromId && toId && !self.canvasState.connections.some(c => c.from === fromId && c.to === toId)) {
+            self.canvasState.connections.push({ from: fromId, to: toId, label: '' });
+            self.saveCanvasSnapshot();
+          }
+        }
+        if (fromSocket) fromSocket.classList.remove('dragging');
+        self.socketDragState = null;
+        self.renderLines();
+      }
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', onUp);
+      window.removeEventListener('blur', onUp);
+    }
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', onUp);
+    window.addEventListener('blur', onUp);
+    this.renderLines();
+  },
+
+  // Find a socket whose world-coord anchor is within SOCKET_HIT_RADIUS of
+  // (wx, wy), excluding the source node and requiring opposite direction.
+  // Returns { nodeId, dir } or null. Pure geometry — no DOM hit-testing,
+  // so it works correctly at any zoom/pan.
+  _findSocketHit(wx, wy, excludeNodeId, requireDir) {
+    const r = SOCKET_HIT_RADIUS;
+    for (const n of this.canvasState.nodes) {
+      if (n.id === excludeNodeId) continue;
+      // Socket anchor points (world coords):
+      //   in  socket = left edge  (x,         y + 40)
+      //   out socket = right edge (x + NODE_W, y + 40)
+      const inX = n.x || 0,            sy = (n.y || 0) + 40;
+      const outX = (n.x || 0) + NODE_W;
+      if (requireDir !== 'in') {
+        // Looking for an 'in' socket (source is 'out')
+        const dx = wx - inX, dy = wy - sy;
+        if (dx * dx + dy * dy <= r * r) return { nodeId: n.id, dir: 'in' };
+      }
+      if (requireDir !== 'out') {
+        // Looking for an 'out' socket (source is 'in')
+        const dx = wx - outX, dy = wy - sy;
+        if (dx * dx + dy * dy <= r * r) return { nodeId: n.id, dir: 'out' };
+      }
+    }
+    return null;
+  },
+
+  // ── Node CRUD ──
+  addNode() {
+    const id = 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    const c = document.getElementById('comfyCanvasContainer');
+    let cx = WORLD_CENTER_X, cy = WORLD_CENTER_Y;
+    if (c && c.clientWidth > 0) {
+      cx = Math.round((-this.panX + c.clientWidth / 2) / this.scale);
+      cy = Math.round((-this.panY + c.clientHeight / 2) / this.scale);
+    }
+    const x = Math.round(cx / GRID) * GRID - Math.round(NODE_W / 2 / GRID) * GRID;
+    const y = Math.round(cy / GRID) * GRID - 40;
+    this.canvasState.nodes.push({
+      id, label: '新节点', desc: '',
+      color: COLORS[Math.floor(Math.random() * COLORS.length)], x, y
+    });
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+    this.selectedNodeIds.clear();
+    this.selectedNodeIds.add(id);
+    this.inlineEdit('nodeTitle', id);
+  },
+
+  /* Double-click on canvas blank area → add node at that position */
+  _onCanvasDblClick(e) {
+    const target = e.target;
+    if (target.closest('.comfy-node') || target.closest('.comfy-coord') || target.closest('.comfy-sel-overlay')) return;
+    const wp = this.getWorldPos(e.clientX, e.clientY);
+    const id = 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    const x = Math.round(wp.x / GRID) * GRID - Math.round(NODE_W / 2 / GRID) * GRID;
+    const y = Math.round(wp.y / GRID) * GRID - 40;
+    this.canvasState.nodes.push({
+      id, label: '新节点', desc: '',
+      color: COLORS[Math.floor(Math.random() * COLORS.length)], x, y
+    });
+    this.selectedNodeIds.clear();
+    this.selectedNodeIds.add(id);
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+    this.inlineEdit('nodeTitle', id);
+  },
+
+  /* Copy selected nodes to internal clipboard */
+  copyNodes() {
+    if (this.selectedNodeIds.size === 0) return;
+    this._clipboard = [];
+    this.canvasState.nodes.forEach(n => {
+      if (this.selectedNodeIds.has(n.id)) this._clipboard.push(JSON.parse(JSON.stringify(n)));
+    });
+    if (this._clipboard.length > 0) showToast('已复制 ' + this._clipboard.length + ' 个节点');
+  },
+
+  /* Paste nodes from clipboard, offset by 30px */
+  pasteNodes() {
+    if (this._clipboard.length === 0) return;
+    const idMap = {};
+    const newIds = [];
+    this._clipboard.forEach(src => {
+      const id = 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+      idMap[src.id] = id;
+      this.canvasState.nodes.push({
+        id, label: src.label + ' 副本', desc: src.desc, color: src.color,
+        x: (src.x || 0) + 30, y: (src.y || 0) + 30
+      });
+      newIds.push(id);
+    });
+    /* Copy connections between pasted nodes */
+    this._clipboard.forEach(src => {
+      this.canvasState.connections.forEach(c => {
+        if (c.from === src.id && idMap[c.to]) {
+          this.canvasState.connections.push({ from: idMap[src.id], to: idMap[c.to], label: c.label });
+        }
+      });
+    });
+    this.selectedNodeIds.clear();
+    newIds.forEach(id => this.selectedNodeIds.add(id));
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+    showToast('已粘贴 ' + newIds.length + ' 个节点');
+  },
+
+  /* Select all nodes */
+  selectAllNodes() {
+    this.canvasState.nodes.forEach(n => this.selectedNodeIds.add(n.id));
+    this.renderAssociationCanvas();
+  },
+
+  removeNode(id) {
+    if (!this.canvasState.nodes.some(n => n.id === id)) return;
+    this.canvasState.nodes = this.canvasState.nodes.filter(n => n.id !== id);
+    this.canvasState.connections = this.canvasState.connections.filter(c => c.from !== id && c.to !== id);
+    this.selectedNodeIds.delete(id);
+    const el = this._nodeElMap.get(id);
+    if (el) { el.remove(); this._nodeElMap.delete(id); }
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+    showToast('节点已删除', 'warning');
+  },
+
+  removeNodes(ids) {
+    const idSet = new Set(ids);
+    const before = this.canvasState.nodes.length;
+    this.canvasState.nodes = this.canvasState.nodes.filter(n => !idSet.has(n.id));
+    const removed = before - this.canvasState.nodes.length;
+    if (removed === 0) return;
+    this.canvasState.connections = this.canvasState.connections.filter(c => !idSet.has(c.from) && !idSet.has(c.to));
+    // If the selected connection referenced a deleted node, drop the selection.
+    if (this.selectedConnKey) {
+      const parts = this.selectedConnKey.split('___');
+      if (idSet.has(parts[0]) || idSet.has(parts[1])) this.selectedConnKey = null;
+    }
+    ids.forEach(id => {
+      this.selectedNodeIds.delete(id);
+      const el = this._nodeElMap.get(id);
+      if (el) { el.remove(); this._nodeElMap.delete(id); }
+    });
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+    if (removed === 1) { showToast('节点已删除', 'warning'); }
+    else { showToast('已删除 ' + removed + ' 个节点', 'warning'); }
+  },
+
+  openNodeModal(id) {
+    const n = this.canvasState.nodes.find(nn => nn.id === id);
+    if (!n) return;
+    this._modalNodeId = id;
+    this.selectedNodeIds.clear();
+    this.selectedNodeIds.add(id);
+    document.getElementById('mTitle').textContent = '编辑节点';
+    document.getElementById('mLabel').value = n.label;
+    document.getElementById('mDesc').value = n.desc || '';
+    const cp = document.getElementById('mColors');
+    cp.innerHTML = COLORS.map(c => '<button data-c="' + c + '" style="width:22px;height:22px;border-radius:50%;border:' + (n.color === c ? '2px solid #1a1d24' : '2px solid transparent') + ';background:' + COLOR_HEX[c] + ';cursor:pointer"></button>').join('');
+    cp.querySelectorAll('button').forEach(b => {
+      b.addEventListener('click', () => {
+        cp.querySelectorAll('button').forEach(x => x.style.border = '2px solid transparent');
+        b.style.border = '2px solid #1a1d24';
+        document.getElementById('modal').dataset.color = b.dataset.c;
+      });
+    });
+    document.getElementById('modal').dataset.color = n.color;
+    document.getElementById('modal').classList.add('on');
+    setTimeout(() => document.getElementById('mLabel').focus(), 30);
+  },
+
+  closeModal() { document.getElementById('modal').classList.remove('on'); this._modalNodeId = null; },
+  saveModal() {
+    const n = this.canvasState.nodes.find(nn => nn.id === this._modalNodeId);
+    if (n) {
+      n.label = document.getElementById('mLabel').value.trim() || n.label;
+      n.desc = document.getElementById('mDesc').value.trim();
+      const c = document.getElementById('modal').dataset.color;
+      if (c) n.color = c;
+    }
+    this.closeModal();
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+  },
+
+  // ── Context Menu ──
+  showCtx(x, y, nodeId, connKey) {
+    this._ctxNodeId = nodeId;
+    this._ctxConnKey = connKey || null;
+    // Adaptive menu: nodes show 编辑/复制/属性/删除; connections show only
+    // 编辑文字/删除 (复制 and 属性 are node-only operations).
+    const isConn = !!connKey;
+    const set = (id, show) => { const el = document.getElementById(id); if (el) el.style.display = show ? '' : 'none'; };
+    set('ctxEdit', true);
+    set('ctxDup', !isConn);
+    set('ctxProps', !isConn);
+    set('ctxDel', true);
+    set('ctxSep1', !isConn);
+    set('ctxSep2', !isConn);
+    document.getElementById('ctxEdit').textContent = isConn ? '编辑文字' : '编辑';
+    const m = document.getElementById('ctx');
+    m.style.left = Math.min(x, innerWidth - 110) + 'px';
+    m.style.top = Math.min(y, innerHeight - 100) + 'px';
+    m.style.display = 'block';
+  },
+
+  ctxEdit() {
+    if (this._ctxNodeId) this.inlineEdit('nodeTitle', this._ctxNodeId);
+    if (this._ctxConnKey) this.inlineEdit('edge', this._ctxConnKey);
+    this._ctxNodeId = this._ctxConnKey = null;
+  },
+  ctxProps() {
+    if (this._ctxNodeId) this.openNodeModal(this._ctxNodeId);
+    this._ctxNodeId = null;
+  },
+  ctxDup() {
+    if (!this._ctxNodeId) return;
+    const src = this.canvasState.nodes.find(n => n.id === this._ctxNodeId);
+    if (!src) return;
+    const id = 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+    this.canvasState.nodes.push({
+      id, label: src.label + ' 副本', desc: src.desc, color: src.color,
+      x: (src.x || 0) + 30, y: (src.y || 0) + 30
+    });
+    this.canvasState.connections.filter(c => c.from === this._ctxNodeId).forEach(c => {
+      this.canvasState.connections.push({ from: id, to: c.to, label: c.label });
+    });
+    this.canvasState.connections.filter(c => c.to === this._ctxNodeId).forEach(c => {
+      this.canvasState.connections.push({ from: c.from, to: id, label: c.label });
+    });
+    this._ctxNodeId = null;
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+  },
+  ctxDel() {
+    if (this._ctxNodeId) this.removeNode(this._ctxNodeId);
+    if (this._ctxConnKey) {
+      const parts = this._ctxConnKey.split('___');
+      const fromId = parts[0], toId = parts[1];
+      this.canvasState.connections = this.canvasState.connections.filter(c => !(c.from === fromId && c.to === toId));
+      // If the deleted connection was the selected one, drop the selection
+      // so the highlight doesn't linger on a non-existent connection.
+      if (this.selectedConnKey === this._ctxConnKey) this.selectedConnKey = null;
+      this.saveCanvasSnapshot();
+      this.renderLines();
+    }
+    this._ctxNodeId = this._ctxConnKey = null;
+  },
+
+  // ── Inline Edit ──
+  closeInlineEdit() {
+    if (this._inlineEditTarget) {
+      const t = this._inlineEditTarget.type;
+      const id = this._inlineEditTarget.id;
+      if (t === 'nodeTitle' || t === 'nodeDesc') {
+        const sel = t === 'nodeTitle' ? '.comfy-node-header' : '.comfy-node-val';
+        const el = this._nodeElMap.get(id);
+        const target = el ? el.querySelector(sel) : null;
+        if (target) {
+          target.removeAttribute('contenteditable');
+          target.style.cursor = '';
+          target.style.outline = '';
+          if (t === 'nodeDesc') {
+            target.style.whiteSpace = '';
+            target.style.setProperty('-webkit-line-clamp', '');
+          }
+        }
+      }
+      if (t === 'nodeTitle') {
+        const el = this._nodeElMap.get(id);
+        const header = el ? el.querySelector('.comfy-node-header') : null;
+        if (header) header.onmousedown = function(e) { App.startNodeDrag(e, id); };
+      }
+    }
+    this._inlineEditTarget = null;
+    document.getElementById('inlineEdit').style.display = 'none';
+  },
+
+  _getInlineInput() {
+    const t = this._inlineEditTarget;
+    if (!t) return null;
+    if (t.type === 'nodeTitle' || t.type === 'nodeDesc') {
+      const sel = t.type === 'nodeTitle' ? '.comfy-node-header' : '.comfy-node-val';
+      const el = this._nodeElMap.get(t.id);
+      return el ? el.querySelector(sel) : null;
+    }
+    return document.getElementById('inlineInp');
+  },
+
+  saveInlineEdit() {
+    if (!this._inlineEditTarget) return;
+    const inp = this._getInlineInput();
+    if (!inp) return;
+    const val = (inp.value !== undefined ? inp.value.trim() : (inp.innerText || inp.textContent || '').trim());
+    const { type, id } = this._inlineEditTarget;
+    if (type === 'edge') {
+      const parts = id.split('___');
+      const fromId = parts[0], toId = parts[1];
+      const conn = this.canvasState.connections.find(c => c.from === fromId && c.to === toId);
+      if (conn) conn.label = val;
+    } else if (type === 'nodeTitle') {
+      const n = this.canvasState.nodes.find(nn => nn.id === id);
+      if (n) n.label = val || n.label;
+    } else if (type === 'nodeDesc') {
+      const n = this.canvasState.nodes.find(nn => nn.id === id);
+      if (n) n.desc = val;
+    }
+    this.closeInlineEdit();
+    this.saveCanvasSnapshot();
+    this.renderAssociationCanvas();
+  },
+
+  inlineEdit(type, id) {
+    const el = document.getElementById('inlineEdit');
+    const inp = document.getElementById('inlineInp');
+    const ta = document.getElementById('inlineTa');
+    this._inlineEditTarget = { type, id };
+    inp.style.display = 'none';
+    ta.style.display = 'none';
+    el.style.display = 'none';
+
+    if (type === 'nodeTitle' || type === 'nodeDesc') {
+      const isTitle = type === 'nodeTitle';
+      const sel = isTitle ? '.comfy-node-header' : '.comfy-node-val';
+      const nodeEl = this._nodeElMap.get(id);
+      const target = nodeEl ? nodeEl.querySelector(sel) : null;
+      if (!target) return;
+      const n = this.canvasState.nodes.find(nn => nn.id === id);
+      if (!n) return;
+      if (isTitle) {
+        target.onmousedown = function(e) { e.stopPropagation(); };
+      } else {
+        target.onmousedown = function(e) { e.stopPropagation(); };
+        const body = target.closest('.comfy-node-body');
+        if (body) body.onclick = null;
+      }
+      target.contentEditable = 'plaintext-only';
+      target.style.outline = 'none';
+      target.style.cursor = 'text';
+      if (!isTitle) {
+        target.style.whiteSpace = 'pre-wrap';
+        target.style.setProperty('-webkit-line-clamp', 'unset');
+        const body = target.closest('.comfy-node-body');
+        if (body) { body.classList.remove('has-overflow'); }
+        if (!n.desc) { target.textContent = ''; }
+      }
+      setTimeout(() => {
+        target.focus();
+        const range = document.createRange();
+        range.selectNodeContents(target);
+        const selRange = window.getSelection();
+        selRange.removeAllRanges();
+        selRange.addRange(range);
+      }, 0);
+      const onKey = e => {
+        e.stopPropagation();
+        if (e.key === 'Escape') { e.preventDefault(); this.closeInlineEdit(); this.renderAssociationCanvas(); }
+        if (e.key === 'Enter' && isTitle) { e.preventDefault(); this.saveInlineEdit(); }
+      };
+      const onBlur = () => { if (this._inlineEditTarget?.type === type) this.saveInlineEdit(); };
+      const onWheel = e => { e.stopPropagation(); e.preventDefault(); target.scrollTop += e.deltaY; };
+      target.addEventListener('keydown', onKey);
+      target.addEventListener('blur', onBlur);
+      if (!isTitle) { target.addEventListener('wheel', onWheel, { passive: false }); }
+      return;
+    }
+
+    inp.style.display = '';
+    const inputEl = inp;
+    inputEl.style.cssText = 'background:#fff;color:inherit;border:2px solid var(--accent);border-radius:6px;padding:4px 8px;font-size:11px;text-shadow:none';
+
+    if (type === 'edge') {
+      const parts = id.split('___');
+      const fromId = parts[0], toId = parts[1];
+      const conn = this.canvasState.connections.find(c => c.from === fromId && c.to === toId);
+      if (!conn) return;
+      const a = this.canvasState.nodes.find(n => n.id === conn.from);
+      const b = this.canvasState.nodes.find(n => n.id === conn.to);
+      if (!a || !b) return;
+      const x1 = (a.x || 0) + NODE_W, y1 = (a.y || 0) + 40;
+      const x2 = (b.x || 0), y2 = (b.y || 0) + 40;
+      const mx = (x1 + x2) / 2, my = (y1 + y2) / 2;
+      const cRect = document.getElementById('comfyCanvasContainer').getBoundingClientRect();
+      const sp = { x: mx * this.scale + this.panX + cRect.left, y: my * this.scale + this.panY + cRect.top };
+      inputEl.value = conn.label || '';
+      inp.style.width = '130px';
+      el.style.left = (sp.x - 60) + 'px'; el.style.top = (sp.y - 14) + 'px';
+    }
+    el.style.display = 'block';
+    setTimeout(() => { inputEl.focus(); inputEl.select(); }, 10);
+  },
+
+  // ── Export / Import ──
+  doExport() {
+    if (this.canvasState.nodes.length === 0) { showToast('无数据可导出', 'warning'); return; }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([JSON.stringify({
+      nodes: this.canvasState.nodes,
+      connections: this.canvasState.connections.map(c => ({ from: c.from, to: c.to, label: c.label })),
+      viewport: { panX: this.panX, panY: this.panY, scale: this.scale }
+    }, null, 2)], { type: 'application/json' }));
+    a.download = 'flow.json'; a.click(); showToast('已导出');
+  },
+
+  _validateLoadedData(data) {
+    const nodeIds = new Set();
+    data.nodes.forEach((n, i) => {
+      if (!n.id || typeof n.id !== 'string') {
+        n.id = 'n_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6) + '_fix' + i;
+      }
+      if (nodeIds.has(n.id)) n.id = n.id + '_dup' + i;
+      nodeIds.add(n.id);
+      if (typeof n.x !== 'number' || isNaN(n.x)) n.x = WORLD_CENTER_X + ((i % 4) - 1) * 300;
+      if (typeof n.y !== 'number' || isNaN(n.y)) n.y = START_Y;
+      if (!n.label || typeof n.label !== 'string') n.label = '未命名';
+    });
+    if (Array.isArray(data.connections) && data.connections.length) {
+      const validIds = new Set(data.nodes.map(n => n.id));
+      data.connections = data.connections.filter(c =>
+        typeof c.from === 'string' && typeof c.to === 'string' &&
+        validIds.has(c.from) && validIds.has(c.to)
+      );
+    } else {
+      data.connections = [];
+    }
+  },
+
+  doImport() {
+    const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json';
+    inp.onchange = () => {
+      const f = inp.files[0]; if (!f) return;
+      const r = new FileReader();
+      r.onload = () => {
+        try {
+          const d = JSON.parse(r.result);
+          if (d.nodes && Array.isArray(d.nodes)) {
+            this.canvasState.nodes = d.nodes;
+            this.canvasState.connections = Array.isArray(d.connections) ? d.connections : [];
+            this._validateLoadedData(this.canvasState);
+            let newViewport = false;
+            if (d.viewport && typeof d.viewport.panX === 'number') {
+              this.panX = d.viewport.panX;
+              this.panY = Number.isFinite(d.viewport.panY) ? d.viewport.panY : 0;
+              this.scale = Number.isFinite(d.viewport.scale) ? d.viewport.scale : 1;
+              newViewport = true;
+            }
+            this.canvasState.history = [];
+            this.canvasHistoryIndex = -1;
+            this.renderAssociationCanvas({ center: false });
+            this.saveCanvasSnapshot();
+            if (newViewport) this.applyViewTransform();
+            else if (this.canvasState.nodes.length > 0) this.centerCanvasOnNodes();
+            showToast('导入成功');
+          } else {
+            showToast('无效的存档格式', 'error');
+          }
+        } catch (err) { showToast('解析失败: ' + err.message, 'error'); }
+      };
+      r.readAsText(f);
+    };
+    inp.click();
+  }
+};
+
+// ── Global Events (rAF-throttled pan) ──
+let _panRafId = null;
+let _panLastEvent = null;
+
+document.addEventListener('mousemove', function(e) {
+  if (App.isDragging) return;
+  if (App.canvasBoxState) {
+    const wp = App.getWorldPos(e.clientX, e.clientY);
+    App.canvasBoxState.curX = wp.x; App.canvasBoxState.curY = wp.y;
+    const lx = Math.min(App.canvasBoxState.startX, wp.x);
+    const ly = Math.min(App.canvasBoxState.startY, wp.y);
+    const rx = Math.max(App.canvasBoxState.startX, wp.x);
+    const ry = Math.max(App.canvasBoxState.startY, wp.y);
+    const overlay = document.getElementById('boxSelectOverlay');
+    if (overlay) {
+      overlay.style.left = (lx * App.scale + App.panX) + 'px';
+      overlay.style.top = (ly * App.scale + App.panY) + 'px';
+      overlay.style.width = ((rx - lx) * App.scale) + 'px';
+      overlay.style.height = ((ry - ly) * App.scale) + 'px';
+    }
+  }
+  if (App.canvasPanState) {
+    _panLastEvent = e;
+    if (!_panRafId) {
+      _panRafId = requestAnimationFrame(() => {
+        _panRafId = null;
+        const ev = _panLastEvent;
+        if (!ev || !App.canvasPanState) return;
+        App.panX = App.canvasPanState.origPanX + (ev.clientX - App.canvasPanState.startX);
+        App.panY = App.canvasPanState.origPanY + (ev.clientY - App.canvasPanState.startY);
+        App.clampPan();
+        /* Only update world translate + grid (no zoom change) */
+        const world = document.getElementById('comfyCanvasWorld');
+        if (world) world.style.transform = 'translate(' + App.panX + 'px,' + App.panY + 'px)';
+        App._drawGrid();
+        App.updateCoordDisplay();
+      });
+    }
+  }
+});
+
+document.addEventListener('mouseup', function() {
+  if (App.canvasPanState) {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (c) c.classList.remove('grabbing');
+    App.canvasPanState = null;
+    App.saveCanvas();
+  }
+  if (App.canvasBoxState) App.finalizeBoxSelect();
+});
+
+// Inline edit events
+(function() {
+  const inp = document.getElementById('inlineInp');
+  const ta = document.getElementById('inlineTa');
+  let _blurTimer = null;
+  function onKeydown(e) {
+    e.stopPropagation();
+    clearTimeout(_blurTimer);
+    if (e.key === 'Enter' && App._inlineEditTarget?.type !== 'nodeDesc') { e.preventDefault(); App.saveInlineEdit(); }
+    if (e.key === 'Escape') { App.closeInlineEdit(); App.renderAssociationCanvas(); }
+  }
+  function onBlur() {
+    clearTimeout(_blurTimer);
+    _blurTimer = setTimeout(() => { if (App._inlineEditTarget) App.saveInlineEdit(); }, 0);
+  }
+  inp.addEventListener('keydown', onKeydown);
+  inp.addEventListener('blur', onBlur);
+  ta.addEventListener('keydown', onKeydown);
+  ta.addEventListener('blur', onBlur);
+})();
+
+// Context menu dismiss
+document.addEventListener('click', () => { document.getElementById('ctx').style.display = 'none'; }, true);
+
+// Modal events
+document.getElementById('modal').addEventListener('click', function(e) { if (e.target === this) App.closeModal(); });
+
+// Keyboard
+document.addEventListener('keydown', function(e) {
+  const tag = (e.target.tagName || '').toLowerCase();
+  const isEditing = tag === 'input' || tag === 'textarea' || e.target.isContentEditable;
+  if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); App.canvasUndo(); }
+  else if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); App.canvasRedo(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'a') { if (!isEditing) { e.preventDefault(); App.selectAllNodes(); } }
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'c') { if (!isEditing) App.copyNodes(); }
+  else if ((e.ctrlKey || e.metaKey) && e.key === 'v') { if (!isEditing) App.pasteNodes(); }
+  else if (e.key === 'Escape') { App.closeModal(); App.closeInlineEdit(); }
+  else if ((e.key === 'Delete' || e.key === 'Backspace') && !isEditing && !document.getElementById('modal').classList.contains('on')) {
+    if (App.selectedNodeIds.size > 0) { App.removeNodes([...App.selectedNodeIds]); }
+    else if (App.selectedConnKey) {
+      const parts = App.selectedConnKey.split('___');
+      const fromId = parts[0], toId = parts[1];
+      App.canvasState.connections = App.canvasState.connections.filter(c => !(c.from === fromId && c.to === toId));
+      App.selectedConnKey = null;
+      App.saveCanvasSnapshot();
+      App.renderLines();
+    }
+  }
+});
+
+// ── Init ──
+(function() {
+  const saved = localStorage.getItem('flow_data');
+  let hasViewport = false;
+  if (saved) {
+    try {
+      const d = JSON.parse(saved);
+      if (d.nodes && d.nodes.length) {
+        App.canvasState.nodes = d.nodes;
+        App.canvasState.connections = d.connections || [];
+        App._validateLoadedData(App.canvasState);
+        if (d.viewport && typeof d.viewport.panX === 'number') {
+          App.panX = d.viewport.panX;
+          App.panY = Number.isFinite(d.viewport.panY) ? d.viewport.panY : 0;
+          App.scale = Number.isFinite(d.viewport.scale) ? d.viewport.scale : 1;
+          hasViewport = true;
+        }
+      }
+    } catch (e) { /* ignore */ }
+  }
+
+  if (App.canvasState.nodes.length === 0) {
+    const t = Date.now();
+    App.canvasState.nodes = [
+      { id: 'n_' + t + '_a1b2', label: '输入', desc: '数据输入', color: 'blue', x: COL_X[0], y: START_Y },
+      { id: 'n_' + t + '_c3d4', label: '输出', desc: '数据输出', color: 'blue', x: COL_X[1], y: START_Y }
+    ];
+    App.canvasState.connections = [
+      { from: 'n_' + t + '_a1b2', to: 'n_' + t + '_c3d4', label: 'data' }
+    ];
+  }
+
+  App.renderAssociationCanvas({ center: false });
+  if (hasViewport) App.applyViewTransform();
+  else if (App.canvasState.nodes.length > 0) App.centerCanvasOnNodes();
+  else App.centerCanvasOnOrigin();
+
+  /* Ensure grid is drawn after layout is ready (retry until container has size) */
+  (function _initGrid() {
+    const c = document.getElementById('comfyCanvasContainer');
+    if (c && c.clientWidth > 0 && c.clientHeight > 0) {
+      App._drawGrid();
+      App.saveCanvasSnapshot();
+    } else {
+      requestAnimationFrame(_initGrid);
+    }
+  })();
+})();
+
+window.addEventListener('beforeunload', function() { App.saveCanvas(); });
+window.addEventListener('resize', function() { App.applyViewTransform(); });
+</script>
+</body>
+</html>
