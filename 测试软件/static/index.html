@@ -6090,57 +6090,6 @@
                     if (el) el.textContent = text;
                 },
 
-                _restoreSplitterWidths() {
-                    const sidebar = document.querySelector('.sidebar');
-                    const aiPanel = document.querySelector('.ai-stream-panel');
-                    const leftW = localStorage.getItem('ft_splitter_left');
-                    const rightW = localStorage.getItem('ft_splitter_right');
-                    if (leftW && sidebar) sidebar.style.width = leftW + 'px';
-                    if (rightW && aiPanel) aiPanel.style.flex = '0 0 ' + rightW + 'px';
-                },
-
-                _initSplitters() {
-                    const sidebar = document.querySelector('.sidebar');
-                    const aiPanel = document.querySelector('.ai-stream-panel');
-                    const HIT = 4;
-                    let active = null, startX, startW;
-
-                    document.addEventListener('mousemove', (e) => {
-                        if (active) {
-                            if (active === 'left') {
-                                sidebar.style.width = Math.max(200, Math.min(600, startW + (e.clientX - startX))) + 'px';
-                            } else {
-                                aiPanel.style.flex = '0 0 ' + Math.max(280, Math.min(800, startW + (startX - e.clientX))) + 'px';
-                            }
-                            return;
-                        }
-                        const nearLeft = Math.abs(e.clientX - sidebar.getBoundingClientRect().right) < HIT;
-                        const nearRight = Math.abs(e.clientX - aiPanel.getBoundingClientRect().left) < HIT;
-                        document.body.style.cursor = (nearLeft || nearRight) ? 'col-resize' : '';
-                    });
-
-                    document.addEventListener('mousedown', (e) => {
-                        const nearLeft = Math.abs(e.clientX - sidebar.getBoundingClientRect().right) < HIT;
-                        const nearRight = Math.abs(e.clientX - aiPanel.getBoundingClientRect().left) < HIT;
-                        if (nearLeft || nearRight) {
-                            active = nearLeft ? 'left' : 'right';
-                            startX = e.clientX;
-                            startW = active === 'left' ? sidebar.getBoundingClientRect().width : aiPanel.getBoundingClientRect().width;
-                            document.body.style.userSelect = 'none';
-                            e.preventDefault();
-                        }
-                    });
-
-                    document.addEventListener('mouseup', () => {
-                        if (!active) return;
-                        if (active === 'left') localStorage.setItem('ft_splitter_left', sidebar.getBoundingClientRect().width);
-                        else localStorage.setItem('ft_splitter_right', aiPanel.getBoundingClientRect().width);
-                        active = null;
-                        document.body.style.userSelect = '';
-                        document.body.style.cursor = '';
-                    });
-                },
-
                 async init() {
                     this.setLoadingPhase('正在加载配置…');
                     await this.loadConfig();
@@ -6223,8 +6172,6 @@
                         setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 500);
                     }
                     window.addEventListener('resize', this.debouncedCanvasResize.bind(this));
-                    this._restoreSplitterWidths();
-                    this._initSplitters();
                 },
 
                 async loadConfig() {
@@ -6277,11 +6224,11 @@
                 const on = (el, ev, fn) => { if (el) el.addEventListener(ev, fn); };
 
                 on(byId('setFilterBtn'), 'click', () => App.toggleSetFilterPanel());
-                on(byId('promptSearch'), 'input', () => App.renderPromptList());
-                on(byId('questionSearch'), 'input', () => App.renderQuestionList());
+                on(byId('promptSearch'), 'input', debounce(() => App.renderPromptList(), 300));
+                on(byId('questionSearch'), 'input', debounce(() => App.renderQuestionList(), 300));
                 on(byId('testSetDir'), 'blur', () => App.onTestSetDirChange());
                 on(byId('baseUrl'), 'blur', () => App.onBaseUrlBlur());
-                on(byId('resultFilterText'), 'input', () => App.applyStreamFilter());
+                on(byId('resultFilterText'), 'input', debounce(() => App.applyStreamFilter(), 300));
                 on(byId('paramsToggle'), 'click', () => App.toggleParamsModal());
                 on(byId('openModelBtn'), 'click', () => App.openModelModal());
                 on(byId('runBtn'), 'click', () => App.runTests());
