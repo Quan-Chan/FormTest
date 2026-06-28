@@ -62,7 +62,7 @@ Benches/<nombre>/
 
 ```bash
 pip install -r APPs/requirements.txt
-cd 测试软件
+cd APPs
 python app.py
 ```
 
