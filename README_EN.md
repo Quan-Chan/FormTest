@@ -93,7 +93,7 @@ pip install -r APPs/requirements.txt
 ### 2. Start
 
 ```bash
-cd 测试软件
+cd APPs
 python app.py
 # or double-click run.bat
 ```
