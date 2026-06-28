@@ -10,14 +10,14 @@ Ein automatisiertes Test-Framework zur Bewertung der Fähigkeit großer Sprachmo
 
 ```
 FormTest/
-├── 测试软件/              # Hauptanwendung (Flask-Backend + HTML-Frontend)
+├── APPs/              # Hauptanwendung (Flask-Backend + HTML-Frontend)
 │   ├── app.py            # Flask-Einstiegspunkt, REST API + SSE-Streaming
 │   ├── config.json       # Laufzeitkonfiguration
 │   ├── requirements.txt  # Python-Abhängigkeiten
 │   ├── run.bat           # Schnellstart-Skript
 │   ├── static/           # Frontend-Dateien (index.html + CSS/JS)
 │   └── data/             # Laufzeitdaten (Canvas-Status, usw.)
-├── 测试集/               # Testdatensätze (KI-generiert, keine echten Daten)
+├── Benches/               # Testdatensätze (KI-generiert, keine echten Daten)
 │   ├── 教学视频测试/     # Lehrvideo-Inhaltstest
 │   ├── 企业信息测试/     # Unternehmensinformationstest
 │   ├── 运行日志测试/     # Systembetriebsprotokolltest
@@ -32,7 +32,7 @@ FormTest/
 Jeder Testdatensatz folgt dieser Struktur:
 
 ```
-测试集/<Name>/
+Benches/<Name>/
 ├── 测试问题/             # Testfragen (JSON-Format)
 │   ├── 基础问题.json     # Grundlegende Fragen
 │   └── 进阶问题.json     # Fortgeschrittene Fragen
@@ -85,7 +85,7 @@ Jeder Testdatensatz folgt dieser Struktur:
 ## Schnellstart
 
 ```bash
-pip install -r 测试软件/requirements.txt
+pip install -r APPs/requirements.txt
 cd 测试软件
 python app.py
 ```

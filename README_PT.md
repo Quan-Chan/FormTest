@@ -10,14 +10,14 @@ Um framework de teste automatizado para avaliar a capacidade de Grandes Modelos 
 
 ```
 FormTest/
-├── 测试软件/              # Aplicação principal (Backend Flask + Frontend HTML)
+├── APPs/              # Aplicação principal (Backend Flask + Frontend HTML)
 │   ├── app.py            # Ponto de entrada Flask, API REST + SSE
 │   ├── config.json       # Configuração de execução
 │   ├── requirements.txt  # Dependências Python
 │   ├── run.bat           # Script de início rápido
 │   ├── static/           # Arquivos frontend
 │   └── data/             # Dados de execução
-├── 测试集/               # Dados de teste (gerados por IA, não reais)
+├── Benches/               # Dados de teste (gerados por IA, não reais)
 │   ├── 教学视频测试/     # Teste de conteúdo de vídeo educacional
 │   ├── 企业信息测试/     # Teste de informações empresariais
 │   ├── 运行日志测试/     # Teste de logs de operação
@@ -41,7 +41,7 @@ FormTest/
 ## Início Rápido
 
 ```bash
-pip install -r 测试软件/requirements.txt
+pip install -r APPs/requirements.txt
 cd 测试软件
 python app.py
 ```

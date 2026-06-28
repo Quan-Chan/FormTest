@@ -10,14 +10,14 @@
 
 ```
 FormTest/
-├── 测试软件/              # 主程序（Flask 后端 + 原生 HTML 前端）
+├── APPs/              # 主程序（Flask 后端 + 原生 HTML 前端）
 │   ├── app.py            # Flask 应用入口，提供 REST API + SSE 流式输出
 │   ├── config.json       # 运行配置（API 地址、模型、参数等）
 │   ├── requirements.txt  # Python 依赖
 │   ├── run.bat           # 快速启动脚本
 │   ├── static/           # 前端静态文件（index.html + CSS/JS）
 │   └── data/             # 运行时数据（画布状态等）
-├── 测试集/               # 测试数据集（AI 合成，非真实数据）
+├── Benches/               # 测试数据集（AI 合成，非真实数据）
 │   ├── 教学视频测试/     # 教学视频内容理解测试
 │   ├── 企业信息测试/     # 企业结构化信息测试
 │   ├── 运行日志测试/     # 系统运行日志理解测试
@@ -33,7 +33,7 @@ FormTest/
 每个测试集目录结构如下：
 
 ```
-测试集/<名称>/
+Benches/<名称>/
 ├── 测试问题/             # 测试问题（JSON 格式）
 │   ├── 基础问题.json     # 基础难度问题集
 │   └── 进阶问题.json     # 进阶难度问题集
@@ -88,7 +88,7 @@ FormTest/
 ### 1. 安装依赖
 
 ```bash
-pip install -r 测试软件/requirements.txt
+pip install -r APPs/requirements.txt
 ```
 
 ### 2. 启动
