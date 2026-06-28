@@ -52,3 +52,9 @@ Benches/*/测试结果/
 
 # Migration script (one-time use)
 APPs/migrate_data.py
+
+# Agent instructions (local only, not for repo)
+AGENTS.md
+
+# Backup / draft files — for reference only, not tracked
+APPs/static/备份勿动.html
