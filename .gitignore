@@ -2,6 +2,8 @@
 *.log
 *.tmp
 *.swp
+server_err.txt
+server_out.txt
 
 # Environment
 .env
@@ -37,16 +39,16 @@ htmlcov/
 .ruff_cache/
 
 # Runtime artifacts
-测试软件/Answer Cache/
-测试软件/results/
-测试软件/data/
-测试软件/linksave/
+APPs/Answer Cache/
+APPs/results/
+APPs/data/
+APPs/linksave/
 
 # Local config (contains API keys, paths)
-测试软件/config.json
+APPs/config.json
 
-# Test datasets (user-specific content)
-测试集/
+# Test datasets - ignore result folders only
+Benches/*/测试结果/
 
 # Migration script (one-time use)
-测试软件/migrate_data.py
+APPs/migrate_data.py

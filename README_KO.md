@@ -10,14 +10,14 @@
 
 ```
 FormTest/
-├── 测试软件/              # 메인 애플리케이션(Flask 백엔드 + HTML 프론트엔드)
+├── APPs/              # 메인 애플리케이션(Flask 백엔드 + HTML 프론트엔드)
 │   ├── app.py            # Flask 진입점, REST API + SSE 스트리밍
 │   ├── config.json       # 런타임 설정
 │   ├── requirements.txt  # Python 의존성
 │   ├── run.bat           # 빠른 시작 스크립트
 │   ├── static/           # 프론트엔드 파일
 │   └── data/             # 런타임 데이터
-├── 测试集/               # 테스트 데이터세트(AI 생성, 실제 데이터 아님)
+├── Benches/               # 테스트 데이터세트(AI 생성, 실제 데이터 아님)
 │   ├── 教学视频测试/     # 교육 비디오 콘텐츠 테스트
 │   ├── 企业信息测试/     # 기업 정보 테스트
 │   ├── 运行日志测试/     # 시스템 운영 로그 테스트
@@ -41,7 +41,7 @@ FormTest/
 ## 빠른 시작
 
 ```bash
-pip install -r 测试软件/requirements.txt
+pip install -r APPs/requirements.txt
 cd 测试软件
 python app.py
 ```

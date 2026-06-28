@@ -10,14 +10,14 @@ An automated testing framework for evaluating Large Language Models' (LLM) abili
 
 ```
 FormTest/
-├── 测试软件/              # Main application (Flask backend + vanilla HTML frontend)
+├── APPs/              # Main application (Flask backend + vanilla HTML frontend)
 │   ├── app.py            # Flask entry point, REST API + SSE streaming
 │   ├── config.json       # Runtime configuration
 │   ├── requirements.txt  # Python dependencies
 │   ├── run.bat           # Quick start script
 │   ├── static/           # Frontend static files (index.html + CSS/JS)
 │   └── data/             # Runtime data (canvas state, etc.)
-├── 测试集/               # Test datasets (AI-generated, not real data)
+├── Benches/               # Test datasets (AI-generated, not real data)
 │   ├── 教学视频测试/     # Teaching video content test
 │   ├── 企业信息测试/     # Enterprise information test
 │   ├── 运行日志测试/     # System operation log test
@@ -32,7 +32,7 @@ FormTest/
 Each test set directory follows this structure:
 
 ```
-测试集/<name>/
+Benches/<name>/
 ├── 测试问题/             # Test questions (JSON format)
 │   ├── 基础问题.json     # Basic level questions
 │   └── 进阶问题.json     # Advanced level questions
@@ -87,7 +87,7 @@ Each test set directory follows this structure:
 ### 1. Install Dependencies
 
 ```bash
-pip install -r 测试软件/requirements.txt
+pip install -r APPs/requirements.txt
 ```
 
 ### 2. Start
