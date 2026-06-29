@@ -81,6 +81,7 @@ default_config = {
     "timeout": 60,
     "auto_append_v1": True,
     "allowed_origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+    "known_test_sets": [],
 }
 
 config = dict(default_config)
@@ -189,6 +190,38 @@ def validate_file_name(name):
     if name.startswith('.') or name.startswith('_'):
         return False
     return True
+
+
+def validate_test_set_name_strict(name):
+    """Validate test set name without checking against get_test_set_dir().
+    Suitable for custom-path creation."""
+    if not name:
+        return False
+    if ".." in name or "/" in name or "\\" in name:
+        return False
+    if name != os.path.basename(name):
+        return False
+    if sys.platform == "win32":
+        reserved = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4",
+                     "COM5", "COM6", "COM7", "COM8", "COM9", "LPT1", "LPT2", "LPT3",
+                     "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"}
+        if os.path.splitext(name)[0].upper() in reserved:
+            return False
+    return True
+
+
+def _record_known_test_set(name, path):
+    """Record a test set in the known_test_sets config list."""
+    with config_lock:
+        known = config.get("known_test_sets", [])
+        for entry in known:
+            if entry.get("name") == name and entry.get("path") == path:
+                entry["last_used"] = time.time()
+                break
+        else:
+            known.append({"name": name, "path": path, "last_used": time.time()})
+        config["known_test_sets"] = known
+        save_config()
 
 # ============ Config ============
 
@@ -411,6 +444,79 @@ def get_all_tags():
         "tags": _tags_cache,
         "tags_by_set": tags_by_set,
     })
+
+
+@app.route("/api/v1/test-set/create", methods=["POST"])
+def create_test_set():
+    data = request.get_json()
+    base_path = data.get("base_path", "")
+    name = data.get("name", "")
+    question_groups = data.get("question_groups", [])
+    prompt_groups = data.get("prompt_groups", [])
+
+    if not name:
+        return jsonify({"error": "测试集名称不能为空"}), 400
+    if not validate_test_set_name_strict(name):
+        return jsonify({"error": "测试集名称不合法"}), 400
+    if not base_path:
+        return jsonify({"error": "保存路径不能为空"}), 400
+
+    abs_path = os.path.abspath(base_path)
+    if not os.path.isdir(abs_path):
+        return jsonify({"error": f"保存路径不存在: {abs_path}"}), 400
+
+    qa_count = sum(len(g.get("items", [])) for g in question_groups)
+    prompt_count = sum(len(g.get("items", [])) for g in prompt_groups)
+    if qa_count < 1 or prompt_count < 1:
+        return jsonify({"error": "至少需要 1 个问答对和 1 个提示词"}), 400
+
+    test_set_path = os.path.join(abs_path, name)
+    if os.path.exists(test_set_path):
+        return jsonify({"error": f"该位置已存在同名测试集「{name}」，请修改名称后重试"}), 409
+
+    try:
+        for subdir in ["测试系统提示词", "测试问题", "测试结果"]:
+            os.makedirs(os.path.join(test_set_path, subdir), exist_ok=True)
+    except OSError as e:
+        return jsonify({"error": f"创建目录失败: {str(e)}"}), 500
+
+    for group in question_groups:
+        filename = group.get("filename", "")
+        if not filename.lower().endswith(".json"):
+            filename += ".json"
+        tag = group.get("tag", "")
+        items = group.get("items", [])
+        entries = [
+            {"id": i + 1, "tag": tag, "question": item.get("question", ""), "answer": item.get("answer", "")}
+            for i, item in enumerate(items)
+        ]
+        try:
+            save_json(os.path.join(test_set_path, "测试问题", filename), entries)
+        except OSError as e:
+            return jsonify({"error": f"写入文件失败: {filename} - {str(e)}"}), 500
+
+    for group in prompt_groups:
+        filename = group.get("filename", "")
+        if not filename.lower().endswith(".json"):
+            filename += ".json"
+        tag = group.get("tag", "")
+        default_qs = [f"测试问题/{f}" for f in group.get("default_questions", [])]
+        items = group.get("items", [])
+        entries = [
+            {"id": i + 1, "tag": tag, "default_questions": default_qs, "content": item.get("content", "")}
+            for i, item in enumerate(items)
+        ]
+        try:
+            save_json(os.path.join(test_set_path, "测试系统提示词", filename), entries)
+        except OSError as e:
+            return jsonify({"error": f"写入文件失败: {filename} - {str(e)}"}), 500
+
+    invalidate_tags_cache()
+    try:
+        _record_known_test_set(name, test_set_path)
+    except Exception:
+        pass
+    return jsonify({"success": True, "path": test_set_path})
 
 
 @app.route("/api/v1/test-set/results", methods=["GET"])
@@ -1043,6 +1149,67 @@ def handle_archives():
         archives = [a for a in archives if a.get("id") != archive_id]
         save_json(ARCHIVES_FILE, archives)
         return jsonify({"status": "ok"})
+
+
+# ============ Known Test Sets ============
+
+@app.route("/api/v1/test-set/known/check", methods=["POST"])
+def check_known_test_sets():
+    data = request.get_json() or {}
+    known = data.get("known_test_sets", [])
+    if not known:
+        with config_lock:
+            known = config.get("known_test_sets", [])
+    results = []
+    for entry in known:
+        path = entry.get("path", "")
+        results.append({
+            "name": entry.get("name", ""),
+            "path": path,
+            "available": bool(path and os.path.exists(path) and os.path.isdir(path)),
+            "last_used": entry.get("last_used", 0)
+        })
+    return jsonify({"test_sets": results})
+
+
+@app.route("/api/v1/test-set/known/set-dir", methods=["POST"])
+def set_test_set_dir():
+    data = request.get_json() or {}
+    new_dir = data.get("test_set_dir", "")
+    if not new_dir:
+        return jsonify({"error": "路径不能为空"}), 400
+    if not os.path.isdir(new_dir):
+        return jsonify({"error": "路径不存在"}), 400
+    with config_lock:
+        config["test_set_dir"] = new_dir
+        save_config()
+    return scan_test_sets()
+
+
+@app.route("/api/v1/test-set/known/record", methods=["POST"])
+def record_known_test_sets():
+    data = request.get_json() or {}
+    sets = data.get("test_sets", [])
+    if not isinstance(sets, list):
+        return jsonify({"error": "数据格式无效"}), 400
+    with config_lock:
+        known = config.get("known_test_sets", [])
+        for item in sets:
+            name = item.get("name", "")
+            path = item.get("path", "")
+            if not name or not path:
+                continue
+            found = False
+            for entry in known:
+                if entry.get("name") == name and entry.get("path") == path:
+                    entry["last_used"] = time.time()
+                    found = True
+                    break
+            if not found:
+                known.append({"name": name, "path": path, "last_used": time.time()})
+        config["known_test_sets"] = known
+        save_config()
+    return jsonify({"status": "ok"})
 
 
 @app.errorhandler(404)

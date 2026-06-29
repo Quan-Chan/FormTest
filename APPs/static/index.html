@@ -2562,6 +2562,410 @@
             border-color: var(--accent);
             color: var(--accent);
         }
+
+        /* ===== Create Test Set Modal ===== */
+        .create-ts-modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+        .create-ts-modal-overlay.show {
+            display: flex;
+        }
+        .create-ts-modal {
+            background: var(--bg-card);
+            border-radius: var(--radius-lg);
+            width: 90%;
+            max-width: 720px;
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-lg);
+        }
+        .create-ts-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        .create-ts-title {
+            font-size: 16px;
+            font-weight: 500;
+        }
+        .create-ts-close {
+            background: none;
+            border: none;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px 8px;
+            line-height: 1;
+            border-radius: var(--radius-sm);
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .create-ts-close:hover {
+            color: var(--text-primary);
+            background: var(--bg-hover);
+        }
+        .create-ts-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .create-ts-footer {
+            padding: 16px 20px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-shrink: 0;
+        }
+        .create-ts-section {
+            margin-bottom: 24px;
+        }
+        .create-ts-section:last-child {
+            margin-bottom: 0;
+        }
+        .create-ts-section-title {
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+        .create-ts-field {
+            margin-bottom: 12px;
+        }
+        .create-ts-field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .create-ts-field input[type="text"],
+        .create-ts-field textarea {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 13px;
+            font-family: inherit;
+            transition: border-color 0.2s;
+        }
+        .create-ts-field input[type="text"]:focus,
+        .create-ts-field textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .create-ts-field textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .cts-group-card {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 14px;
+            margin-bottom: 10px;
+        }
+        .cts-group-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+            flex-wrap: wrap;
+        }
+        .cts-group-header .cts-tag-input {
+            width: 120px;
+            padding: 6px 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: inherit;
+        }
+        .cts-group-header .cts-tag-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .cts-group-header .cts-filename-input {
+            width: 180px;
+            padding: 6px 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: inherit;
+        }
+        .cts-group-header .cts-filename-input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .cts-remove-group-btn {
+            margin-left: auto;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 18px;
+            padding: 4px 6px;
+            border-radius: 4px;
+            line-height: 1;
+            font-family: inherit;
+        }
+        .cts-remove-group-btn:hover {
+            color: #e74c3c;
+            background: rgba(231,76,60,0.1);
+        }
+
+        .cts-qa-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            margin-bottom: 6px;
+        }
+        .cts-qa-row {
+            display: flex;
+            gap: 8px;
+            align-items: flex-start;
+        }
+        .cts-qa-field {
+            flex: 1;
+            position: relative;
+        }
+        .cts-qa-field label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 3px;
+            display: block;
+        }
+        .cts-qa-field textarea {
+            width: 100%;
+            padding: 6px 8px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 50px;
+            padding-right: 28px;
+        }
+        .cts-qa-field textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+        .cts-remove-item-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 16px;
+            padding: 4px;
+            border-radius: 4px;
+            line-height: 1;
+            flex-shrink: 0;
+            font-family: inherit;
+        }
+        .cts-remove-item-btn:hover {
+            color: #e74c3c;
+            background: rgba(231,76,60,0.1);
+        }
+
+        .cts-prompt-item {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px;
+            margin-bottom: 6px;
+        }
+        .cts-prompt-item textarea {
+            width: 100%;
+            padding: 8px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-primary);
+            font-size: 12px;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 80px;
+            padding-right: 28px;
+        }
+        .cts-prompt-item textarea:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .cts-import-btn {
+            position: absolute;
+            right: 4px;
+            top: 4px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+            border-radius: 4px;
+            line-height: 1;
+            font-family: inherit;
+        }
+        .cts-import-btn:hover {
+            color: var(--accent);
+            background: var(--accent-bg);
+        }
+
+        .cts-group-actions {
+            display: flex;
+            gap: 6px;
+            margin-top: 8px;
+        }
+        .cts-group-actions .btn {
+            font-size: 11px;
+            padding: 5px 10px;
+        }
+
+        .cts-default-questions {
+            margin-bottom: 10px;
+            padding: 8px 10px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .cts-default-questions > label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            margin-bottom: 6px;
+            display: block;
+        }
+        .cts-dq-checkboxes {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        .cts-dq-checkboxes label {
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            cursor: pointer;
+            user-select: none;
+            color: var(--text-secondary);
+        }
+        .cts-dq-checkboxes input[type="checkbox"] {
+            width: 14px;
+            height: 14px;
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        /* ===== Known Test Sets Dropdown ===== */
+        .known-ts-dropdown {
+            display: none;
+            position: absolute;
+            top: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 500;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .known-ts-dropdown.show {
+            display: block;
+        }
+        .known-ts-entry {
+            padding: 8px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            transition: background 0.1s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .known-ts-entry:hover {
+            background: var(--bg-hover);
+        }
+        .known-ts-entry.disabled {
+            cursor: default;
+            opacity: 0.6;
+        }
+        .known-ts-entry.disabled:hover {
+            background: transparent;
+        }
+        .known-ts-name {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex-shrink: 1;
+        }
+        .known-ts-path {
+            font-size: 10px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            min-width: 0;
+            flex: 1;
+        }
+        .known-ts-path.invalid {
+            color: #ef4444;
+        }
+        .known-ts-badge {
+            font-size: 9px;
+            padding: 2px 6px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+        .known-ts-badge.available {
+            background: rgba(16,185,129,0.15);
+            color: #065f46;
+        }
+        .known-ts-badge.unavailable {
+            background: #fef2f2;
+            color: #991b1b;
+        }
+        .known-ts-badge.missing-text {
+            background: #fef2f2;
+            color: #991b1b;
+            font-weight: 500;
+        }
+        .known-ts-empty {
+            padding: 16px;
+            text-align: center;
+            font-size: 12px;
+            color: var(--text-muted);
+        }
     </style>
 </head>
 <body>
@@ -2640,7 +3044,14 @@
                             <div class="config-grid">
                                 <div class="form-group">
                                     <label>测试集目录</label>
-                                    <input type="text" class="form-input" id="testSetDir" placeholder="D:/测试集">
+                                    <div style="position:relative;overflow:visible;">
+                                        <input type="text" class="form-input" id="testSetDir" placeholder="D:/测试集" style="width:100%;padding-right:36px;">
+                                        <button id="knownTestSetsBtn" style="position:absolute;right:4px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;padding:4px;display:flex;align-items:center;color:var(--text-muted);border-radius:4px;" title="历史测试集">
+                                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        </button>
+                                        <button class="btn btn-secondary" id="createTestSetBtn" data-action="openCreateTestSetModal" style="position:absolute;left:100%;top:50%;transform:translateY(-50%);white-space:nowrap;margin-left:6px;z-index:10;">+ 新建</button>
+                                        <div class="known-ts-dropdown" id="knownTestSetsDropdown"></div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -2957,6 +3368,47 @@
             <div class="model-modal-footer">
                 <button class="btn btn-secondary">取消</button>
                 <button class="btn btn-primary">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="create-ts-modal-overlay" id="createTestSetModal">
+        <div class="create-ts-modal">
+            <div class="create-ts-header">
+                <span class="create-ts-title">创建测试集</span>
+                <button class="create-ts-close">&times;</button>
+            </div>
+            <div class="create-ts-body">
+                <div class="create-ts-section">
+                    <div class="create-ts-section-title">基本信息</div>
+                    <div class="create-ts-field">
+                        <label>测试集名称</label>
+                        <input type="text" id="cts-name" required placeholder="例如：我的测试集">
+                    </div>
+                    <div class="create-ts-field" id="cts-path-field">
+                        <label>保存路径</label>
+                        <div style="display:flex;gap:6px;">
+                            <input type="text" id="cts-path" style="flex:1;" placeholder="D:/Benches">
+                            <button class="btn btn-secondary" id="cts-browse-btn" style="padding:6px 10px;" title="选择文件夹">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="create-ts-section">
+                    <div class="create-ts-section-title">问题 Tag 组</div>
+                    <div id="cts-question-groups"></div>
+                    <button class="btn btn-secondary" data-action="addQuestionGroup">+ 添加 Tag 组</button>
+                </div>
+                <div class="create-ts-section">
+                    <div class="create-ts-section-title">系统提示词 Tag 组</div>
+                    <div id="cts-prompt-groups"></div>
+                    <button class="btn btn-secondary" data-action="addPromptGroup">+ 添加 Tag 组</button>
+                </div>
+            </div>
+            <div class="create-ts-footer">
+                <button class="btn btn-secondary" data-action="closeCreateTestSetModal">取消</button>
+                <button class="btn btn-primary" id="cts-submit-btn">确定并创建</button>
             </div>
         </div>
     </div>
@@ -3333,6 +3785,14 @@
                         this.onTestSetChange();
                         this.computeCurrentTags();
                         this.renderSetFilterPanel();
+
+                        // Sync known test sets — record the test_set_dir path itself
+                        const testSetDir = document.getElementById('testSetDir').value;
+                        if (testSetDir) {
+                            this._ensureKnownTestSet(testSetDir);
+                        }
+                        this._saveKnownTestSets();
+
                         if (total > 0) {
                             showToast(`加载完成：${this.prompts.length} 个提示词，${this.questions.length} 个问题`, 'success');
                         }
@@ -6271,6 +6731,7 @@
                     this.saveCanvasSnapshot();
                     try { await this.renderArchiveSelector(); } catch (e) { console.error('加载存档失败', e); }
                     this.initDropdowns();
+                    await this._loadKnownTestSets();
                     _bindEvents();
                     ['temperature', 'concurrency', 'testCount', 'maxRetries', 'contextSize', 'topP', 'minP', 'topK'].forEach(p => this.updateSliderVisual(p));
                     window.addEventListener('resize', this.debouncedCanvasResize.bind(this));
@@ -6315,6 +6776,569 @@
                     }
                 },
 
+                // ── Known test sets state ──
+                _knownTestSets: [],
+                _dirHandle: null,
+
+                // ── Create test set state ──
+                _qaGroups: [],
+                _promptGroups: [],
+
+                // ── Known Test Sets ──
+                async _loadKnownTestSets() {
+                    try {
+                        const raw = localStorage.getItem('ft_known_test_sets');
+                        let local = [];
+                        if (raw) {
+                            try { local = JSON.parse(raw); } catch (e) { local = []; }
+                        }
+                        const resp = await fetchWithTimeout('/api/v1/test-set/known/check', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ known_test_sets: local })
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            this._knownTestSets = data.test_sets || [];
+                        } else if (local.length > 0) {
+                            this._knownTestSets = local;
+                        }
+                        try {
+                            localStorage.setItem('ft_known_test_sets', JSON.stringify(this._knownTestSets));
+                        } catch (e) {}
+                    } catch (e) {
+                        try {
+                            const raw = localStorage.getItem('ft_known_test_sets');
+                            if (raw) this._knownTestSets = JSON.parse(raw);
+                        } catch (e2) {}
+                    }
+                },
+
+                async _saveKnownTestSets() {
+                    const list = this._knownTestSets.map(e => ({ name: e.name || '', path: e.path || '', last_used: e.last_used || Date.now() }));
+                    try {
+                        localStorage.setItem('ft_known_test_sets', JSON.stringify(list));
+                    } catch (e) {}
+                    try {
+                        await fetchWithTimeout('/api/v1/test-set/known/record', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ test_sets: list })
+                        });
+                    } catch (e) {}
+                },
+
+                _onTestSetDirChanged() {
+                    const path = document.getElementById('testSetDir').value.trim();
+                    if (path) {
+                        this._ensureKnownTestSet(path);
+                        this._saveKnownTestSets();
+                    }
+                },
+
+                _ensureKnownTestSet(path) {
+                    if (!path) return;
+                    for (const e of this._knownTestSets) {
+                        if (e.path === path) {
+                            e.last_used = Date.now();
+                            return;
+                        }
+                    }
+                    const name = path.replace(/[/\\]+$/, '').split(/[/\\]/).pop() || path;
+                    this._knownTestSets.push({ name, path, last_used: Date.now(), available: true });
+                },
+
+                toggleKnownTestSets() {
+                    const dd = document.getElementById('knownTestSetsDropdown');
+                    if (!dd) return;
+                    const open = dd.classList.contains('show');
+                    document.querySelectorAll('.custom-select-dropdown.show').forEach(d => d.classList.remove('show'));
+                    document.querySelectorAll('.known-ts-dropdown.show').forEach(d => d.classList.remove('show'));
+                    if (!open) {
+                        dd.classList.add('show');
+                        this.loadKnownTestSets();
+                    }
+                },
+
+                async loadKnownTestSets() {
+                    try {
+                        const resp = await fetchWithTimeout('/api/v1/test-set/known/check', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            this._knownTestSets = data.test_sets || [];
+                            try { localStorage.setItem('ft_known_test_sets', JSON.stringify(this._knownTestSets)); } catch (e) {}
+                        }
+                    } catch (e) {}
+                    this.renderKnownTestSetsDropdown();
+                },
+
+                renderKnownTestSetsDropdown() {
+                    const dd = document.getElementById('knownTestSetsDropdown');
+                    if (!dd) return;
+                    if (!this._knownTestSets || this._knownTestSets.length === 0) {
+                        dd.innerHTML = '<div class="known-ts-empty">暂无历史测试集</div>';
+                        return;
+                    }
+                    dd.innerHTML = this._knownTestSets.map((entry, idx) => {
+                        const avail = entry.available;
+                        const cls = 'known-ts-entry' + (avail ? '' : ' disabled');
+                        const pathCls = 'known-ts-path' + (avail ? '' : ' invalid');
+                        const badgeCls = 'known-ts-badge ' + (avail ? 'available' : 'unavailable');
+                        const badgeText = avail ? '可用' : '测试集不存在';
+                        const lastUsed = entry.last_used ? new Date(entry.last_used).toLocaleDateString('zh-CN') : '';
+                        return `<div class="${cls}" data-ts-idx="${idx}">
+                            <span class="known-ts-name">${this.escapeHtml(entry.name)}</span>
+                            <span class="${pathCls}">${this.escapeHtml(entry.path)}</span>
+                            <span class="${badgeCls}">${badgeText}</span>
+                        </div>`;
+                    }).join('');
+                },
+
+                async switchToKnownTestSet(entry) {
+                    if (!entry.path) {
+                        showToast('路径为空', 'error');
+                        return;
+                    }
+                    try {
+                        const resp = await fetchWithTimeout('/api/v1/test-set/known/set-dir', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ test_set_dir: entry.path })
+                        });
+                        if (resp.ok) {
+                            const data = await resp.json();
+                            this.testSetNames = (data.test_sets || []).map(ts => ts.name);
+                            this.selectedTestSets = new Set(this.testSetNames);
+                            this.openGroups.clear();
+                            this.prompts = [];
+                            this.questions = [];
+                            this.onTestSetChange();
+                            await this.loadAllTestSets();
+                            this._ensureKnownTestSet(entry.path);
+                            this._saveKnownTestSets();
+                            showToast('已切换到: ' + (entry.name || entry.path), 'success');
+                        } else {
+                            const err = await resp.json();
+                            showToast(err.error || '切换失败', 'error');
+                        }
+                    } catch (e) {
+                        showToast('切换失败: ' + friendlyError(e.message), 'error');
+                    }
+                },
+
+                // ── Create Test Set Modal ──
+                openCreateTestSetModal() {
+                    this._qaGroups = [];
+                    this._promptGroups = [];
+                    this._dirHandle = null;
+                    document.getElementById('cts-name').value = '';
+                    const pathInput = document.getElementById('cts-path');
+                    if (pathInput) {
+                        pathInput.value = document.getElementById('testSetDir').value || '';
+                    }
+                    const pf = document.getElementById('cts-path-field');
+                    if (pf) pf.style.display = '';
+                    document.getElementById('cts-question-groups').innerHTML = '';
+                    document.getElementById('cts-prompt-groups').innerHTML = '';
+                    document.getElementById('createTestSetModal').classList.add('show');
+                    this._addQuestionGroup();
+                    this._addPromptGroup();
+                },
+
+                closeCreateTestSetModal() {
+                    this._qaGroups = [];
+                    this._promptGroups = [];
+                    this._dirHandle = null;
+                    document.getElementById('createTestSetModal').classList.remove('show');
+                },
+
+                // ── Question Groups ──
+                _addQuestionGroup() {
+                    const idx = this._qaGroups.length;
+                    this._qaGroups.push({ tag: '', filename: '', items: [{ question: '', answer: '' }] });
+                    this._renderQuestionGroups();
+                    this._updateQuestionFileRefs();
+                },
+
+                _removeQuestionGroup(idx) {
+                    this._qaGroups.splice(idx, 1);
+                    this._renderQuestionGroups();
+                    this._updateQuestionFileRefs();
+                },
+
+                _renderQuestionGroups() {
+                    const container = document.getElementById('cts-question-groups');
+                    if (!container) return;
+                    if (this._qaGroups.length === 0) {
+                        container.innerHTML = '<div class="known-ts-empty">暂无问题 Tag 组，请点击上方按钮添加</div>';
+                        return;
+                    }
+                    container.innerHTML = this._qaGroups.map((group, gi) => {
+                        const tagVal = group.tag || '';
+                        const fnVal = group.filename || (tagVal ? tagVal + '问题.json' : '');
+                        const itemsHtml = group.items.map((item, ii) => {
+                            const q = item.question || '';
+                            const a = item.answer || '';
+                            return `<div class="cts-qa-item" data-gidx="${gi}" data-iiidx="${ii}">
+                                <div class="cts-qa-row">
+                                    <div class="cts-qa-field">
+                                        <label>问题</label>
+                                        <textarea rows="2" class="cts-qa-question" data-gidx="${gi}" data-iiidx="${ii}">${this.escapeHtml(q)}</textarea>
+                                        <button class="cts-import-btn" data-gidx="${gi}" data-iiidx="${ii}" data-target="question" title="从文件导入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+                                    </div>
+                                    <div class="cts-qa-field">
+                                        <label>答案</label>
+                                        <textarea rows="2" class="cts-qa-answer" data-gidx="${gi}" data-iiidx="${ii}">${this.escapeHtml(a)}</textarea>
+                                        <button class="cts-import-btn" data-gidx="${gi}" data-iiidx="${ii}" data-target="answer" title="从文件导入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+                                    </div>
+                                    <button class="cts-remove-item-btn" data-action="removeQAPair" data-gidx="${gi}" data-iiidx="${ii}" title="删除此项">&times;</button>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        return `<div class="cts-group-card" data-gidx="${gi}">
+                            <div class="cts-group-header">
+                                <input class="cts-tag-input" placeholder="Tag 名称" value="${this.escapeHtml(tagVal)}" data-gidx="${gi}">
+                                <span style="color:var(--text-muted);font-size:11px;">文件名:</span>
+                                <input class="cts-filename-input" placeholder="文件名" value="${this.escapeHtml(fnVal)}" data-gidx="${gi}">
+                                <button class="cts-remove-group-btn" data-action="removeQuestionGroup" data-gidx="${gi}" title="删除组">&times;</button>
+                            </div>
+                            ${itemsHtml}
+                            <div class="cts-group-actions">
+                                <button class="btn btn-secondary" data-action="addQAPair" data-gidx="${gi}">+ 添加 Q&A</button>
+                                <button class="btn btn-secondary" data-action="batchImportQuestions" data-gidx="${gi}">批量导入</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                },
+
+                _addQAPair(gIdx) {
+                    if (!this._qaGroups[gIdx]) return;
+                    this._qaGroups[gIdx].items.push({ question: '', answer: '' });
+                    this._renderQuestionGroups();
+                },
+
+                _removeQAPair(gIdx, iIdx) {
+                    if (!this._qaGroups[gIdx]) return;
+                    this._qaGroups[gIdx].items.splice(iIdx, 1);
+                    if (this._qaGroups[gIdx].items.length === 0) {
+                        this._qaGroups[gIdx].items.push({ question: '', answer: '' });
+                    }
+                    this._renderQuestionGroups();
+                },
+
+                _batchImportQuestions(gIdx) {
+                    const self = this;
+                    function pickFiles(accept) {
+                        return new Promise((resolve) => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.multiple = true;
+                            input.accept = accept || '.txt,.json,.md,.csv,.yaml,.yml,.xml';
+                            input.onchange = () => {
+                                const files = Array.from(input.files || []);
+                                resolve(files);
+                            };
+                            input.click();
+                        });
+                    }
+                    (async () => {
+                        const qFiles = await pickFiles();
+                        if (!qFiles.length) return;
+                        const aFiles = await pickFiles();
+                        if (!aFiles.length) {
+                            showToast('请选择答案文件', 'warning');
+                            return;
+                        }
+                        const qTexts = await Promise.all(qFiles.map(f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(f); })));
+                        const aTexts = await Promise.all(aFiles.map(f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(f); })));
+                        let pairs = [];
+                        if (qTexts.length > aTexts.length) {
+                            const ok = await this.showConfirm(`问题文件(${qTexts.length})多于答案文件(${aTexts.length})。多出的问题答案将留空。是否继续？`);
+                            if (!ok) return;
+                            for (let i = 0; i < qTexts.length; i++) {
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '' });
+                            }
+                        } else if (aTexts.length > qTexts.length) {
+                            const ok = await this.showConfirm(`答案文件(${aTexts.length})多于问题文件(${qTexts.length})，多余的答案将被丢弃。是否继续？`);
+                            if (!ok) return;
+                            for (let i = 0; i < qTexts.length; i++) {
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '' });
+                            }
+                        } else {
+                            for (let i = 0; i < qTexts.length; i++) {
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] });
+                            }
+                        }
+                        if (!this._qaGroups[gIdx]) return;
+                        this._qaGroups[gIdx].items.push(...pairs);
+                        this._renderQuestionGroups();
+                        showToast(`已导入 ${pairs.length} 个问答对`, 'success');
+                    })().catch(e => { showToast('导入失败: ' + friendlyError(e.message), 'error'); });
+                },
+
+                // ── Prompt Groups ──
+                _addPromptGroup() {
+                    const idx = this._promptGroups.length;
+                    this._promptGroups.push({ tag: '', filename: '', default_questions: [], items: [{ content: '' }] });
+                    this._renderPromptGroups();
+                },
+
+                _removePromptGroup(idx) {
+                    this._promptGroups.splice(idx, 1);
+                    this._renderPromptGroups();
+                },
+
+                _renderPromptGroups() {
+                    const container = document.getElementById('cts-prompt-groups');
+                    if (!container) return;
+                    if (this._promptGroups.length === 0) {
+                        container.innerHTML = '<div class="known-ts-empty">暂无提示词 Tag 组，请点击上方按钮添加</div>';
+                        return;
+                    }
+                    const setName = document.getElementById('cts-name').value || 'TestSet';
+                    container.innerHTML = this._promptGroups.map((group, gi) => {
+                        const tagVal = group.tag || '';
+                        const fnVal = group.filename || (tagVal ? setName + tagVal + '.json' : '');
+                        // Generate default_questions checkboxes
+                        const qFilenames = this._qaGroups.map(g => g.filename || (g.tag ? g.tag + '问题.json' : '')).filter(Boolean);
+                        const dqHtml = qFilenames.length > 0
+                            ? qFilenames.map(fn => {
+                                const checked = (group.default_questions || []).includes(fn) ? 'checked' : '';
+                                return `<label><input type="checkbox" class="cts-dq-cb" data-gidx="${gi}" value="${this.escapeHtml(fn)}" ${checked}> ${this.escapeHtml(fn)}</label>`;
+                            }).join('')
+                            : '<span style="font-size:11px;color:var(--text-muted)">暂无问题文件</span>';
+                        const itemsHtml = group.items.map((item, ii) => {
+                            const c = item.content || '';
+                            return `<div class="cts-prompt-item" data-gidx="${gi}" data-piidx="${ii}">
+                                <div style="display:flex;gap:6px;align-items:flex-start;">
+                                    <textarea rows="4" class="cts-prompt-content" data-gidx="${gi}" data-piidx="${ii}" style="flex:1;">${this.escapeHtml(c)}</textarea>
+                                    <button class="cts-import-btn" data-gidx="${gi}" data-piidx="${ii}" data-target="prompt" title="从文件导入" style="position:static;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+                                    <button class="cts-remove-item-btn" data-action="removePromptItem" data-gidx="${gi}" data-piidx="${ii}" title="删除此项">&times;</button>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        return `<div class="cts-group-card" data-gidx="${gi}">
+                            <div class="cts-group-header">
+                                <input class="cts-tag-input" placeholder="Tag 名称" value="${this.escapeHtml(tagVal)}" data-gidx="${gi}">
+                                <span style="color:var(--text-muted);font-size:11px;">文件名:</span>
+                                <input class="cts-filename-input" placeholder="文件名" value="${this.escapeHtml(fnVal)}" data-gidx="${gi}">
+                                <button class="cts-remove-group-btn" data-action="removePromptGroup" data-gidx="${gi}" title="删除组">&times;</button>
+                            </div>
+                            <div class="cts-default-questions">
+                                <label>关联问题文件:</label>
+                                <div class="cts-dq-checkboxes">${dqHtml}</div>
+                            </div>
+                            ${itemsHtml}
+                            <div class="cts-group-actions">
+                                <button class="btn btn-secondary" data-action="addPromptItem" data-gidx="${gi}">+ 添加提示词</button>
+                                <button class="btn btn-secondary" data-action="batchImportPrompts" data-gidx="${gi}">批量导入</button>
+                            </div>
+                        </div>`;
+                    }).join('');
+                },
+
+                _addPromptItem(gIdx) {
+                    if (!this._promptGroups[gIdx]) return;
+                    this._promptGroups[gIdx].items.push({ content: '' });
+                    this._renderPromptGroups();
+                },
+
+                _removePromptItem(gIdx, iIdx) {
+                    if (!this._promptGroups[gIdx]) return;
+                    this._promptGroups[gIdx].items.splice(iIdx, 1);
+                    if (this._promptGroups[gIdx].items.length === 0) {
+                        this._promptGroups[gIdx].items.push({ content: '' });
+                    }
+                    this._renderPromptGroups();
+                },
+
+                _batchImportPrompts(gIdx) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml';
+                    const self = this;
+                    input.onchange = async () => {
+                        const files = Array.from(input.files || []);
+                        if (!files.length) return;
+                        const texts = await Promise.all(files.map(f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(f); })));
+                        if (!self._promptGroups[gIdx]) return;
+                        for (const t of texts) {
+                            self._promptGroups[gIdx].items.push({ content: t });
+                        }
+                        self._renderPromptGroups();
+                        showToast(`已导入 ${texts.length} 个提示词`, 'success');
+                    };
+                    input.click();
+                },
+
+                // ── Import file to textarea ──
+                _importFileToTextarea(targetEl) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
+                    input.onchange = () => {
+                        const file = input.files && input.files[0];
+                        if (!file) return;
+                        const fr = new FileReader();
+                        fr.onload = () => { targetEl.value = fr.result; };
+                        fr.readAsText(file);
+                    };
+                    input.click();
+                },
+
+                // ── Browse save path ──
+                async _browseSavePath() {
+                    if (typeof window.showDirectoryPicker === 'function') {
+                        try {
+                            const handle = await window.showDirectoryPicker();
+                            this._dirHandle = handle;
+                            const pf = document.getElementById('cts-path-field');
+                            if (pf) pf.style.display = 'none';
+                        } catch (e) {
+                            if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+                                this._showPathPrompt();
+                            }
+                        }
+                    } else {
+                        this._showPathPrompt();
+                    }
+                },
+
+                _showPathPrompt() {
+                    const current = document.getElementById('cts-path').value || document.getElementById('testSetDir').value || '';
+                    this.showPrompt('请输入保存路径：', current).then(val => {
+                        if (val) document.getElementById('cts-path').value = val;
+                    });
+                },
+
+                // ── Update file refs ──
+                _updateQuestionFileRefs() {
+                    this._renderPromptGroups();
+                },
+
+                _updateQuestionFilenames() {
+                    this._renderQuestionGroups();
+                    this._renderPromptGroups();
+                },
+
+                _updatePromptFilenames() {
+                    this._renderPromptGroups();
+                },
+
+                // ── Validate, collect, submit ──
+                _validateCreateForm() {
+                    const name = document.getElementById('cts-name').value.trim();
+                    if (!name) { showToast('请输入测试集名称', 'warning'); return false; }
+                    if (!this._dirHandle) {
+                        const path = document.getElementById('cts-path').value.trim();
+                        if (!path) { showToast('请输入保存路径', 'warning'); return false; }
+                    }
+                    const qaCount = this._qaGroups.reduce((s, g) => s + g.items.filter(i => i.question || i.answer).length, 0);
+                    const promptCount = this._promptGroups.reduce((s, g) => s + g.items.filter(i => i.content).length, 0);
+                    if (qaCount < 1) { showToast('至少需要 1 个问答对', 'warning'); return false; }
+                    if (promptCount < 1) { showToast('至少需要 1 个提示词', 'warning'); return false; }
+                    return true;
+                },
+
+                _collectCreateFormData() {
+                    const name = document.getElementById('cts-name').value.trim();
+                    const path = this._dirHandle ? '' : document.getElementById('cts-path').value.trim();
+                    const question_groups = this._qaGroups.map(g => ({
+                        filename: g.filename || (g.tag ? g.tag + '问题.json' : 'untitled.json'),
+                        tag: g.tag || '',
+                        items: g.items.map(i => ({ question: i.question || '', answer: i.answer || '' }))
+                    })).filter(g => g.items.some(i => i.question || i.answer));
+                    const prompt_groups = this._promptGroups.map(g => ({
+                        filename: g.filename || (g.tag ? name + g.tag + '.json' : 'untitled.json'),
+                        tag: g.tag || 'untagged',
+                        default_questions: g.default_questions || [],
+                        items: g.items.map(i => ({ content: i.content || '' }))
+                    })).filter(g => g.items.some(i => i.content));
+                    return { name, base_path: path, question_groups, prompt_groups };
+                },
+
+                async _submitCreateTestSet() {
+                    if (!this._validateCreateForm()) return;
+                    const btn = document.getElementById('cts-submit-btn');
+                    btn.disabled = true;
+                    btn.classList.add('btn-loading');
+                    try {
+                        const data = this._collectCreateFormData();
+                        if (this._dirHandle) {
+                            await this._writeFilesViaFSAPI(data, this._dirHandle);
+                        } else {
+                            const resp = await fetchWithTimeout('/api/v1/test-set/create', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify(data)
+                            });
+                            const result = await resp.json();
+                            if (!resp.ok) {
+                                throw new Error(result.error || '创建失败');
+                            }
+                        }
+                        await this._saveKnownTestSets();
+                        this.closeCreateTestSetModal();
+                        showToast('测试集已创建', 'success');
+                        await this.loadAllTestSets();
+                    } catch (e) {
+                        showToast('创建失败: ' + friendlyError(e.message), 'error');
+                    } finally {
+                        btn.disabled = false;
+                        btn.classList.remove('btn-loading');
+                    }
+                },
+
+                async _writeFilesViaFSAPI(data, rootHandle) {
+                    if ((await rootHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+                        if ((await rootHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+                            throw new Error('没有写入权限');
+                        }
+                    }
+                    // Create test set directory
+                    let tsDir;
+                    try {
+                        tsDir = await rootHandle.getDirectoryHandle(data.name);
+                        throw new Error(`该位置已存在同名测试集「${data.name}」`);
+                    } catch (e) {
+                        if (e.name === 'NotFoundError') {
+                            tsDir = await rootHandle.getDirectoryHandle(data.name, { create: true });
+                        } else {
+                            throw e;
+                        }
+                    }
+                    const promptsDir = await tsDir.getDirectoryHandle('测试系统提示词', { create: true });
+                    const questionsDir = await tsDir.getDirectoryHandle('测试问题', { create: true });
+                    await tsDir.getDirectoryHandle('测试结果', { create: true });
+                    for (const group of data.question_groups) {
+                        let fn = group.filename;
+                        if (!fn.endsWith('.json')) fn += '.json';
+                        const entries = group.items.map((item, i) => ({
+                            id: i + 1, tag: group.tag, question: item.question, answer: item.answer
+                        }));
+                        const fh = await questionsDir.getFileHandle(fn, { create: true });
+                        const w = await fh.createWritable();
+                        await w.write(JSON.stringify(entries, null, 2));
+                        await w.close();
+                    }
+                    for (const group of data.prompt_groups) {
+                        let fn = group.filename;
+                        if (!fn.endsWith('.json')) fn += '.json';
+                        const dq = (group.default_questions || []).map(f => '测试问题/' + f);
+                        const entries = group.items.map((item, i) => ({
+                            id: i + 1, tag: group.tag, default_questions: dq, content: item.content
+                        }));
+                        const fh = await promptsDir.getFileHandle(fn, { create: true });
+                        const w = await fh.createWritable();
+                        await w.write(JSON.stringify(entries, null, 2));
+                        await w.close();
+                    }
+                },
+
                 onCanvasResize() { this.renderLines(); },
                 debouncedCanvasResize: debounce(function() { this.renderLines(); this.updateCoordDisplay(); }, 150),
                 debouncedConfigChange: debounce(function() { this.onConfigChange(); }, 500),
@@ -6328,7 +7352,7 @@
                 on(byId('setFilterBtn'), 'click', () => App.toggleSetFilterPanel());
                 on(byId('promptSearch'), 'input', debounce(() => App.renderPromptList(), 300));
                 on(byId('questionSearch'), 'input', debounce(() => App.renderQuestionList(), 300));
-                on(byId('testSetDir'), 'blur', () => App.onTestSetDirChange());
+                on(byId('testSetDir'), 'blur', () => { App.onTestSetDirChange(); App._onTestSetDirChanged(); });
                 on(byId('baseUrl'), 'blur', () => App.onBaseUrlBlur());
                 on(byId('resultFilterText'), 'input', debounce(() => App.applyStreamFilter(), 300));
                 on(byId('paramsToggle'), 'click', () => App.toggleParamsModal());
@@ -6340,6 +7364,89 @@
                 on(byId('historyRetryBtn'), 'click', () => App.retryLoadHistory());
                 on(byId('modal-streaming'), 'change', () => App.onConfigChange());
                 on(byId('autoConnectToggle'), 'change', () => App.onConfigChange());
+
+                // Create test set modal buttons
+                on(byId('knownTestSetsBtn'), 'click', (e) => { e.stopPropagation(); App.toggleKnownTestSets(); });
+                on(byId('cts-submit-btn'), 'click', () => App._submitCreateTestSet());
+                on(byId('cts-browse-btn'), 'click', () => App._browseSavePath());
+                on(byId('createTestSetModal'), 'click', function(e) {
+                    if (e.target === this) App.closeCreateTestSetModal();
+                });
+                const ctsClose = document.querySelector('#createTestSetModal .create-ts-close');
+                if (ctsClose) on(ctsClose, 'click', () => App.closeCreateTestSetModal());
+                // CTS name input → update prompt filenames
+                const ctsName = byId('cts-name');
+                if (ctsName) on(ctsName, 'input', () => App._updatePromptFilenames());
+                // CTS path input → clear dirHandle
+                const ctsPath = byId('cts-path');
+                if (ctsPath) on(ctsPath, 'focus', () => { App._dirHandle = null; });
+                // Delegate input/change events inside create test set modal
+                const ctsModal = byId('createTestSetModal');
+                if (ctsModal) {
+                    on(ctsModal, 'input', function(e) {
+                        const tagInput = e.target.closest('.cts-tag-input');
+                        if (tagInput) {
+                            const gi = parseInt(tagInput.dataset.gidx, 10);
+                            const group = App._qaGroups[gi];
+                            if (group) group.tag = tagInput.value;
+                            return;
+                        }
+                        const fnInput = e.target.closest('.cts-filename-input');
+                        if (fnInput) {
+                            const gi = parseInt(fnInput.dataset.gidx, 10);
+                            if (fnInput.closest('.cts-group-card') && fnInput.closest('.cts-group-card').querySelector('.cts-qa-item')) {
+                                // Question group
+                                const group = App._qaGroups[gi];
+                                if (group) group.filename = fnInput.value;
+                            } else {
+                                // Prompt group
+                                const group = App._promptGroups[gi];
+                                if (group) group.filename = fnInput.value;
+                            }
+                            return;
+                        }
+                        const qInput = e.target.closest('.cts-qa-question');
+                        if (qInput) {
+                            const gi = parseInt(qInput.dataset.gidx, 10);
+                            const ii = parseInt(qInput.dataset.iiidx, 10);
+                            const group = App._qaGroups[gi];
+                            if (group && group.items[ii]) group.items[ii].question = qInput.value;
+                            return;
+                        }
+                        const aInput = e.target.closest('.cts-qa-answer');
+                        if (aInput) {
+                            const gi = parseInt(aInput.dataset.gidx, 10);
+                            const ii = parseInt(aInput.dataset.iiidx, 10);
+                            const group = App._qaGroups[gi];
+                            if (group && group.items[ii]) group.items[ii].answer = aInput.value;
+                            return;
+                        }
+                        const pInput = e.target.closest('.cts-prompt-content');
+                        if (pInput) {
+                            const gi = parseInt(pInput.dataset.gidx, 10);
+                            const ii = parseInt(pInput.dataset.piidx, 10);
+                            const group = App._promptGroups[gi];
+                            if (group && group.items[ii]) group.items[ii].content = pInput.value;
+                            return;
+                        }
+                    });
+                    on(ctsModal, 'change', function(e) {
+                        const cb = e.target.closest('.cts-dq-cb');
+                        if (cb) {
+                            const gi = parseInt(cb.dataset.gidx, 10);
+                            const group = App._promptGroups[gi];
+                            if (!group) return;
+                            if (!group.default_questions) group.default_questions = [];
+                            const val = cb.value;
+                            if (cb.checked) {
+                                if (!group.default_questions.includes(val)) group.default_questions.push(val);
+                            } else {
+                                group.default_questions = group.default_questions.filter(v => v !== val);
+                            }
+                            return;
+                        }
+                    });
+                }
 
                 $$('[data-action]').forEach(el => {
                     const action = el.dataset.action;
@@ -6479,6 +7586,31 @@
                         App.selectDropdownOption(id, val, label);
                         return;
                     }
+                    // Known test set entry
+                    const knownEntry = e.target.closest('.known-ts-entry');
+                    if (knownEntry) {
+                        const idx = parseInt(knownEntry.dataset.tsIdx, 10);
+                        const entry = App._knownTestSets && App._knownTestSets[idx];
+                        if (entry && entry.available !== false) {
+                            App.toggleKnownTestSets();
+                            App.switchToKnownTestSet(entry);
+                        } else if (entry) {
+                            showToast('测试集不存在: ' + entry.path, 'warning');
+                        }
+                        return;
+                    }
+                    // Import file button (inside modal)
+                    const importBtn = e.target.closest('.cts-import-btn');
+                    if (importBtn) {
+                        const textarea = importBtn.parentElement.querySelector('textarea');
+                        if (textarea) App._importFileToTextarea(textarea);
+                        return;
+                    }
+                    // Close known ts dropdown on outside click
+                    if (!e.target.closest('#knownTestSetsBtn') && !e.target.closest('.known-ts-dropdown')) {
+                        const dd = document.getElementById('knownTestSetsDropdown');
+                        if (dd) dd.classList.remove('show');
+                    }
                     if (!e.target.closest('.comfy-sel-popup') && !e.target.closest('.comfy-node-body') && !e.target.closest('.comfy-socket') && !e.target.closest('.custom-select')) {
                         App.closeAllSelectors();
                         document.querySelectorAll('.custom-select-dropdown.show').forEach(d => {
@@ -6509,6 +7641,14 @@
                 });
 
                 document.addEventListener('keydown', function(e) {
+                    if (e.key === 'Escape') {
+                        if (document.getElementById('createTestSetModal').classList.contains('show')) {
+                            App.closeCreateTestSetModal();
+                            return;
+                        }
+                        const kdd = document.getElementById('knownTestSetsDropdown');
+                        if (kdd && kdd.classList.contains('show')) kdd.classList.remove('show');
+                    }
                     if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
                         e.preventDefault();
                         App.canvasUndo();
