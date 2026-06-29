@@ -2966,6 +2966,110 @@
             font-size: 12px;
             color: var(--text-muted);
         }
+
+        /* ===== Step Progress ===== */
+        .cts-progress {
+            display: flex;
+            gap: 0;
+            margin-bottom: 20px;
+            padding: 0;
+            border-radius: var(--radius-sm);
+            background: var(--bg-input);
+            overflow: hidden;
+        }
+        .cts-step {
+            flex: 1;
+            text-align: center;
+            padding: 8px 4px;
+            font-size: 11px;
+            color: var(--text-muted);
+            background: var(--bg-input);
+            transition: all 0.25s;
+            position: relative;
+        }
+        .cts-step.active {
+            color: var(--accent);
+            background: var(--accent-bg);
+            font-weight: 500;
+        }
+        .cts-step.done {
+            color: white;
+            background: var(--accent);
+        }
+        .cts-step-num {
+            display: inline-flex;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 4px;
+            background: rgba(0,0,0,0.1);
+            color: inherit;
+        }
+        .cts-step.done .cts-step-num {
+            background: rgba(255,255,255,0.3);
+        }
+        .cts-step.active .cts-step-num {
+            background: var(--accent);
+            color: white;
+        }
+        .cts-step-panel {
+            min-height: 200px;
+        }
+
+        /* ===== File Import Row (no textarea) ===== */
+        .cts-file-row {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .cts-file-btn {
+            padding: 5px 10px;
+            background: var(--bg-card);
+            border: 1px dashed var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            font-family: inherit;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .cts-file-btn:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-bg);
+        }
+        .cts-file-btn.has-file {
+            border-style: solid;
+            border-color: #10b981;
+            background: rgba(16,185,129,0.08);
+            color: #065f46;
+        }
+        .cts-file-name {
+            font-size: 11px;
+            color: var(--text-muted);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 150px;
+            flex-shrink: 1;
+        }
+        .cts-file-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            min-width: 28px;
+            flex-shrink: 0;
+        }
     </style>
 </head>
 <body>
@@ -3379,36 +3483,61 @@
                 <button class="create-ts-close">&times;</button>
             </div>
             <div class="create-ts-body">
-                <div class="create-ts-section">
-                    <div class="create-ts-section-title">基本信息</div>
-                    <div class="create-ts-field">
-                        <label>测试集名称</label>
-                        <input type="text" id="cts-name" required placeholder="例如：我的测试集">
-                    </div>
-                    <div class="create-ts-field" id="cts-path-field">
-                        <label>保存路径</label>
-                        <div style="display:flex;gap:6px;">
-                            <input type="text" id="cts-path" style="flex:1;" placeholder="D:/Benches">
-                            <button class="btn btn-secondary" id="cts-browse-btn" style="padding:6px 10px;" title="选择文件夹">
-                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
-                            </button>
+                <div class="cts-progress">
+                    <div class="cts-step done" data-step="1"><span class="cts-step-num">1</span> 名称</div>
+                    <div class="cts-step" data-step="2"><span class="cts-step-num">2</span> 问题</div>
+                    <div class="cts-step" data-step="3"><span class="cts-step-num">3</span> 提示词</div>
+                    <div class="cts-step" data-step="4"><span class="cts-step-num">4</span> 保存</div>
+                </div>
+
+                <div class="cts-step-panel" data-step="1">
+                    <div class="create-ts-section">
+                        <div class="create-ts-section-title">第一步：测试集名称</div>
+                        <div class="create-ts-field">
+                            <label>请为新的测试集输入一个名称</label>
+                            <input type="text" id="cts-name" required placeholder="例如：我的测试集">
                         </div>
                     </div>
                 </div>
-                <div class="create-ts-section">
-                    <div class="create-ts-section-title">问题 Tag 组</div>
-                    <div id="cts-question-groups"></div>
-                    <button class="btn btn-secondary" data-action="addQuestionGroup">+ 添加 Tag 组</button>
+
+                <div class="cts-step-panel" data-step="2" style="display:none;">
+                    <div class="create-ts-section">
+                        <div class="create-ts-section-title">第二步：创建问题</div>
+                        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">创建 Tag 组，然后从文件导入问题和答案。</p>
+                        <div id="cts-question-groups"></div>
+                        <button class="btn btn-secondary" data-action="addQuestionGroup">+ 添加 Tag 组</button>
+                    </div>
                 </div>
-                <div class="create-ts-section">
-                    <div class="create-ts-section-title">系统提示词 Tag 组</div>
-                    <div id="cts-prompt-groups"></div>
-                    <button class="btn btn-secondary" data-action="addPromptGroup">+ 添加 Tag 组</button>
+
+                <div class="cts-step-panel" data-step="3" style="display:none;">
+                    <div class="create-ts-section">
+                        <div class="create-ts-section-title">第三步：创建系统提示词</div>
+                        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">创建 Tag 组，然后输入或从文件导入提示词内容。</p>
+                        <div id="cts-prompt-groups"></div>
+                        <button class="btn btn-secondary" data-action="addPromptGroup">+ 添加 Tag 组</button>
+                    </div>
+                </div>
+
+                <div class="cts-step-panel" data-step="4" style="display:none;">
+                    <div class="create-ts-section">
+                        <div class="create-ts-section-title">第四步：保存位置</div>
+                        <div class="create-ts-field" id="cts-path-field">
+                            <label>选择测试集保存路径</label>
+                            <div style="display:flex;gap:6px;">
+                                <input type="text" id="cts-path" style="flex:1;" placeholder="D:/Benches">
+                                <button class="btn btn-secondary" id="cts-browse-btn" style="padding:6px 10px;" title="选择文件夹">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="create-ts-footer">
+                <button class="btn btn-secondary" id="cts-prev-btn" style="display:none;">上一步</button>
                 <button class="btn btn-secondary" data-action="closeCreateTestSetModal">取消</button>
-                <button class="btn btn-primary" id="cts-submit-btn">确定并创建</button>
+                <button class="btn btn-primary" id="cts-next-btn">下一步</button>
+                <button class="btn btn-primary" id="cts-submit-btn" style="display:none;">确定并创建</button>
             </div>
         </div>
     </div>
@@ -6783,6 +6912,7 @@
                 // ── Create test set state ──
                 _qaGroups: [],
                 _promptGroups: [],
+                _ctsStep: 1,
 
                 // ── Known Test Sets ──
                 async _loadKnownTestSets() {
@@ -6934,6 +7064,7 @@
                     this._qaGroups = [];
                     this._promptGroups = [];
                     this._dirHandle = null;
+                    this._ctsStep = 1;
                     document.getElementById('cts-name').value = '';
                     const pathInput = document.getElementById('cts-path');
                     if (pathInput) {
@@ -6944,8 +7075,48 @@
                     document.getElementById('cts-question-groups').innerHTML = '';
                     document.getElementById('cts-prompt-groups').innerHTML = '';
                     document.getElementById('createTestSetModal').classList.add('show');
-                    this._addQuestionGroup();
-                    this._addPromptGroup();
+                    this._goToStep(1);
+                },
+
+                _goToStep(n) {
+                    this._ctsStep = n;
+                    document.querySelectorAll('.cts-step-panel').forEach(el => {
+                        el.style.display = el.dataset.step == n ? '' : 'none';
+                    });
+                    document.querySelectorAll('.cts-step').forEach(el => {
+                        const s = parseInt(el.dataset.step, 10);
+                        el.classList.toggle('done', s < n);
+                        el.classList.toggle('active', s === n);
+                    });
+                    // Render current step's content
+                    if (n === 2) this._renderQuestionGroups();
+                    if (n === 3) this._renderPromptGroups();
+                    // Buttons
+                    document.getElementById('cts-prev-btn').style.display = n > 1 ? '' : 'none';
+                    const isLast = n === 4;
+                    document.getElementById('cts-next-btn').style.display = isLast ? 'none' : '';
+                    document.getElementById('cts-submit-btn').style.display = isLast ? '' : 'none';
+                },
+
+                _nextStep() {
+                    const n = this._ctsStep;
+                    if (n === 1) {
+                        const name = document.getElementById('cts-name').value.trim();
+                        if (!name) { showToast('请输入测试集名称', 'warning'); return; }
+                    }
+                    if (n === 2) {
+                        const hasItems = this._qaGroups.some(g => g.items.some(i => i.question || i.answer));
+                        if (!hasItems) { showToast('请至少添加一个问答对', 'warning'); return; }
+                    }
+                    if (n === 3) {
+                        const hasItems = this._promptGroups.some(g => g.items.some(i => i.content));
+                        if (!hasItems) { showToast('请至少添加一个提示词', 'warning'); return; }
+                    }
+                    this._goToStep(n + 1);
+                },
+
+                _prevStep() {
+                    this._goToStep(this._ctsStep - 1);
                 },
 
                 closeCreateTestSetModal() {
@@ -6980,19 +7151,31 @@
                         const tagVal = group.tag || '';
                         const fnVal = group.filename || (tagVal ? tagVal + '问题.json' : '');
                         const itemsHtml = group.items.map((item, ii) => {
-                            const q = item.question || '';
-                            const a = item.answer || '';
+                            const qFn = item._qFile || '';
+                            const aFn = item._aFile || '';
+                            const qBtnClass = 'cts-file-btn' + (qFn ? ' has-file' : '');
+                            const aBtnClass = 'cts-file-btn' + (aFn ? ' has-file' : '');
+                            const qLabel = qFn ? qFn : '选择文件';
+                            const aLabel = aFn ? aFn : '选择文件';
                             return `<div class="cts-qa-item" data-gidx="${gi}" data-iiidx="${ii}">
-                                <div class="cts-qa-row">
-                                    <div class="cts-qa-field">
-                                        <label>问题</label>
-                                        <textarea rows="2" class="cts-qa-question" data-gidx="${gi}" data-iiidx="${ii}">${this.escapeHtml(q)}</textarea>
-                                        <button class="cts-import-btn" data-gidx="${gi}" data-iiidx="${ii}" data-target="question" title="从文件导入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+                                <div style="display:flex;gap:8px;align-items:flex-start;">
+                                    <div style="flex:1;">
+                                        <div class="cts-file-row">
+                                            <span class="cts-file-label">问题</span>
+                                            <button class="${qBtnClass}" data-action="importQaFile" data-gidx="${gi}" data-iiidx="${ii}" data-target="question">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                ${this.escapeHtml(qLabel)}
+                                            </button>
+                                        </div>
                                     </div>
-                                    <div class="cts-qa-field">
-                                        <label>答案</label>
-                                        <textarea rows="2" class="cts-qa-answer" data-gidx="${gi}" data-iiidx="${ii}">${this.escapeHtml(a)}</textarea>
-                                        <button class="cts-import-btn" data-gidx="${gi}" data-iiidx="${ii}" data-target="answer" title="从文件导入"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+                                    <div style="flex:1;">
+                                        <div class="cts-file-row">
+                                            <span class="cts-file-label">答案</span>
+                                            <button class="${aBtnClass}" data-action="importQaFile" data-gidx="${gi}" data-iiidx="${ii}" data-target="answer">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                ${this.escapeHtml(aLabel)}
+                                            </button>
+                                        </div>
                                     </div>
                                     <button class="cts-remove-item-btn" data-action="removeQAPair" data-gidx="${gi}" data-iiidx="${ii}" title="删除此项">&times;</button>
                                 </div>
@@ -7016,7 +7199,7 @@
 
                 _addQAPair(gIdx) {
                     if (!this._qaGroups[gIdx]) return;
-                    this._qaGroups[gIdx].items.push({ question: '', answer: '' });
+                    this._qaGroups[gIdx].items.push({ question: '', answer: '', _qFile: '', _aFile: '' });
                     this._renderQuestionGroups();
                 },
 
@@ -7024,9 +7207,36 @@
                     if (!this._qaGroups[gIdx]) return;
                     this._qaGroups[gIdx].items.splice(iIdx, 1);
                     if (this._qaGroups[gIdx].items.length === 0) {
-                        this._qaGroups[gIdx].items.push({ question: '', answer: '' });
+                        this._qaGroups[gIdx].items.push({ question: '', answer: '', _qFile: '', _aFile: '' });
                     }
                     this._renderQuestionGroups();
+                },
+
+                _importQaFile(gIdx, iIdx, target) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
+                    const self = this;
+                    input.onchange = () => {
+                        const file = input.files && input.files[0];
+                        if (!file) return;
+                        const fr = new FileReader();
+                        fr.onload = () => {
+                            const group = self._qaGroups[gIdx];
+                            if (!group || !group.items[iIdx]) return;
+                            const item = group.items[iIdx];
+                            if (target === 'question') {
+                                item.question = fr.result;
+                                item._qFile = file.name;
+                            } else {
+                                item.answer = fr.result;
+                                item._aFile = file.name;
+                            }
+                            self._renderQuestionGroups();
+                        };
+                        fr.readAsText(file);
+                    };
+                    input.click();
                 },
 
                 _batchImportQuestions(gIdx) {
@@ -7059,17 +7269,17 @@
                             const ok = await this.showConfirm(`问题文件(${qTexts.length})多于答案文件(${aTexts.length})。多出的问题答案将留空。是否继续？`);
                             if (!ok) return;
                             for (let i = 0; i < qTexts.length; i++) {
-                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '' });
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '', _qFile: qFiles[i].name, _aFile: aTexts[i] ? aFiles[i].name : '' });
                             }
                         } else if (aTexts.length > qTexts.length) {
                             const ok = await this.showConfirm(`答案文件(${aTexts.length})多于问题文件(${qTexts.length})，多余的答案将被丢弃。是否继续？`);
                             if (!ok) return;
                             for (let i = 0; i < qTexts.length; i++) {
-                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '' });
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '', _qFile: qFiles[i].name, _aFile: aFiles[i].name });
                             }
                         } else {
                             for (let i = 0; i < qTexts.length; i++) {
-                                pairs.push({ question: qTexts[i], answer: aTexts[i] });
+                                pairs.push({ question: qTexts[i], answer: aTexts[i], _qFile: qFiles[i].name, _aFile: aFiles[i].name });
                             }
                         }
                         if (!this._qaGroups[gIdx]) return;
@@ -7368,6 +7578,8 @@
                 // Create test set modal buttons
                 on(byId('knownTestSetsBtn'), 'click', (e) => { e.stopPropagation(); App.toggleKnownTestSets(); });
                 on(byId('cts-submit-btn'), 'click', () => App._submitCreateTestSet());
+                on(byId('cts-next-btn'), 'click', () => App._nextStep());
+                on(byId('cts-prev-btn'), 'click', () => App._prevStep());
                 on(byId('cts-browse-btn'), 'click', () => App._browseSavePath());
                 on(byId('createTestSetModal'), 'click', function(e) {
                     if (e.target === this) App.closeCreateTestSetModal();
@@ -7403,22 +7615,6 @@
                                 const group = App._promptGroups[gi];
                                 if (group) group.filename = fnInput.value;
                             }
-                            return;
-                        }
-                        const qInput = e.target.closest('.cts-qa-question');
-                        if (qInput) {
-                            const gi = parseInt(qInput.dataset.gidx, 10);
-                            const ii = parseInt(qInput.dataset.iiidx, 10);
-                            const group = App._qaGroups[gi];
-                            if (group && group.items[ii]) group.items[ii].question = qInput.value;
-                            return;
-                        }
-                        const aInput = e.target.closest('.cts-qa-answer');
-                        if (aInput) {
-                            const gi = parseInt(aInput.dataset.gidx, 10);
-                            const ii = parseInt(aInput.dataset.iiidx, 10);
-                            const group = App._qaGroups[gi];
-                            if (group && group.items[ii]) group.items[ii].answer = aInput.value;
                             return;
                         }
                         const pInput = e.target.closest('.cts-prompt-content');
@@ -7599,7 +7795,33 @@
                         }
                         return;
                     }
-                    // Import file button (inside modal)
+                    // Import QA file button (file-only mode)
+                    const qaFileBtn = e.target.closest('[data-action="importQaFile"]');
+                    if (qaFileBtn) {
+                        const gi = parseInt(qaFileBtn.dataset.gidx, 10);
+                        const ii = parseInt(qaFileBtn.dataset.iiidx, 10);
+                        const target = qaFileBtn.dataset.target;
+                        App._importQaFile(gi, ii, target);
+                        return;
+                    }
+                    // CTS action buttons (Q&A and prompt management)
+                    const ctsActionBtn = e.target.closest('[data-action]');
+                    if (ctsActionBtn && ctsActionBtn.closest('#createTestSetModal')) {
+                        const action = ctsActionBtn.dataset.action;
+                        const gIdx = parseInt(ctsActionBtn.dataset.gidx, 10);
+                        const iIdx = parseInt(ctsActionBtn.dataset.iiidx, 10);
+                        if (action === 'addQuestionGroup') { App._addQuestionGroup(); return; }
+                        if (action === 'removeQuestionGroup' && !isNaN(gIdx)) { App._removeQuestionGroup(gIdx); return; }
+                        if (action === 'addQAPair' && !isNaN(gIdx)) { App._addQAPair(gIdx); return; }
+                        if (action === 'removeQAPair' && !isNaN(gIdx) && !isNaN(iIdx)) { App._removeQAPair(gIdx, iIdx); return; }
+                        if (action === 'batchImportQuestions' && !isNaN(gIdx)) { App._batchImportQuestions(gIdx); return; }
+                        if (action === 'addPromptGroup') { App._addPromptGroup(); return; }
+                        if (action === 'removePromptGroup' && !isNaN(gIdx)) { App._removePromptGroup(gIdx); return; }
+                        if (action === 'addPromptItem' && !isNaN(gIdx)) { App._addPromptItem(gIdx); return; }
+                        if (action === 'removePromptItem' && !isNaN(gIdx) && !isNaN(iIdx)) { App._removePromptItem(gIdx, iIdx); return; }
+                        if (action === 'batchImportPrompts' && !isNaN(gIdx)) { App._batchImportPrompts(gIdx); return; }
+                    }
+                    // Import file button (inside modal, textarea mode)
                     const importBtn = e.target.closest('.cts-import-btn');
                     if (importBtn) {
                         const textarea = importBtn.parentElement.querySelector('textarea');
