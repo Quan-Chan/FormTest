@@ -500,7 +500,10 @@ def create_test_set():
         if not filename.lower().endswith(".json"):
             filename += ".json"
         tag = group.get("tag", "")
-        default_qs = [f"测试问题/{f}" for f in group.get("default_questions", [])]
+        default_qs = []
+        for f in group.get("default_questions", []):
+            fn = f if f.endswith(".json") else f + ".json"
+            default_qs.append(f"测试问题/{fn}")
         items = group.get("items", [])
         entries = [
             {"id": i + 1, "tag": tag, "default_questions": default_qs, "content": item.get("content", "")}

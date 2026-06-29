@@ -1,0 +1,10 @@
+[
+  {
+    "id": 1,
+    "tag": "哈亚古",
+    "default_questions": [
+      "测试问题/哈基米"
+    ],
+    "content": "在@测试软件 构建一个AI测试软件\r\n\r\n需求：\r\n    技术栈：\r\n        前端: React + TypeScript + Vite\r\n        桌面: Tauri 2\r\n\r\n    允许配置参数；\r\n        API Key (可选)\r\n        Base URL (默认: https://api.openai.com/v1)\r\n        Model (默认: gpt-4o)\r\n        Temperature\r\n        Top P\r\n        并发数\r\n        当前测试的测试问题\r\n        当前测试的测试集\r\n    \r\n    技术细节：\r\n        查找测试集方法：基于文件夹结构拉取JSON，而非基于文件名\r\n        使用/api/v1/models接口获取模型列表\r\n        允许用户选择模型\r\n\r\n    测试实现逻辑：\r\n\r\n    渲染实现逻辑："
+  }
+]
