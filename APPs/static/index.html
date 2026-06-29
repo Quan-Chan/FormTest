@@ -7180,8 +7180,6 @@
                     }
                     const pf = document.getElementById('cts-path-field');
                     if (pf) pf.style.display = '';
-                    document.getElementById('cts-question-groups').innerHTML = '';
-                    document.getElementById('cts-prompt-groups').innerHTML = '';
                     document.getElementById('createTestSetModal').classList.add('show');
                     this._goToStep(1);
                 },
@@ -7249,6 +7247,7 @@
                             <input type="text" id="cts-qa-filename" placeholder="例如：基础问题.json" value="${this.escapeHtml(this._qaTempFilename)}">
                             <button class="btn btn-primary" id="cts-qa-tag-confirm">确定</button>
                         </div>`;
+                        document.getElementById('cts-qa-tag-confirm')?.addEventListener('click', () => this._qaConfirmTag());
                     } else if (this._qaSubStep === 'questions') {
                         const files = this._qaTempQuestions.map(f =>
                             `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`
@@ -7259,6 +7258,8 @@
                             <div class="cts-file-list">${files || ''}</div>
                             <button class="btn btn-primary" id="cts-qa-questions-confirm" ${files ? '' : 'disabled'}>确定</button>
                         </div>`;
+                        document.getElementById('cts-qa-import-questions')?.addEventListener('click', () => this._qaPickQuestions());
+                        document.getElementById('cts-qa-questions-confirm')?.addEventListener('click', () => this._qaConfirmQuestions());
                     } else if (this._qaSubStep === 'answers') {
                         el.innerHTML = header + `<div class="cts-substep">
                             <p>为 Tag 组 <strong>${this.escapeHtml(this._qaTempTag)}</strong> 导入答案文件（已选 ${this._qaTempQuestions.length} 个问题，请按相同顺序选择答案）：</p>
@@ -7266,6 +7267,7 @@
                             <div class="cts-file-list" id="cts-qa-answer-list"></div>
                             <button class="btn btn-primary" id="cts-qa-answers-confirm" disabled>确定</button>
                         </div>`;
+                        document.getElementById('cts-qa-import-answers')?.addEventListener('click', () => this._qaPickAnswers());
                     } else if (this._qaSubStep === 'summary') {
                         const g = this._qaGroups[this._qaGroups.length - 1];
                         el.innerHTML = header + `<div class="cts-substep">
@@ -7275,6 +7277,8 @@
                                 <button class="btn btn-primary" id="cts-qa-done">完成</button>
                             </div>
                         </div>`;
+                        document.getElementById('cts-qa-add-another')?.addEventListener('click', () => this._qaAddAnother());
+                        document.getElementById('cts-qa-done')?.addEventListener('click', () => this._qaDone());
                     }
                 },
 
@@ -7350,6 +7354,7 @@
                             <input type="text" id="cts-prompt-filename" placeholder="例如：MySet原版.json" value="${this.escapeHtml(this._promptTempFilename)}">
                             <button class="btn btn-primary" id="cts-prompt-tag-confirm">确定</button>
                         </div>`;
+                        document.getElementById('cts-prompt-tag-confirm')?.addEventListener('click', () => this._promptConfirmTag());
                     } else if (this._promptSubStep === 'prompts') {
                         const items = this._promptTempItems||[];
                         const files = items.map(f => `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`).join('');
@@ -7359,6 +7364,8 @@
                             <div class="cts-file-list">${files||''}</div>
                             <button class="btn btn-primary" id="cts-prompt-confirm" ${items.length?'':'disabled'}>确定</button>
                         </div>`;
+                        document.getElementById('cts-prompt-import')?.addEventListener('click', () => this._promptPickFiles());
+                        document.getElementById('cts-prompt-confirm')?.addEventListener('click', () => this._promptConfirmPrompts());
                     } else if (this._promptSubStep === 'summary') {
                         const g = this._promptGroups[this._promptGroups.length-1];
                         el.innerHTML = header + `<div class="cts-substep">
@@ -7368,6 +7375,8 @@
                                 <button class="btn btn-primary" id="cts-prompt-done">完成</button>
                             </div>
                         </div>`;
+                        document.getElementById('cts-prompt-add-another')?.addEventListener('click', () => this._promptAddAnother());
+                        document.getElementById('cts-prompt-done')?.addEventListener('click', () => this._promptDone());
                     }
                 },
 
@@ -7410,19 +7419,6 @@
                     });
                 },
 
-                // ── Update file refs ──
-                _updateQuestionFileRefs() {
-                    this._renderPromptGroups();
-                },
-
-                _updateQuestionFilenames() {
-                    this._renderQuestionGroups();
-                    this._renderPromptGroups();
-                },
-
-                _updatePromptFilenames() {
-                    this._renderPromptGroups();
-                },
 
                 // ── Validate, collect, submit ──
                 _validateCreateForm() {
@@ -7564,22 +7560,6 @@
                             const ii = parseInt(pInput.dataset.piidx, 10);
                             const group = App._promptGroups[gi];
                             if (group && group.items[ii]) group.items[ii].content = pInput.value;
-                            return;
-                        }
-                    });
-                    on(ctsModal, 'change', function(e) {
-                        const cb = e.target.closest('.cts-dq-cb');
-                        if (cb) {
-                            const gi = parseInt(cb.dataset.gidx, 10);
-                            const group = App._promptGroups[gi];
-                            if (!group) return;
-                            if (!group.default_questions) group.default_questions = [];
-                            const val = cb.value;
-                            if (cb.checked) {
-                                if (!group.default_questions.includes(val)) group.default_questions.push(val);
-                            } else {
-                                group.default_questions = group.default_questions.filter(v => v !== val);
-                            }
                             return;
                         }
                     });
@@ -7734,39 +7714,6 @@
                         } else if (entry) {
                             showToast('测试集不存在: ' + entry.path, 'warning');
                         }
-                        return;
-                    }
-                    // Import QA file button (file-only mode)
-                    const qaFileBtn = e.target.closest('[data-action="importQaFile"]');
-                    if (qaFileBtn) {
-                        const gi = parseInt(qaFileBtn.dataset.gidx, 10);
-                        const ii = parseInt(qaFileBtn.dataset.iiidx, 10);
-                        const target = qaFileBtn.dataset.target;
-                        App._importQaFile(gi, ii, target);
-                        return;
-                    }
-                    // CTS action buttons (Q&A and prompt management)
-                    const ctsActionBtn = e.target.closest('[data-action]');
-                    if (ctsActionBtn && ctsActionBtn.closest('#createTestSetModal')) {
-                        const action = ctsActionBtn.dataset.action;
-                        const gIdx = parseInt(ctsActionBtn.dataset.gidx, 10);
-                        const iIdx = parseInt(ctsActionBtn.dataset.iiidx, 10);
-                        if (action === 'addQuestionGroup') { App._addQuestionGroup(); return; }
-                        if (action === 'removeQuestionGroup' && !isNaN(gIdx)) { App._removeQuestionGroup(gIdx); return; }
-                        if (action === 'addQAPair' && !isNaN(gIdx)) { App._addQAPair(gIdx); return; }
-                        if (action === 'removeQAPair' && !isNaN(gIdx) && !isNaN(iIdx)) { App._removeQAPair(gIdx, iIdx); return; }
-                        if (action === 'batchImportQuestions' && !isNaN(gIdx)) { App._batchImportQuestions(gIdx); return; }
-                        if (action === 'addPromptGroup') { App._addPromptGroup(); return; }
-                        if (action === 'removePromptGroup' && !isNaN(gIdx)) { App._removePromptGroup(gIdx); return; }
-                        if (action === 'addPromptItem' && !isNaN(gIdx)) { App._addPromptItem(gIdx); return; }
-                        if (action === 'removePromptItem' && !isNaN(gIdx) && !isNaN(iIdx)) { App._removePromptItem(gIdx, iIdx); return; }
-                        if (action === 'batchImportPrompts' && !isNaN(gIdx)) { App._batchImportPrompts(gIdx); return; }
-                    }
-                    // Import file button (inside modal, textarea mode)
-                    const importBtn = e.target.closest('.cts-import-btn');
-                    if (importBtn) {
-                        const textarea = importBtn.parentElement.querySelector('textarea');
-                        if (textarea) App._importFileToTextarea(textarea);
                         return;
                     }
                     // Close known ts dropdown on outside click
