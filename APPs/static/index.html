@@ -2580,8 +2580,8 @@
             background: var(--bg-card);
             border-radius: var(--radius-lg);
             width: 90%;
-            max-width: 720px;
-            max-height: 85vh;
+            max-width: 520px;
+            max-height: 90vh;
             display: flex;
             flex-direction: column;
             box-shadow: var(--shadow-lg);
@@ -7021,6 +7021,8 @@
                 _promptSubStep: 'tag',
                 _promptTempTag: '',
                 _promptTempFilename: '',
+                _promptTempItems: [],
+                _promptTempDefaultQuestions: [],
 
                 // ── Known Test Sets ──
                 async _loadKnownTestSets() {
@@ -7173,6 +7175,10 @@
                     this._promptGroups = [];
                     this._dirHandle = null;
                     this._ctsStep = 1;
+                    this._qaSubStep = 'tag';
+                    this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = [];
+                    this._promptSubStep = 'tag';
+                    this._promptTempTag = ''; this._promptTempFilename = ''; this._promptTempItems = []; this._promptTempDefaultQuestions = [];
                     document.getElementById('cts-name').value = '';
                     const pathInput = document.getElementById('cts-path');
                     if (pathInput) {
@@ -7346,12 +7352,24 @@
                     ).join('');
                     const header = completed ? `<div class="cts-completed-groups">${completed}</div>` : '';
                     if (this._promptSubStep === 'tag') {
+                        const qFilenames = this._qaGroups.map(g => g.filename || (g.tag ? g.tag + '问题.json' : '')).filter(Boolean);
+                        const dqHtml = qFilenames.length > 0 ? qFilenames.map(fn => {
+                            const checked = (this._promptTempDefaultQuestions || []).includes(fn) ? 'checked' : '';
+                            return `<label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;color:var(--text-secondary);margin:2px 0;">
+                                <input type="checkbox" class="cts-prompt-dq-cb" value="${this.escapeHtml(fn)}" ${checked} style="width:14px;height:14px;accent-color:var(--accent);cursor:pointer;">
+                                ${this.escapeHtml(fn)}
+                            </label>`;
+                        }).join('') : '<span style="font-size:11px;color:var(--text-muted)">暂无问题文件</span>';
                         el.innerHTML = header + `<div class="cts-substep">
                             <p>创建一个新的 Tag 组，用于组织系统提示词。</p>
                             <label>Tag 名称</label>
                             <input type="text" id="cts-prompt-tag" placeholder="例如：原版" value="${this.escapeHtml(this._promptTempTag)}">
                             <label>文件名</label>
                             <input type="text" id="cts-prompt-filename" placeholder="例如：MySet原版.json" value="${this.escapeHtml(this._promptTempFilename)}">
+                            ${qFilenames.length > 0 ? `<div style="margin-top:10px;padding:8px 10px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);">
+                                <label style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:6px;display:block;">关联问题文件（选中的文件会在侧边栏自动关联）</label>
+                                ${dqHtml}
+                            </div>` : ''}
                             <button class="btn btn-primary" id="cts-prompt-tag-confirm">确定</button>
                         </div>`;
                         document.getElementById('cts-prompt-tag-confirm')?.addEventListener('click', () => this._promptConfirmTag());
@@ -7404,12 +7422,12 @@
 
                 _promptConfirmPrompts() {
                     if (!this._promptTempItems||!this._promptTempItems.length) { showToast('请至少选择一个提示词文件','warning'); return; }
-                    this._promptGroups.push({ tag:this._promptTempTag, filename:this._promptTempFilename||(this._promptTempTag+'.json'), default_questions:[], items:this._promptTempItems.map(i=>({content:i.content})) });
-                    this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[];
+                    this._promptGroups.push({ tag:this._promptTempTag, filename:this._promptTempFilename||(this._promptTempTag+'.json'), default_questions:this._promptTempDefaultQuestions||[], items:this._promptTempItems.map(i=>({content:i.content})) });
+                    this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[]; this._promptTempDefaultQuestions=[];
                     this._promptSubStep='summary'; this._renderPromptStep();
                 },
 
-                _promptAddAnother() { this._promptSubStep='tag'; this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[]; this._renderPromptStep(); },
+                _promptAddAnother() { this._promptSubStep='tag'; this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[]; this._promptTempDefaultQuestions=[]; this._renderPromptStep(); },
                 _promptDone() { this._goToStep(4); },
 
                 _showPathPrompt() {
@@ -7444,7 +7462,7 @@
                     const prompt_groups = this._promptGroups.map(g => ({
                         filename: g.filename || (g.tag ? name + g.tag + '.json' : 'untitled.json'),
                         tag: g.tag || 'untagged',
-                        default_questions: [],
+                        default_questions: g.default_questions || [],
                         items: g.items.map(i => ({ content: i.content || '' }))
                     }));
                     return { name, base_path: path, question_groups, prompt_groups };
@@ -7502,7 +7520,8 @@
                     }
                     for (const g of data.prompt_groups) {
                         let fn = g.filename; if (!fn.endsWith('.json')) fn += '.json';
-                        const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, default_questions:[], content:it.content}));
+                        const dq = (g.default_questions || []).map(f => '测试问题/' + f);
+                        const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, default_questions:dq, content:it.content}));
                         const fh = await pDir.getFileHandle(fn, {create:true});
                         const w = await fh.createWritable();
                         await w.write(JSON.stringify(entries, null, 2));
@@ -7561,6 +7580,19 @@
                             const group = App._promptGroups[gi];
                             if (group && group.items[ii]) group.items[ii].content = pInput.value;
                             return;
+                        }
+                    });
+                    on(ctsModal, 'change', function(e) {
+                        const cb = e.target.closest('.cts-prompt-dq-cb');
+                        if (cb) {
+                            const val = cb.value;
+                            const arr = App._promptTempDefaultQuestions;
+                            if (cb.checked) {
+                                if (!arr.includes(val)) arr.push(val);
+                            } else {
+                                const idx = arr.indexOf(val);
+                                if (idx !== -1) arr.splice(idx, 1);
+                            }
                         }
                     });
                 }
