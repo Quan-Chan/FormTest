@@ -3085,6 +3085,8 @@
                 canvasHistoryIndex: -1,
                 _canvasHistoryMax: 50,
                 _canvasSyncDisabled: false,
+                _saveInFlight: false,
+                _savePending: false,
                 _sseChunkTimeout: 300000,
                 _sseTimer: null,
                 _lastRemovedSelections: null,
@@ -3844,6 +3846,18 @@
                     if (this.canvasHistoryIndex < this.canvasState.history.length - 1) {
                         this.canvasState.history = this.canvasState.history.slice(0, this.canvasHistoryIndex + 1);
                     }
+                    const latest = this.canvasState.history[this.canvasHistoryIndex];
+                    if (latest) {
+                        const eq = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+                        if (eq(latest.nodes, snapshot.nodes) &&
+                            eq(latest.connections, snapshot.connections) &&
+                            eq([...latest.selectedPrompts].sort(), [...snapshot.selectedPrompts].sort()) &&
+                            eq([...latest.selectedQuestions].sort(), [...snapshot.selectedQuestions].sort()) &&
+                            eq([...latest.selectedModels].sort(), [...snapshot.selectedModels].sort())) {
+                            this.updateCanvasUndoButtons();
+                            return;
+                        }
+                    }
                     this.canvasState.history.push(snapshot);
                     if (this.canvasState.history.length > this._canvasHistoryMax) {
                         this.canvasState.history.shift();
@@ -4278,6 +4292,12 @@
                 },
 
                 async saveCanvas() {
+                    if (this._saveInFlight) {
+                        this._savePending = true;
+                        return;
+                    }
+                    this._saveInFlight = true;
+                    this._savePending = false;
                     try {
                         const cleanNodes = this.canvasState.nodes.map(n => {
                             const { autoLayout, _notFound, ...rest } = n;
@@ -4298,6 +4318,12 @@
                         showToast('画布状态已保存', 'success');
                     } catch (error) {
                         showToast('保存失败: ' + friendlyError(error.message), 'error');
+                    } finally {
+                        this._saveInFlight = false;
+                        if (this._savePending) {
+                            this._savePending = false;
+                            setTimeout(() => this.saveCanvas(), 0);
+                        }
                     }
                 },
 
@@ -4971,7 +4997,6 @@
                     }
                     this.applyViewTransform();
                     this.renderLines();
-                    this.debouncedAutoSave();
                 },
 
                 _cancelSnapAnim(el) {
@@ -5184,6 +5209,8 @@
                     function onUp() {
                         let positionChanged = false;
                         if (dragRafId) { cancelAnimationFrame(dragRafId); dragRafId = null; }
+                        // Phase 1: compute snapped positions, update data model for all nodes
+                        const snapInfos = [];
                         if (self.dragState && self.dragState.nodes) {
                             for (const n of self.dragState.nodes) {
                                 const nodeObj = self.canvasState.nodes.find(nn => nn.id === n.id);
@@ -5196,18 +5223,26 @@
                                     ? Math.round((visualX - 0.25 * self.GRID) / self.GRID) * self.GRID + 0.25 * self.GRID
                                     : Math.round(visualX / self.GRID) * self.GRID;
                                 const snappedY = Math.round(visualY / self.GRID) * self.GRID;
-                                if (snappedX !== visualX || snappedY !== visualY) positionChanged = true;
+                                const nodeChanged = snappedX !== visualX || snappedY !== visualY;
+                                if (nodeChanged) positionChanged = true;
                                 nodeObj.x = snappedX;
                                 nodeObj.y = snappedY;
                                 const el = document.querySelector(`.comfy-node[data-node-id="${n.id}"]`);
-                                if (el) {
-                                    el.classList.remove('dragging');
-                                    if (positionChanged) {
-                                        self._animateNodeToGrid(el, nodeObj, snappedX, snappedY);
-                                    } else {
-                                        el.style.transform = 'translate(' + snappedX + 'px,' + snappedY + 'px)';
-                                    }
-                                }
+                                if (el) el.classList.remove('dragging');
+                                snapInfos.push({ el, nodeObj, snappedX, snappedY, changed: nodeChanged });
+                            }
+                        }
+                        // Phase 2: save snapshot with all nodes at consistent snapped positions
+                        if (positionChanged) {
+                            self.saveCanvasSnapshot();
+                        }
+                        // Phase 3: update DOM / start animations
+                        for (const info of snapInfos) {
+                            if (!info.el) continue;
+                            if (info.changed) {
+                                self._animateNodeToGrid(info.el, info.nodeObj, info.snappedX, info.snappedY);
+                            } else {
+                                info.el.style.transform = 'translate(' + info.snappedX + 'px,' + info.snappedY + 'px)';
                             }
                         }
                         self.dragState = null;
@@ -5215,7 +5250,6 @@
                         document.querySelectorAll('.comfy-node').forEach(el => { el.style.transition = ''; });
                         self.renderLines();
                         if (positionChanged) {
-                            self.saveCanvasSnapshot();
                             self.debouncedAutoSave();
                         }
                         document.removeEventListener('mousemove', onMove);
@@ -6284,7 +6318,7 @@
                 onCanvasResize() { this.renderLines(); },
                 debouncedCanvasResize: debounce(function() { this.renderLines(); this.updateCoordDisplay(); }, 150),
                 debouncedConfigChange: debounce(function() { this.onConfigChange(); }, 500),
-                debouncedAutoSave: debounce(function() { this.saveCanvas(); }, 500)
+                debouncedAutoSave: debounce(function() { this.saveCanvas(); }, 200)
             };
 
             function _bindEvents() {
@@ -6392,7 +6426,6 @@
                         const c = document.getElementById('comfyCanvasContainer');
                         if (c) c.classList.remove('grabbing');
                         App.canvasPanState = null;
-                        App.debouncedAutoSave();
                     }
                     if (App.canvasBoxState) {
                         App.finalizeBoxSelect();
