@@ -3699,6 +3699,8 @@
                 return msg;
             }
 
+            function isJsonFile(f) { return f && f.toLowerCase().endsWith('.json'); }
+
             function debounce(fn, ms) {
                 let timer;
                 return function(...args) {
@@ -7060,12 +7062,13 @@
                         localStorage.setItem('ft_known_test_sets', JSON.stringify(list));
                     } catch (e) {}
                     try {
-                        await fetchWithTimeout('/api/v1/test-set/known/record', {
+                        const resp = await fetchWithTimeout('/api/v1/test-set/known/record', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ test_sets: list })
                         });
-                    } catch (e) {}
+                        if (!resp.ok) console.warn('保存已知测试集到服务端失败:', resp.status);
+                    } catch (e) { console.warn('保存已知测试集请求异常:', e); }
                 },
 
                 _onTestSetDirChanged() {
@@ -7101,17 +7104,23 @@
                 },
 
                 async loadKnownTestSets() {
+                    const local = this._knownTestSets || [];
                     try {
                         const resp = await fetchWithTimeout('/api/v1/test-set/known/check', {
                             method: 'POST',
-                            headers: { 'Content-Type': 'application/json' }
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ known_test_sets: local.map(e => ({ name: e.name, path: e.path, last_used: e.last_used })) })
                         });
                         if (resp.ok) {
                             const data = await resp.json();
                             this._knownTestSets = data.test_sets || [];
-                            try { localStorage.setItem('ft_known_test_sets', JSON.stringify(this._knownTestSets)); } catch (e) {}
+                        } else if (local.length > 0) {
+                            this._knownTestSets = local;
                         }
-                    } catch (e) {}
+                        try { localStorage.setItem('ft_known_test_sets', JSON.stringify(this._knownTestSets)); } catch (e) {}
+                    } catch (e) {
+                        if (local.length > 0) { this._knownTestSets = local; }
+                    }
                     this.renderKnownTestSetsDropdown();
                 },
 
@@ -7176,7 +7185,7 @@
                     this._dirHandle = null;
                     this._ctsStep = 1;
                     this._qaSubStep = 'tag';
-                    this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = [];
+                    this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = []; this._qaTempAnswers = [];
                     this._promptSubStep = 'tag';
                     this._promptTempTag = ''; this._promptTempFilename = ''; this._promptTempItems = []; this._promptTempDefaultQuestions = [];
                     document.getElementById('cts-name').value = '';
@@ -7267,13 +7276,17 @@
                         document.getElementById('cts-qa-import-questions')?.addEventListener('click', () => this._qaPickQuestions());
                         document.getElementById('cts-qa-questions-confirm')?.addEventListener('click', () => this._qaConfirmQuestions());
                     } else if (this._qaSubStep === 'answers') {
+                        const ansFiles = (this._qaTempAnswers||[]).map(f =>
+                            `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`
+                        ).join('');
                         el.innerHTML = header + `<div class="cts-substep">
                             <p>为 Tag 组 <strong>${this.escapeHtml(this._qaTempTag)}</strong> 导入答案文件（已选 ${this._qaTempQuestions.length} 个问题，请按相同顺序选择答案）：</p>
                             <button class="btn btn-secondary" id="cts-qa-import-answers">选择文件</button>
-                            <div class="cts-file-list" id="cts-qa-answer-list"></div>
-                            <button class="btn btn-primary" id="cts-qa-answers-confirm" disabled>确定</button>
+                            <div class="cts-file-list" id="cts-qa-answer-list">${ansFiles}</div>
+                            <button class="btn btn-primary" id="cts-qa-answers-confirm" ${this._qaTempAnswers && this._qaTempAnswers.length ? '' : 'disabled'}>确定</button>
                         </div>`;
                         document.getElementById('cts-qa-import-answers')?.addEventListener('click', () => this._qaPickAnswers());
+                        document.getElementById('cts-qa-answers-confirm')?.addEventListener('click', () => this._qaFinishAnswers());
                     } else if (this._qaSubStep === 'summary') {
                         const g = this._qaGroups[this._qaGroups.length - 1];
                         el.innerHTML = header + `<div class="cts-substep">
@@ -7302,8 +7315,8 @@
                     const s = this;
                     i.onchange = function() {
                         const files = Array.from(this.files || []), ordered = [];
-                        files.forEach((f, idx) => { const r = new FileReader(); r.onload = () => { ordered[idx] = { content: r.result, fileName: f.name }; }; r.readAsText(f); });
-                        const c = () => { if (ordered.length === files.length && ordered.every(Boolean)) { s._qaTempQuestions = ordered; s._renderQAStep(); const b = document.getElementById('cts-qa-questions-confirm'); if (b) b.disabled = false; } else setTimeout(c, 100); };
+                        files.forEach((f, idx) => { const r = new FileReader(); r.onerror = () => showToast('读取问题文件失败: ' + f.name, 'error'); r.onload = () => { ordered[idx] = { content: r.result, fileName: f.name }; }; r.readAsText(f); });
+                        const c = () => { if (ordered.length === files.length && ordered.every(Boolean)) { s._qaTempQuestions = ordered; s._renderQAStep(); const b = document.getElementById('cts-qa-questions-confirm'); if (b) b.disabled = false; } else if (ordered.some(x => x === undefined)) { showToast('部分问题文件读取失败', 'error'); } else setTimeout(c, 100); };
                         setTimeout(c, 200);
                     };
                     i.click();
@@ -7321,26 +7334,27 @@
                     const s = this;
                     i.onchange = function() {
                         const files = Array.from(this.files || []), ordered = [];
-                        files.forEach((f, idx) => { const r = new FileReader(); r.onload = () => { ordered[idx] = { content: r.result, fileName: f.name }; }; r.readAsText(f); });
-                        const c = () => { if (ordered.length === files.length && ordered.every(Boolean)) { s._qaFinishAnswers(ordered, qc); } else setTimeout(c, 100); };
+                        files.forEach((f, idx) => { const r = new FileReader(); r.onerror = () => showToast('读取答案文件失败: ' + f.name, 'error'); r.onload = () => { ordered[idx] = { content: r.result, fileName: f.name }; }; r.readAsText(f); });
+                        const c = () => { if (ordered.length === files.length && ordered.every(Boolean)) { s._qaTempAnswers = ordered; s._renderQAStep(); const b = document.getElementById('cts-qa-answers-confirm'); if (b) b.disabled = false; } else if (ordered.some(x => x === undefined)) { showToast('部分答案文件读取失败', 'error'); } else setTimeout(c, 100); };
                         setTimeout(c, 200);
                     };
                     i.click();
                 },
 
-                _qaFinishAnswers(answers, qc) {
-                    const l = document.getElementById('cts-qa-answer-list');
-                    if (l) l.innerHTML = answers.map(f => `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`).join('');
-                    if (qc > answers.length) { if (!confirm(`问题文件(${qc})多于答案文件(${answers.length})，多出的答案将留空。是否继续？`)) return; }
-                    else if (answers.length > qc) { if (!confirm(`答案文件(${answers.length})多于问题文件(${qc})，多余的将被丢弃。是否继续？`)) return; }
+                async _qaFinishAnswers() {
+                    const answers = this._qaTempAnswers;
+                    const qc = this._qaTempQuestions.length;
+                    if (!answers || !answers.length) { showToast('请先选择答案文件', 'warning'); return; }
+                    if (qc > answers.length) { const ok = await App.showConfirm(`问题文件(${qc})多于答案文件(${answers.length})，不足的答案将留空。是否继续？`); if (!ok) return; }
+                    else if (answers.length > qc) { const ok = await App.showConfirm(`答案文件(${answers.length})多于问题文件(${qc})，多余的答案将被丢弃。是否继续？`); if (!ok) return; }
                     const pairs = [];
                     for (let i = 0; i < qc; i++) pairs.push({ question: this._qaTempQuestions[i]?.content||'', answer: answers[i]?.content||'', _qFile: this._qaTempQuestions[i]?.fileName||'', _aFile: answers[i]?.fileName||'' });
                     this._qaGroups.push({ tag: this._qaTempTag, filename: this._qaTempFilename||(this._qaTempTag+'问题.json'), items: pairs });
-                    this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = [];
+                    this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = []; this._qaTempAnswers = [];
                     this._qaSubStep = 'summary'; this._renderQAStep();
                 },
 
-                _qaAddAnother() { this._qaSubStep = 'tag'; this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = []; this._renderQAStep(); },
+                _qaAddAnother() { this._qaSubStep = 'tag'; this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = []; this._qaTempAnswers = []; this._renderQAStep(); },
                 _qaDone() { this._goToStep(3); },
 
                 // ── Step 3: Prompt Sub-steps ──
@@ -7354,7 +7368,7 @@
                     if (this._promptSubStep === 'tag') {
                         const qFilenames = this._qaGroups.map(g => {
                             let fn = g.filename || (g.tag ? g.tag + '问题.json' : '');
-                            if (fn && !fn.endsWith('.json')) fn += '.json';
+                            if (fn && !isJsonFile(fn)) fn += '.json';
                             return fn;
                         }).filter(Boolean);
                         const dqHtml = qFilenames.length > 0 ? qFilenames.map(fn => {
@@ -7417,8 +7431,8 @@
                     const s = this;
                     i.onchange = function() {
                         const files = Array.from(this.files||[]), ordered = [];
-                        files.forEach((f,idx) => { const r = new FileReader(); r.onload = () => { ordered[idx]={content:r.result,fileName:f.name}; }; r.readAsText(f); });
-                        const c = () => { if (ordered.length===files.length && ordered.every(Boolean)) { s._promptTempItems=ordered; s._renderPromptStep(); const b=document.getElementById('cts-prompt-confirm'); if(b)b.disabled=false; } else setTimeout(c,100); };
+                        files.forEach((f,idx) => { const r = new FileReader(); r.onerror = () => showToast('读取提示词文件失败: ' + f.name, 'error'); r.onload = () => { ordered[idx]={content:r.result,fileName:f.name}; }; r.readAsText(f); });
+                        const c = () => { if (ordered.length===files.length && ordered.every(Boolean)) { s._promptTempItems=ordered; s._renderPromptStep(); const b=document.getElementById('cts-prompt-confirm'); if(b)b.disabled=false; } else if (ordered.some(x => x === undefined)) { showToast('部分提示词文件读取失败', 'error'); } else setTimeout(c,100); };
                         setTimeout(c,200);
                     };
                     i.click();
@@ -7426,7 +7440,7 @@
 
                 _promptConfirmPrompts() {
                     if (!this._promptTempItems||!this._promptTempItems.length) { showToast('请至少选择一个提示词文件','warning'); return; }
-                    this._promptGroups.push({ tag:this._promptTempTag, filename:this._promptTempFilename||(this._promptTempTag+'.json'), default_questions:this._promptTempDefaultQuestions||[], items:this._promptTempItems.map(i=>({content:i.content})) });
+                    this._promptGroups.push({ tag:this._promptTempTag, filename:this._promptTempFilename||(this._promptTempTag+'.json'), default_questions:this._promptTempDefaultQuestions||[], items:this._promptTempItems.map(i=>({content:i.content, fileName:i.fileName})) });
                     this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[]; this._promptTempDefaultQuestions=[];
                     this._promptSubStep='summary'; this._renderPromptStep();
                 },
@@ -7514,22 +7528,32 @@
                     const pDir = await tsDir.getDirectoryHandle('测试系统提示词', {create:true});
                     const qDir = await tsDir.getDirectoryHandle('测试问题', {create:true});
                     await tsDir.getDirectoryHandle('测试结果', {create:true});
-                    for (const g of data.question_groups) {
-                        let fn = g.filename; if (!fn.endsWith('.json')) fn += '.json';
-                        const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, question:it.question, answer:it.answer}));
-                        const fh = await qDir.getFileHandle(fn, {create:true});
-                        const w = await fh.createWritable();
-                        await w.write(JSON.stringify(entries, null, 2));
-                        await w.close();
-                    }
-                    for (const g of data.prompt_groups) {
-                        let fn = g.filename; if (!fn.endsWith('.json')) fn += '.json';
-                        const dq = (g.default_questions || []).map(f => { let fn = f; if (!fn.endsWith('.json')) fn += '.json'; return '测试问题/' + fn; });
-                        const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, default_questions:dq, content:it.content}));
-                        const fh = await pDir.getFileHandle(fn, {create:true});
-                        const w = await fh.createWritable();
-                        await w.write(JSON.stringify(entries, null, 2));
-                        await w.close();
+                    const written = [];
+                    try {
+                        for (const g of data.question_groups) {
+                            let fn = g.filename; if (!isJsonFile(fn)) fn += '.json';
+                            const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, question:it.question, answer:it.answer}));
+                            const fh = await qDir.getFileHandle(fn, {create:true});
+                            const w = await fh.createWritable();
+                            await w.write(JSON.stringify(entries, null, 2));
+                            await w.close();
+                            written.push({dir: qDir, name: fn});
+                        }
+                        for (const g of data.prompt_groups) {
+                            let fn = g.filename; if (!isJsonFile(fn)) fn += '.json';
+                            const dq = (g.default_questions || []).map(f => { let fn = f; if (!isJsonFile(fn)) fn += '.json'; return '测试问题/' + fn; });
+                            const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, default_questions:dq, content:it.content}));
+                            const fh = await pDir.getFileHandle(fn, {create:true});
+                            const w = await fh.createWritable();
+                            await w.write(JSON.stringify(entries, null, 2));
+                            await w.close();
+                            written.push({dir: pDir, name: fn});
+                        }
+                    } catch (e) {
+                        for (const w of written) {
+                            try { await w.dir.removeEntry(w.name); } catch (e2) {}
+                        }
+                        throw e;
                     }
                 },
 

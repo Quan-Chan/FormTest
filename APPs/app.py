@@ -145,6 +145,11 @@ def read_file(filepath):
     return None
 
 
+def is_json_file(filename):
+    """Check if a filename has a .json extension (case-insensitive)."""
+    return isinstance(filename, str) and filename.lower().endswith(".json")
+
+
 def get_test_set_dir():
     with config_lock:
         d = config.get("test_set_dir")
@@ -216,10 +221,10 @@ def _record_known_test_set(name, path):
         known = config.get("known_test_sets", [])
         for entry in known:
             if entry.get("name") == name and entry.get("path") == path:
-                entry["last_used"] = time.time()
+                entry["last_used"] = int(time.time() * 1000)
                 break
         else:
-            known.append({"name": name, "path": path, "last_used": time.time()})
+            known.append({"name": name, "path": path, "last_used": int(time.time() * 1000)})
         config["known_test_sets"] = known
         save_config()
 
@@ -344,7 +349,7 @@ def get_test_set_prompts():
     prompts = []
     warnings = []
     for f in sorted(os.listdir(prompts_dir)):
-        if not f.endswith(".json"):
+        if not is_json_file(f):
             continue
         if not validate_file_name(f):
             warnings.append(f"文件名不合法，已跳过: {f}")
@@ -380,7 +385,7 @@ def get_test_set_questions():
     questions = []
     warnings = []
     for f in sorted(os.listdir(questions_dir)):
-        if not f.endswith(".json"):
+        if not is_json_file(f):
             continue
         if not validate_file_name(f):
             warnings.append(f"文件名不合法，已跳过: {f}")
@@ -427,7 +432,7 @@ def get_all_tags():
         for d in [prompts_dir, questions_dir]:
             if os.path.exists(d):
                 for f in os.listdir(d):
-                    if not f.endswith(".json"):
+                    if not is_json_file(f):
                         continue
                     file_entries = load_json(os.path.join(d, f))
                     if not isinstance(file_entries, list):
@@ -470,56 +475,109 @@ def create_test_set():
     if qa_count < 1 or prompt_count < 1:
         return jsonify({"error": "至少需要 1 个问答对和 1 个提示词"}), 400
 
-    test_set_path = os.path.join(abs_path, name)
-    if os.path.exists(test_set_path):
-        return jsonify({"error": f"该位置已存在同名测试集「{name}」，请修改名称后重试"}), 409
+    # ── Phase 1: Validate all input before creating any files ──
+    for group in question_groups:
+        filename = group.get("filename", "").strip()
+        if not filename:
+            return jsonify({"error": "问题组的文件名不能为空"}), 400
+        tag = group.get("tag", "")
+        for i, item in enumerate(group.get("items", [])):
+            if not item.get("question", "").strip() or not item.get("answer", "").strip():
+                return jsonify({"error": f"问题组「{tag}」第 {i+1} 项存在空内容"}), 400
 
+    for group in prompt_groups:
+        filename = group.get("filename", "").strip()
+        if not filename:
+            return jsonify({"error": "提示词组的文件名不能为空"}), 400
+        tag = group.get("tag", "")
+        for i, item in enumerate(group.get("items", [])):
+            if not item.get("content", "").strip():
+                return jsonify({"error": f"提示词组「{tag}」第 {i+1} 项存在空内容"}), 400
+
+    # ── Phase 2: Create directory structure ──
+    test_set_path = os.path.join(abs_path, name)
+    # Use os.mkdir to atomically create the root dir (fails if exists) — avoids TOCTOU race
     try:
-        for subdir in ["测试系统提示词", "测试问题", "测试结果"]:
-            os.makedirs(os.path.join(test_set_path, subdir), exist_ok=True)
+        os.mkdir(test_set_path)
+    except FileExistsError:
+        return jsonify({"error": f"该位置已存在同名测试集「{name}」，请修改名称后重试"}), 409
     except OSError as e:
         return jsonify({"error": f"创建目录失败: {str(e)}"}), 500
 
-    for group in question_groups:
-        filename = group.get("filename", "")
-        if not filename.lower().endswith(".json"):
-            filename += ".json"
-        tag = group.get("tag", "")
-        items = group.get("items", [])
-        entries = [
-            {"id": i + 1, "tag": tag, "question": item.get("question", ""), "answer": item.get("answer", "")}
-            for i, item in enumerate(items)
-        ]
-        try:
-            save_json(os.path.join(test_set_path, "测试问题", filename), entries)
-        except OSError as e:
-            return jsonify({"error": f"写入文件失败: {filename} - {str(e)}"}), 500
+    created_dirs = []
+    try:
+        for subdir in ["测试系统提示词", "测试问题", "测试结果"]:
+            os.makedirs(os.path.join(test_set_path, subdir), exist_ok=True)
+            created_dirs.append(os.path.join(test_set_path, subdir))
+    except OSError as e:
+        _cleanup_created(test_set_path, created_dirs)
+        return jsonify({"error": f"创建目录失败: {str(e)}"}), 500
 
-    for group in prompt_groups:
-        filename = group.get("filename", "")
-        if not filename.lower().endswith(".json"):
-            filename += ".json"
-        tag = group.get("tag", "")
-        default_qs = []
-        for f in group.get("default_questions", []):
-            fn = f if f.endswith(".json") else f + ".json"
-            default_qs.append(f"测试问题/{fn}")
-        items = group.get("items", [])
-        entries = [
-            {"id": i + 1, "tag": tag, "default_questions": default_qs, "content": item.get("content", "")}
-            for i, item in enumerate(items)
-        ]
-        try:
+    # ── Phase 3: Write files (validation already done in Phase 1) ──
+    written_files = []
+    try:
+        for group in question_groups:
+            filename = group.get("filename", "").strip()
+            if not is_json_file(filename):
+                filename += ".json"
+            tag = group.get("tag", "")
+            items = group.get("items", [])
+            entries = [
+                {"id": i + 1, "tag": tag, "question": item.get("question", ""), "answer": item.get("answer", "")}
+                for i, item in enumerate(items)
+            ]
+            save_json(os.path.join(test_set_path, "测试问题", filename), entries)
+            written_files.append(os.path.join(test_set_path, "测试问题", filename))
+
+        for group in prompt_groups:
+            filename = group.get("filename", "").strip()
+            if not is_json_file(filename):
+                filename += ".json"
+            tag = group.get("tag", "")
+            default_qs = []
+            for f in group.get("default_questions", []):
+                fn = f if is_json_file(f) else f + ".json"
+                default_qs.append(f"测试问题/{fn}")
+            items = group.get("items", [])
+            entries = [
+                {"id": i + 1, "tag": tag, "default_questions": default_qs, "content": item.get("content", "")}
+                for i, item in enumerate(items)
+            ]
             save_json(os.path.join(test_set_path, "测试系统提示词", filename), entries)
-        except OSError as e:
-            return jsonify({"error": f"写入文件失败: {filename} - {str(e)}"}), 500
+            written_files.append(os.path.join(test_set_path, "测试系统提示词", filename))
+    except OSError as e:
+        _cleanup_created(test_set_path, created_dirs, written_files)
+        return jsonify({"error": f"创建测试集失败: {str(e)}"}), 500
 
     invalidate_tags_cache()
     try:
         _record_known_test_set(name, test_set_path)
-    except Exception:
-        pass
+    except Exception as e:
+        log_debug(f"[create_test_set] 记录已知测试集失败: {e}")
     return jsonify({"success": True, "path": test_set_path})
+
+
+def _cleanup_created(root_path, dirs=None, files=None):
+    """Rollback: remove created files and directories on failure."""
+    if files:
+        for f in files:
+            try:
+                if os.path.exists(f):
+                    os.remove(f)
+            except OSError:
+                pass
+    if dirs:
+        for d in reversed(dirs):
+            try:
+                if os.path.isdir(d):
+                    os.rmdir(d)
+            except OSError:
+                pass
+    try:
+        if os.path.isdir(root_path):
+            os.rmdir(root_path)
+    except OSError:
+        pass
 
 
 @app.route("/api/v1/test-set/results", methods=["GET"])
@@ -534,7 +592,7 @@ def get_test_set_results():
         return jsonify({"results": []})
     files = []
     for f in sorted(os.listdir(results_dir), reverse=True):
-        if f.endswith(".json") and not f.startswith("_"):
+        if is_json_file(f) and not f.startswith("_"):
             filepath = os.path.join(results_dir, f)
             data = load_json(filepath)
             files.append({
@@ -1117,7 +1175,7 @@ def save_results_to_test_set(test_set, results, incremental=False):
     save_json(filepath, results)
     if not incremental:
         try:
-            all_files = sorted([f for f in os.listdir(results_dir) if f.endswith(".json") and not f.startswith("_")])
+            all_files = sorted([f for f in os.listdir(results_dir) if is_json_file(f) and not f.startswith("_")])
             while len(all_files) > 20:
                 old = all_files.pop(0)
                 try:
@@ -1205,11 +1263,11 @@ def record_known_test_sets():
             found = False
             for entry in known:
                 if entry.get("name") == name and entry.get("path") == path:
-                    entry["last_used"] = time.time()
+                    entry["last_used"] = int(time.time() * 1000)
                     found = True
                     break
             if not found:
-                known.append({"name": name, "path": path, "last_used": time.time()})
+                known.append({"name": name, "path": path, "last_used": int(time.time() * 1000)})
         config["known_test_sets"] = known
         save_config()
     return jsonify({"status": "ok"})
