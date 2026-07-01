@@ -7562,11 +7562,7 @@
                 on(byId('cts-prev-btn'), 'click', () => App._prevStep());
                 on(byId('cts-browse-btn'), 'click', () => App._browseSavePath());
                 on(byId('createTestSetModal'), 'click', function(e) {
-                    if (e.target === this) {
-                        App.showConfirm('确定关闭？未保存的数据将丢失。').then(ok => {
-                            if (ok) App.closeCreateTestSetModal();
-                        });
-                    }
+                    if (e.target === this) App.closeCreateTestSetModal();
                 });
                 const ctsClose = document.querySelector('#createTestSetModal .create-ts-close');
                 if (ctsClose) on(ctsClose, 'click', () => App.closeCreateTestSetModal());
