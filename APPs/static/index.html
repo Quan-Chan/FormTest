@@ -7352,11 +7352,7 @@
                     ).join('');
                     const header = completed ? `<div class="cts-completed-groups">${completed}</div>` : '';
                     if (this._promptSubStep === 'tag') {
-                        const qFilenames = this._qaGroups.map(g => {
-                            let fn = g.filename || (g.tag ? g.tag + '问题.json' : '');
-                            if (fn && !fn.endsWith('.json')) fn += '.json';
-                            return fn;
-                        }).filter(Boolean);
+                        const qFilenames = this._qaGroups.map(g => g.filename || (g.tag ? g.tag + '问题.json' : '')).filter(Boolean);
                         const dqHtml = qFilenames.length > 0 ? qFilenames.map(fn => {
                             const checked = (this._promptTempDefaultQuestions || []).includes(fn) ? 'checked' : '';
                             return `<label style="font-size:12px;display:flex;align-items:center;gap:4px;cursor:pointer;user-select:none;color:var(--text-secondary);margin:2px 0;">
@@ -7524,7 +7520,7 @@
                     }
                     for (const g of data.prompt_groups) {
                         let fn = g.filename; if (!fn.endsWith('.json')) fn += '.json';
-                        const dq = (g.default_questions || []).map(f => { let fn = f; if (!fn.endsWith('.json')) fn += '.json'; return '测试问题/' + fn; });
+                        const dq = (g.default_questions || []).map(f => '测试问题/' + f);
                         const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, default_questions:dq, content:it.content}));
                         const fh = await pDir.getFileHandle(fn, {create:true});
                         const w = await fh.createWritable();
