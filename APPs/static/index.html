@@ -3070,111 +3070,6 @@
             min-width: 28px;
             flex-shrink: 0;
         }
-
-        /* ===== Sub-step UI ===== */
-        .cts-substep {
-            padding: 8px 0;
-        }
-        .cts-substep p {
-            font-size: 13px;
-            color: var(--text-primary);
-            margin-bottom: 14px;
-            line-height: 1.5;
-        }
-        .cts-substep p strong {
-            font-weight: 600;
-            color: var(--accent);
-        }
-        .cts-substep label {
-            display: block;
-            font-size: 11px;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 4px;
-            margin-top: 10px;
-        }
-        .cts-substep input[type="text"] {
-            width: 100%;
-            padding: 8px 10px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-sm);
-            color: var(--text-primary);
-            font-size: 13px;
-            font-family: inherit;
-            transition: border-color 0.2s;
-        }
-        .cts-substep input[type="text"]:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-        .cts-substep .btn {
-            margin-top: 14px;
-        }
-        .cts-file-list {
-            margin: 10px 0;
-            max-height: 200px;
-            overflow-y: auto;
-        }
-        .cts-file-item {
-            padding: 5px 8px;
-            font-size: 12px;
-            border-bottom: 1px solid var(--border);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .cts-file-item:last-child {
-            border-bottom: none;
-        }
-        .cts-file-item-icon {
-            color: #10b981;
-            flex-shrink: 0;
-        }
-        .cts-file-item-name {
-            color: var(--text-primary);
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .cts-file-item-size {
-            color: var(--text-muted);
-            font-size: 10px;
-            flex-shrink: 0;
-            margin-left: auto;
-        }
-        .cts-summary-box {
-            background: var(--accent-bg);
-            border: 1px solid rgba(59,130,246,0.2);
-            border-radius: var(--radius-sm);
-            padding: 14px;
-            margin: 10px 0;
-        }
-        .cts-summary-box p {
-            font-size: 13px;
-            color: var(--accent);
-            margin: 0;
-        }
-        .cts-summary-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 16px;
-        }
-        .cts-completed-groups {
-            margin-bottom: 12px;
-        }
-        .cts-completed-tag {
-            font-size: 11px;
-            padding: 3px 8px;
-            background: rgba(16,185,129,0.12);
-            color: #065f46;
-            border-radius: 8px;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            margin-right: 6px;
-            margin-bottom: 6px;
-        }
     </style>
 </head>
 <body>
@@ -3608,14 +3503,18 @@
                 <div class="cts-step-panel" data-step="2" style="display:none;">
                     <div class="create-ts-section">
                         <div class="create-ts-section-title">第二步：创建问题</div>
-                        <div id="cts-qa-content"></div>
+                        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">创建 Tag 组，然后从文件导入问题和答案。</p>
+                        <div id="cts-question-groups"></div>
+                        <button class="btn btn-secondary" data-action="addQuestionGroup">+ 添加 Tag 组</button>
                     </div>
                 </div>
 
                 <div class="cts-step-panel" data-step="3" style="display:none;">
                     <div class="create-ts-section">
                         <div class="create-ts-section-title">第三步：创建系统提示词</div>
-                        <div id="cts-prompt-content"></div>
+                        <p style="font-size:12px;color:var(--text-secondary);margin-bottom:12px;">创建 Tag 组，然后输入或从文件导入提示词内容。</p>
+                        <div id="cts-prompt-groups"></div>
+                        <button class="btn btn-secondary" data-action="addPromptGroup">+ 添加 Tag 组</button>
                     </div>
                 </div>
 
@@ -7014,13 +6913,6 @@
                 _qaGroups: [],
                 _promptGroups: [],
                 _ctsStep: 1,
-                _qaSubStep: 'tag',
-                _qaTempTag: '',
-                _qaTempFilename: '',
-                _qaTempQuestions: [],
-                _promptSubStep: 'tag',
-                _promptTempTag: '',
-                _promptTempFilename: '',
 
                 // ── Known Test Sets ──
                 async _loadKnownTestSets() {
@@ -7197,8 +7089,8 @@
                         el.classList.toggle('active', s === n);
                     });
                     // Render current step's content
-                    if (n === 2) this._renderQAStep();
-                    if (n === 3) this._renderPromptStep();
+                    if (n === 2) this._renderQuestionGroups();
+                    if (n === 3) this._renderPromptGroups();
                     // Buttons
                     document.getElementById('cts-prev-btn').style.display = n > 1 ? '' : 'none';
                     const isLast = n === 4;
@@ -7207,18 +7099,20 @@
                 },
 
                 _nextStep() {
-                    if (this._ctsStep === 1) {
-                        if (!document.getElementById('cts-name').value.trim()) {
-                            showToast('请输入测试集名称', 'warning'); return;
-                        }
+                    const n = this._ctsStep;
+                    if (n === 1) {
+                        const name = document.getElementById('cts-name').value.trim();
+                        if (!name) { showToast('请输入测试集名称', 'warning'); return; }
                     }
-                    if (this._ctsStep === 2 && this._qaGroups.length === 0) {
-                        showToast('请至少创建一个 Tag 组', 'warning'); return;
+                    if (n === 2) {
+                        const hasItems = this._qaGroups.some(g => g.items.some(i => i.question || i.answer));
+                        if (!hasItems) { showToast('请至少添加一个问答对', 'warning'); return; }
                     }
-                    if (this._ctsStep === 3 && this._promptGroups.length === 0) {
-                        showToast('请至少创建一个 Tag 组', 'warning'); return;
+                    if (n === 3) {
+                        const hasItems = this._promptGroups.some(g => g.items.some(i => i.content));
+                        if (!hasItems) { showToast('请至少添加一个提示词', 'warning'); return; }
                     }
-                    this._goToStep(this._ctsStep + 1);
+                    this._goToStep(n + 1);
                 },
 
                 _prevStep() {
@@ -7232,176 +7126,297 @@
                     document.getElementById('createTestSetModal').classList.remove('show');
                 },
 
-                // ── Step 2: Q&A Sub-steps ──
-                _renderQAStep() {
-                    const el = document.getElementById('cts-qa-content');
-                    if (!el) return;
-                    const completed = this._qaGroups.map(g =>
-                        `<span class="cts-completed-tag">✓ ${this.escapeHtml(g.tag || g.filename || '未命名')} (${g.items.length}题)</span>`
-                    ).join('');
-                    const header = completed ? `<div class="cts-completed-groups">${completed}</div>` : '';
-                    if (this._qaSubStep === 'tag') {
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <p>创建一个新的 Tag 组，用于组织问题。</p>
-                            <label>Tag 名称</label>
-                            <input type="text" id="cts-qa-tag" placeholder="例如：基础" value="${this.escapeHtml(this._qaTempTag)}">
-                            <label>文件名</label>
-                            <input type="text" id="cts-qa-filename" placeholder="例如：基础问题.json" value="${this.escapeHtml(this._qaTempFilename)}">
-                            <button class="btn btn-primary" id="cts-qa-tag-confirm">确定</button>
-                        </div>`;
-                    } else if (this._qaSubStep === 'questions') {
-                        const files = this._qaTempQuestions.map(f =>
-                            `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`
-                        ).join('');
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <p>为 Tag 组 <strong>${this.escapeHtml(this._qaTempTag)}</strong> 导入问题文件：</p>
-                            <button class="btn btn-secondary" id="cts-qa-import-questions">选择文件</button>
-                            <div class="cts-file-list">${files || ''}</div>
-                            <button class="btn btn-primary" id="cts-qa-questions-confirm" ${files ? '' : 'disabled'}>确定</button>
-                        </div>`;
-                    } else if (this._qaSubStep === 'answers') {
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <p>为 Tag 组 <strong>${this.escapeHtml(this._qaTempTag)}</strong> 导入答案文件（已选 ${this._qaTempQuestions.length} 个问题，请按相同顺序选择答案）：</p>
-                            <button class="btn btn-secondary" id="cts-qa-import-answers">选择文件</button>
-                            <div class="cts-file-list" id="cts-qa-answer-list"></div>
-                            <button class="btn btn-primary" id="cts-qa-answers-confirm" disabled>确定</button>
-                        </div>`;
-                    } else if (this._qaSubStep === 'summary') {
-                        const g = this._qaGroups[this._qaGroups.length - 1];
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <div class="cts-summary-box"><p>Tag 组「${this.escapeHtml(g ? g.tag : '')}」已完成：${g ? g.items.length : 0} 个问答对</p></div>
-                            <div class="cts-summary-actions">
-                                <button class="btn btn-secondary" id="cts-qa-add-another">再添加一组</button>
-                                <button class="btn btn-primary" id="cts-qa-done">完成</button>
+                // ── Question Groups ──
+                _addQuestionGroup() {
+                    const idx = this._qaGroups.length;
+                    this._qaGroups.push({ tag: '', filename: '', items: [{ question: '', answer: '' }] });
+                    this._renderQuestionGroups();
+                    this._updateQuestionFileRefs();
+                },
+
+                _removeQuestionGroup(idx) {
+                    this._qaGroups.splice(idx, 1);
+                    this._renderQuestionGroups();
+                    this._updateQuestionFileRefs();
+                },
+
+                _renderQuestionGroups() {
+                    const container = document.getElementById('cts-question-groups');
+                    if (!container) return;
+                    if (this._qaGroups.length === 0) {
+                        container.innerHTML = '<div class="known-ts-empty">暂无问题 Tag 组，请点击上方按钮添加</div>';
+                        return;
+                    }
+                    container.innerHTML = this._qaGroups.map((group, gi) => {
+                        const tagVal = group.tag || '';
+                        const fnVal = group.filename || (tagVal ? tagVal + '问题.json' : '');
+                        const itemsHtml = group.items.map((item, ii) => {
+                            const qFn = item._qFile || '';
+                            const aFn = item._aFile || '';
+                            const qBtnClass = 'cts-file-btn' + (qFn ? ' has-file' : '');
+                            const aBtnClass = 'cts-file-btn' + (aFn ? ' has-file' : '');
+                            const qLabel = qFn ? qFn : '选择文件';
+                            const aLabel = aFn ? aFn : '选择文件';
+                            return `<div class="cts-qa-item" data-gidx="${gi}" data-iiidx="${ii}">
+                                <div style="display:flex;gap:8px;align-items:flex-start;">
+                                    <div style="flex:1;">
+                                        <div class="cts-file-row">
+                                            <span class="cts-file-label">问题</span>
+                                            <button class="${qBtnClass}" data-action="importQaFile" data-gidx="${gi}" data-iiidx="${ii}" data-target="question">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                ${this.escapeHtml(qLabel)}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div style="flex:1;">
+                                        <div class="cts-file-row">
+                                            <span class="cts-file-label">答案</span>
+                                            <button class="${aBtnClass}" data-action="importQaFile" data-gidx="${gi}" data-iiidx="${ii}" data-target="answer">
+                                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="12" height="12"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                                                ${this.escapeHtml(aLabel)}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <button class="cts-remove-item-btn" data-action="removeQAPair" data-gidx="${gi}" data-iiidx="${ii}" title="删除此项">&times;</button>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        return `<div class="cts-group-card" data-gidx="${gi}">
+                            <div class="cts-group-header">
+                                <input class="cts-tag-input" placeholder="Tag 名称" value="${this.escapeHtml(tagVal)}" data-gidx="${gi}">
+                                <span style="color:var(--text-muted);font-size:11px;">文件名:</span>
+                                <input class="cts-filename-input" placeholder="文件名" value="${this.escapeHtml(fnVal)}" data-gidx="${gi}">
+                                <button class="cts-remove-group-btn" data-action="removeQuestionGroup" data-gidx="${gi}" title="删除组">&times;</button>
+                            </div>
+                            ${itemsHtml}
+                            <div class="cts-group-actions">
+                                <button class="btn btn-secondary" data-action="addQAPair" data-gidx="${gi}">+ 添加 Q&A</button>
+                                <button class="btn btn-secondary" data-action="batchImportQuestions" data-gidx="${gi}">批量导入</button>
                             </div>
                         </div>`;
+                    }).join('');
+                },
+
+                _addQAPair(gIdx) {
+                    if (!this._qaGroups[gIdx]) return;
+                    this._qaGroups[gIdx].items.push({ question: '', answer: '', _qFile: '', _aFile: '' });
+                    this._renderQuestionGroups();
+                },
+
+                _removeQAPair(gIdx, iIdx) {
+                    if (!this._qaGroups[gIdx]) return;
+                    this._qaGroups[gIdx].items.splice(iIdx, 1);
+                    if (this._qaGroups[gIdx].items.length === 0) {
+                        this._qaGroups[gIdx].items.push({ question: '', answer: '', _qFile: '', _aFile: '' });
                     }
+                    this._renderQuestionGroups();
                 },
 
-                _qaConfirmTag() {
-                    const tag = document.getElementById('cts-qa-tag')?.value.trim();
-                    const fn = document.getElementById('cts-qa-filename')?.value.trim() || (tag ? tag + '问题.json' : '');
-                    if (!tag) { showToast('请输入 Tag 名称', 'warning'); return; }
-                    this._qaTempTag = tag; this._qaTempFilename = fn; this._qaTempQuestions = [];
-                    this._qaSubStep = 'questions'; this._renderQAStep();
-                },
-
-                _qaPickQuestions() {
-                    const i = document.createElement('input'); i.type = 'file'; i.multiple = true;
-                    i.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
-                    const s = this;
-                    i.onchange = function() {
-                        const files = Array.from(this.files || []), ordered = [];
-                        files.forEach((f, idx) => { const r = new FileReader(); r.onload = () => { ordered[idx] = { content: r.result, fileName: f.name }; }; r.readAsText(f); });
-                        const c = () => { if (ordered.length === files.length && ordered.every(Boolean)) { s._qaTempQuestions = ordered; s._renderQAStep(); const b = document.getElementById('cts-qa-questions-confirm'); if (b) b.disabled = false; } else setTimeout(c, 100); };
-                        setTimeout(c, 200);
+                _importQaFile(gIdx, iIdx, target) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
+                    const self = this;
+                    input.onchange = () => {
+                        const file = input.files && input.files[0];
+                        if (!file) return;
+                        const fr = new FileReader();
+                        fr.onload = () => {
+                            const group = self._qaGroups[gIdx];
+                            if (!group || !group.items[iIdx]) return;
+                            const item = group.items[iIdx];
+                            if (target === 'question') {
+                                item.question = fr.result;
+                                item._qFile = file.name;
+                            } else {
+                                item.answer = fr.result;
+                                item._aFile = file.name;
+                            }
+                            self._renderQuestionGroups();
+                        };
+                        fr.readAsText(file);
                     };
-                    i.click();
+                    input.click();
                 },
 
-                _qaConfirmQuestions() {
-                    if (!this._qaTempQuestions.length) { showToast('请先选择问题文件', 'warning'); return; }
-                    this._qaSubStep = 'answers'; this._renderQAStep();
+                _batchImportQuestions(gIdx) {
+                    const self = this;
+                    function pickFiles(accept) {
+                        return new Promise((resolve) => {
+                            const input = document.createElement('input');
+                            input.type = 'file';
+                            input.multiple = true;
+                            input.accept = accept || '.txt,.json,.md,.csv,.yaml,.yml,.xml';
+                            input.onchange = () => {
+                                const files = Array.from(input.files || []);
+                                resolve(files);
+                            };
+                            input.click();
+                        });
+                    }
+                    (async () => {
+                        const qFiles = await pickFiles();
+                        if (!qFiles.length) return;
+                        const aFiles = await pickFiles();
+                        if (!aFiles.length) {
+                            showToast('请选择答案文件', 'warning');
+                            return;
+                        }
+                        const qTexts = await Promise.all(qFiles.map(f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(f); })));
+                        const aTexts = await Promise.all(aFiles.map(f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(f); })));
+                        let pairs = [];
+                        if (qTexts.length > aTexts.length) {
+                            const ok = await this.showConfirm(`问题文件(${qTexts.length})多于答案文件(${aTexts.length})。多出的问题答案将留空。是否继续？`);
+                            if (!ok) return;
+                            for (let i = 0; i < qTexts.length; i++) {
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '', _qFile: qFiles[i].name, _aFile: aTexts[i] ? aFiles[i].name : '' });
+                            }
+                        } else if (aTexts.length > qTexts.length) {
+                            const ok = await this.showConfirm(`答案文件(${aTexts.length})多于问题文件(${qTexts.length})，多余的答案将被丢弃。是否继续？`);
+                            if (!ok) return;
+                            for (let i = 0; i < qTexts.length; i++) {
+                                pairs.push({ question: qTexts[i], answer: aTexts[i] || '', _qFile: qFiles[i].name, _aFile: aFiles[i].name });
+                            }
+                        } else {
+                            for (let i = 0; i < qTexts.length; i++) {
+                                pairs.push({ question: qTexts[i], answer: aTexts[i], _qFile: qFiles[i].name, _aFile: aFiles[i].name });
+                            }
+                        }
+                        if (!this._qaGroups[gIdx]) return;
+                        this._qaGroups[gIdx].items.push(...pairs);
+                        this._renderQuestionGroups();
+                        showToast(`已导入 ${pairs.length} 个问答对`, 'success');
+                    })().catch(e => { showToast('导入失败: ' + friendlyError(e.message), 'error'); });
                 },
 
-                _qaPickAnswers() {
-                    const qc = this._qaTempQuestions.length;
-                    const i = document.createElement('input'); i.type = 'file'; i.multiple = true;
-                    i.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
-                    const s = this;
-                    i.onchange = function() {
-                        const files = Array.from(this.files || []), ordered = [];
-                        files.forEach((f, idx) => { const r = new FileReader(); r.onload = () => { ordered[idx] = { content: r.result, fileName: f.name }; }; r.readAsText(f); });
-                        const c = () => { if (ordered.length === files.length && ordered.every(Boolean)) { s._qaFinishAnswers(ordered, qc); } else setTimeout(c, 100); };
-                        setTimeout(c, 200);
-                    };
-                    i.click();
+                // ── Prompt Groups ──
+                _addPromptGroup() {
+                    const idx = this._promptGroups.length;
+                    this._promptGroups.push({ tag: '', filename: '', default_questions: [], items: [{ content: '' }] });
+                    this._renderPromptGroups();
                 },
 
-                _qaFinishAnswers(answers, qc) {
-                    const l = document.getElementById('cts-qa-answer-list');
-                    if (l) l.innerHTML = answers.map(f => `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`).join('');
-                    if (qc > answers.length) { if (!confirm(`问题文件(${qc})多于答案文件(${answers.length})，多出的答案将留空。是否继续？`)) return; }
-                    else if (answers.length > qc) { if (!confirm(`答案文件(${answers.length})多于问题文件(${qc})，多余的将被丢弃。是否继续？`)) return; }
-                    const pairs = [];
-                    for (let i = 0; i < qc; i++) pairs.push({ question: this._qaTempQuestions[i]?.content||'', answer: answers[i]?.content||'', _qFile: this._qaTempQuestions[i]?.fileName||'', _aFile: answers[i]?.fileName||'' });
-                    this._qaGroups.push({ tag: this._qaTempTag, filename: this._qaTempFilename||(this._qaTempTag+'问题.json'), items: pairs });
-                    this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = [];
-                    this._qaSubStep = 'summary'; this._renderQAStep();
+                _removePromptGroup(idx) {
+                    this._promptGroups.splice(idx, 1);
+                    this._renderPromptGroups();
                 },
 
-                _qaAddAnother() { this._qaSubStep = 'tag'; this._qaTempTag = ''; this._qaTempFilename = ''; this._qaTempQuestions = []; this._renderQAStep(); },
-                _qaDone() { this._goToStep(3); },
-
-                // ── Step 3: Prompt Sub-steps ──
-                _renderPromptStep() {
-                    const el = document.getElementById('cts-prompt-content');
-                    if (!el) return;
-                    const completed = this._promptGroups.map(g =>
-                        `<span class="cts-completed-tag">✓ ${this.escapeHtml(g.tag || g.filename || '未命名')} (${g.items.length}条)</span>`
-                    ).join('');
-                    const header = completed ? `<div class="cts-completed-groups">${completed}</div>` : '';
-                    if (this._promptSubStep === 'tag') {
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <p>创建一个新的 Tag 组，用于组织系统提示词。</p>
-                            <label>Tag 名称</label>
-                            <input type="text" id="cts-prompt-tag" placeholder="例如：原版" value="${this.escapeHtml(this._promptTempTag)}">
-                            <label>文件名</label>
-                            <input type="text" id="cts-prompt-filename" placeholder="例如：MySet原版.json" value="${this.escapeHtml(this._promptTempFilename)}">
-                            <button class="btn btn-primary" id="cts-prompt-tag-confirm">确定</button>
-                        </div>`;
-                    } else if (this._promptSubStep === 'prompts') {
-                        const items = this._promptTempItems||[];
-                        const files = items.map(f => `<div class="cts-file-item"><span class="cts-file-item-icon">✓</span><span class="cts-file-item-name">${this.escapeHtml(f.fileName)}</span></div>`).join('');
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <p>为 Tag 组 <strong>${this.escapeHtml(this._promptTempTag)}</strong> 导入系统提示词文件（每个文件 = 一条提示词）：</p>
-                            <button class="btn btn-secondary" id="cts-prompt-import">选择文件</button>
-                            <div class="cts-file-list">${files||''}</div>
-                            <button class="btn btn-primary" id="cts-prompt-confirm" ${items.length?'':'disabled'}>确定</button>
-                        </div>`;
-                    } else if (this._promptSubStep === 'summary') {
-                        const g = this._promptGroups[this._promptGroups.length-1];
-                        el.innerHTML = header + `<div class="cts-substep">
-                            <div class="cts-summary-box"><p>Tag 组「${this.escapeHtml(g?g.tag:'')}」已完成：${g?g.items.length:0} 条提示词</p></div>
-                            <div class="cts-summary-actions">
-                                <button class="btn btn-secondary" id="cts-prompt-add-another">再添加一组</button>
-                                <button class="btn btn-primary" id="cts-prompt-done">完成</button>
+                _renderPromptGroups() {
+                    const container = document.getElementById('cts-prompt-groups');
+                    if (!container) return;
+                    if (this._promptGroups.length === 0) {
+                        container.innerHTML = '<div class="known-ts-empty">暂无提示词 Tag 组，请点击上方按钮添加</div>';
+                        return;
+                    }
+                    const setName = document.getElementById('cts-name').value || 'TestSet';
+                    container.innerHTML = this._promptGroups.map((group, gi) => {
+                        const tagVal = group.tag || '';
+                        const fnVal = group.filename || (tagVal ? setName + tagVal + '.json' : '');
+                        // Generate default_questions checkboxes
+                        const qFilenames = this._qaGroups.map(g => g.filename || (g.tag ? g.tag + '问题.json' : '')).filter(Boolean);
+                        const dqHtml = qFilenames.length > 0
+                            ? qFilenames.map(fn => {
+                                const checked = (group.default_questions || []).includes(fn) ? 'checked' : '';
+                                return `<label><input type="checkbox" class="cts-dq-cb" data-gidx="${gi}" value="${this.escapeHtml(fn)}" ${checked}> ${this.escapeHtml(fn)}</label>`;
+                            }).join('')
+                            : '<span style="font-size:11px;color:var(--text-muted)">暂无问题文件</span>';
+                        const itemsHtml = group.items.map((item, ii) => {
+                            const c = item.content || '';
+                            return `<div class="cts-prompt-item" data-gidx="${gi}" data-piidx="${ii}">
+                                <div style="display:flex;gap:6px;align-items:flex-start;">
+                                    <textarea rows="4" class="cts-prompt-content" data-gidx="${gi}" data-piidx="${ii}" style="flex:1;">${this.escapeHtml(c)}</textarea>
+                                    <button class="cts-import-btn" data-gidx="${gi}" data-piidx="${ii}" data-target="prompt" title="从文件导入" style="position:static;flex-shrink:0;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></button>
+                                    <button class="cts-remove-item-btn" data-action="removePromptItem" data-gidx="${gi}" data-piidx="${ii}" title="删除此项">&times;</button>
+                                </div>
+                            </div>`;
+                        }).join('');
+                        return `<div class="cts-group-card" data-gidx="${gi}">
+                            <div class="cts-group-header">
+                                <input class="cts-tag-input" placeholder="Tag 名称" value="${this.escapeHtml(tagVal)}" data-gidx="${gi}">
+                                <span style="color:var(--text-muted);font-size:11px;">文件名:</span>
+                                <input class="cts-filename-input" placeholder="文件名" value="${this.escapeHtml(fnVal)}" data-gidx="${gi}">
+                                <button class="cts-remove-group-btn" data-action="removePromptGroup" data-gidx="${gi}" title="删除组">&times;</button>
+                            </div>
+                            <div class="cts-default-questions">
+                                <label>关联问题文件:</label>
+                                <div class="cts-dq-checkboxes">${dqHtml}</div>
+                            </div>
+                            ${itemsHtml}
+                            <div class="cts-group-actions">
+                                <button class="btn btn-secondary" data-action="addPromptItem" data-gidx="${gi}">+ 添加提示词</button>
+                                <button class="btn btn-secondary" data-action="batchImportPrompts" data-gidx="${gi}">批量导入</button>
                             </div>
                         </div>`;
+                    }).join('');
+                },
+
+                _addPromptItem(gIdx) {
+                    if (!this._promptGroups[gIdx]) return;
+                    this._promptGroups[gIdx].items.push({ content: '' });
+                    this._renderPromptGroups();
+                },
+
+                _removePromptItem(gIdx, iIdx) {
+                    if (!this._promptGroups[gIdx]) return;
+                    this._promptGroups[gIdx].items.splice(iIdx, 1);
+                    if (this._promptGroups[gIdx].items.length === 0) {
+                        this._promptGroups[gIdx].items.push({ content: '' });
+                    }
+                    this._renderPromptGroups();
+                },
+
+                _batchImportPrompts(gIdx) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml';
+                    const self = this;
+                    input.onchange = async () => {
+                        const files = Array.from(input.files || []);
+                        if (!files.length) return;
+                        const texts = await Promise.all(files.map(f => new Promise(r => { const fr = new FileReader(); fr.onload = () => r(fr.result); fr.readAsText(f); })));
+                        if (!self._promptGroups[gIdx]) return;
+                        for (const t of texts) {
+                            self._promptGroups[gIdx].items.push({ content: t });
+                        }
+                        self._renderPromptGroups();
+                        showToast(`已导入 ${texts.length} 个提示词`, 'success');
+                    };
+                    input.click();
+                },
+
+                // ── Import file to textarea ──
+                _importFileToTextarea(targetEl) {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
+                    input.onchange = () => {
+                        const file = input.files && input.files[0];
+                        if (!file) return;
+                        const fr = new FileReader();
+                        fr.onload = () => { targetEl.value = fr.result; };
+                        fr.readAsText(file);
+                    };
+                    input.click();
+                },
+
+                // ── Browse save path ──
+                async _browseSavePath() {
+                    if (typeof window.showDirectoryPicker === 'function') {
+                        try {
+                            const handle = await window.showDirectoryPicker();
+                            this._dirHandle = handle;
+                            const pf = document.getElementById('cts-path-field');
+                            if (pf) pf.style.display = 'none';
+                        } catch (e) {
+                            if (e.name !== 'AbortError' && e.name !== 'SecurityError') {
+                                this._showPathPrompt();
+                            }
+                        }
+                    } else {
+                        this._showPathPrompt();
                     }
                 },
-
-                _promptConfirmTag() {
-                    const tag = (document.getElementById('cts-prompt-tag')||{}).value?.trim();
-                    const setName = (document.getElementById('cts-name')||{}).value?.trim()||'TestSet';
-                    const fn = (document.getElementById('cts-prompt-filename')||{}).value?.trim()||(tag?setName+tag+'.json':'');
-                    if (!tag) { showToast('请输入 Tag 名称', 'warning'); return; }
-                    this._promptTempTag = tag; this._promptTempFilename = fn; this._promptTempItems = [];
-                    this._promptSubStep = 'prompts'; this._renderPromptStep();
-                },
-
-                _promptPickFiles() {
-                    const i = document.createElement('input'); i.type = 'file'; i.multiple = true;
-                    i.accept = '.txt,.json,.md,.csv,.yaml,.yml,.xml,.js,.py,.html,.css';
-                    const s = this;
-                    i.onchange = function() {
-                        const files = Array.from(this.files||[]), ordered = [];
-                        files.forEach((f,idx) => { const r = new FileReader(); r.onload = () => { ordered[idx]={content:r.result,fileName:f.name}; }; r.readAsText(f); });
-                        const c = () => { if (ordered.length===files.length && ordered.every(Boolean)) { s._promptTempItems=ordered; s._renderPromptStep(); const b=document.getElementById('cts-prompt-confirm'); if(b)b.disabled=false; } else setTimeout(c,100); };
-                        setTimeout(c,200);
-                    };
-                    i.click();
-                },
-
-                _promptConfirmPrompts() {
-                    if (!this._promptTempItems||!this._promptTempItems.length) { showToast('请至少选择一个提示词文件','warning'); return; }
-                    this._promptGroups.push({ tag:this._promptTempTag, filename:this._promptTempFilename||(this._promptTempTag+'.json'), default_questions:[], items:this._promptTempItems.map(i=>({content:i.content})) });
-                    this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[];
-                    this._promptSubStep='summary'; this._renderPromptStep();
-                },
-
-                _promptAddAnother() { this._promptSubStep='tag'; this._promptTempTag=''; this._promptTempFilename=''; this._promptTempItems=[]; this._renderPromptStep(); },
-                _promptDone() { this._goToStep(4); },
 
                 _showPathPrompt() {
                     const current = document.getElementById('cts-path').value || document.getElementById('testSetDir').value || '';
@@ -7432,8 +7447,10 @@
                         const path = document.getElementById('cts-path').value.trim();
                         if (!path) { showToast('请输入保存路径', 'warning'); return false; }
                     }
-                    if (this._qaGroups.length === 0) { showToast('请至少创建一个问题 Tag 组', 'warning'); return false; }
-                    if (this._promptGroups.length === 0) { showToast('请至少创建一个提示词 Tag 组', 'warning'); return false; }
+                    const qaCount = this._qaGroups.reduce((s, g) => s + g.items.filter(i => i.question || i.answer).length, 0);
+                    const promptCount = this._promptGroups.reduce((s, g) => s + g.items.filter(i => i.content).length, 0);
+                    if (qaCount < 1) { showToast('至少需要 1 个问答对', 'warning'); return false; }
+                    if (promptCount < 1) { showToast('至少需要 1 个提示词', 'warning'); return false; }
                     return true;
                 },
 
@@ -7444,31 +7461,35 @@
                         filename: g.filename || (g.tag ? g.tag + '问题.json' : 'untitled.json'),
                         tag: g.tag || '',
                         items: g.items.map(i => ({ question: i.question || '', answer: i.answer || '' }))
-                    }));
+                    })).filter(g => g.items.some(i => i.question || i.answer));
                     const prompt_groups = this._promptGroups.map(g => ({
                         filename: g.filename || (g.tag ? name + g.tag + '.json' : 'untitled.json'),
                         tag: g.tag || 'untagged',
-                        default_questions: [],
+                        default_questions: g.default_questions || [],
                         items: g.items.map(i => ({ content: i.content || '' }))
-                    }));
+                    })).filter(g => g.items.some(i => i.content));
                     return { name, base_path: path, question_groups, prompt_groups };
                 },
 
                 async _submitCreateTestSet() {
                     if (!this._validateCreateForm()) return;
                     const btn = document.getElementById('cts-submit-btn');
-                    btn.disabled = true; btn.classList.add('btn-loading');
+                    btn.disabled = true;
+                    btn.classList.add('btn-loading');
                     try {
                         const data = this._collectCreateFormData();
                         if (this._dirHandle) {
                             await this._writeFilesViaFSAPI(data, this._dirHandle);
                         } else {
                             const resp = await fetchWithTimeout('/api/v1/test-set/create', {
-                                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify(data)
                             });
                             const result = await resp.json();
-                            if (!resp.ok) throw new Error(result.error || '创建失败');
+                            if (!resp.ok) {
+                                throw new Error(result.error || '创建失败');
+                            }
                         }
                         await this._saveKnownTestSets();
                         this.closeCreateTestSetModal();
@@ -7477,37 +7498,51 @@
                     } catch (e) {
                         showToast('创建失败: ' + friendlyError(e.message), 'error');
                     } finally {
-                        btn.disabled = false; btn.classList.remove('btn-loading');
+                        btn.disabled = false;
+                        btn.classList.remove('btn-loading');
                     }
                 },
 
                 async _writeFilesViaFSAPI(data, rootHandle) {
-                    if ((await rootHandle.queryPermission({mode:'readwrite'})) !== 'granted') {
-                        if ((await rootHandle.requestPermission({mode:'readwrite'})) !== 'granted') throw new Error('没有写入权限');
+                    if ((await rootHandle.queryPermission({ mode: 'readwrite' })) !== 'granted') {
+                        if ((await rootHandle.requestPermission({ mode: 'readwrite' })) !== 'granted') {
+                            throw new Error('没有写入权限');
+                        }
                     }
+                    // Create test set directory
                     let tsDir;
                     try {
                         tsDir = await rootHandle.getDirectoryHandle(data.name);
                         throw new Error(`该位置已存在同名测试集「${data.name}」`);
                     } catch (e) {
-                        if (e.name === 'NotFoundError') tsDir = await rootHandle.getDirectoryHandle(data.name, {create:true});
-                        else throw e;
+                        if (e.name === 'NotFoundError') {
+                            tsDir = await rootHandle.getDirectoryHandle(data.name, { create: true });
+                        } else {
+                            throw e;
+                        }
                     }
-                    const pDir = await tsDir.getDirectoryHandle('测试系统提示词', {create:true});
-                    const qDir = await tsDir.getDirectoryHandle('测试问题', {create:true});
-                    await tsDir.getDirectoryHandle('测试结果', {create:true});
-                    for (const g of data.question_groups) {
-                        let fn = g.filename; if (!fn.endsWith('.json')) fn += '.json';
-                        const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, question:it.question, answer:it.answer}));
-                        const fh = await qDir.getFileHandle(fn, {create:true});
+                    const promptsDir = await tsDir.getDirectoryHandle('测试系统提示词', { create: true });
+                    const questionsDir = await tsDir.getDirectoryHandle('测试问题', { create: true });
+                    await tsDir.getDirectoryHandle('测试结果', { create: true });
+                    for (const group of data.question_groups) {
+                        let fn = group.filename;
+                        if (!fn.endsWith('.json')) fn += '.json';
+                        const entries = group.items.map((item, i) => ({
+                            id: i + 1, tag: group.tag, question: item.question, answer: item.answer
+                        }));
+                        const fh = await questionsDir.getFileHandle(fn, { create: true });
                         const w = await fh.createWritable();
                         await w.write(JSON.stringify(entries, null, 2));
                         await w.close();
                     }
-                    for (const g of data.prompt_groups) {
-                        let fn = g.filename; if (!fn.endsWith('.json')) fn += '.json';
-                        const entries = g.items.map((it,i) => ({id:i+1, tag:g.tag, default_questions:[], content:it.content}));
-                        const fh = await pDir.getFileHandle(fn, {create:true});
+                    for (const group of data.prompt_groups) {
+                        let fn = group.filename;
+                        if (!fn.endsWith('.json')) fn += '.json';
+                        const dq = (group.default_questions || []).map(f => '测试问题/' + f);
+                        const entries = group.items.map((item, i) => ({
+                            id: i + 1, tag: group.tag, default_questions: dq, content: item.content
+                        }));
+                        const fh = await promptsDir.getFileHandle(fn, { create: true });
                         const w = await fh.createWritable();
                         await w.write(JSON.stringify(entries, null, 2));
                         await w.close();
@@ -7551,6 +7586,9 @@
                 });
                 const ctsClose = document.querySelector('#createTestSetModal .create-ts-close');
                 if (ctsClose) on(ctsClose, 'click', () => App.closeCreateTestSetModal());
+                // CTS name input → update prompt filenames
+                const ctsName = byId('cts-name');
+                if (ctsName) on(ctsName, 'input', () => App._updatePromptFilenames());
                 // CTS path input → clear dirHandle
                 const ctsPath = byId('cts-path');
                 if (ctsPath) on(ctsPath, 'focus', () => { App._dirHandle = null; });
@@ -7558,6 +7596,27 @@
                 const ctsModal = byId('createTestSetModal');
                 if (ctsModal) {
                     on(ctsModal, 'input', function(e) {
+                        const tagInput = e.target.closest('.cts-tag-input');
+                        if (tagInput) {
+                            const gi = parseInt(tagInput.dataset.gidx, 10);
+                            const group = App._qaGroups[gi];
+                            if (group) group.tag = tagInput.value;
+                            return;
+                        }
+                        const fnInput = e.target.closest('.cts-filename-input');
+                        if (fnInput) {
+                            const gi = parseInt(fnInput.dataset.gidx, 10);
+                            if (fnInput.closest('.cts-group-card') && fnInput.closest('.cts-group-card').querySelector('.cts-qa-item')) {
+                                // Question group
+                                const group = App._qaGroups[gi];
+                                if (group) group.filename = fnInput.value;
+                            } else {
+                                // Prompt group
+                                const group = App._promptGroups[gi];
+                                if (group) group.filename = fnInput.value;
+                            }
+                            return;
+                        }
                         const pInput = e.target.closest('.cts-prompt-content');
                         if (pInput) {
                             const gi = parseInt(pInput.dataset.gidx, 10);
