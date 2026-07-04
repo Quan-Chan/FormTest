@@ -6043,6 +6043,9 @@
                         if (data.status === 'stopped') {
                             progressText.textContent = data.message || '已终止';
                         }
+                        if (data.status === 'completed') {
+                            progressText.textContent = data.message || '完成';
+                        }
                         if (data.message && data.message.includes('正在生成')) {
                             document.getElementById('aiStreamStatus').textContent = '生成中';
                             document.getElementById('aiStreamStatus').classList.add('active');
@@ -6148,7 +6151,8 @@
                         }));
                     this.historyResultsList = results
                         .filter(r => r.status === 'fulfilled')
-                        .flatMap(r => r.value);
+                        .flatMap(r => r.value)
+                        .sort((a, b) => (b.name || '').localeCompare(a.name || ''));
                     const dropdown = document.getElementById('historySelectorDropdown');
                     if (dropdown) {
                         dropdown.innerHTML = '<div class="custom-select-option selected" data-dropdown="historySelector" data-value="" data-label="当前运行">当前运行</div>' +

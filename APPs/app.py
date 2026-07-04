@@ -138,7 +138,7 @@ def read_file(filepath):
             log_debug(f"文件过大，跳过读取: {filepath}")
             return None
         try:
-            with open(filepath, "r", encoding="utf-8") as f:
+            with open(filepath, "r", encoding="utf-8-sig") as f:
                 return f.read()
         except (UnicodeDecodeError, IOError, OSError):
             return None
@@ -639,6 +639,9 @@ def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
     except requests.exceptions.Timeout:
         log_debug(f"AI请求超时，将重试")
         return {"retry": True}
+    except requests.exceptions.ConnectionError as e:
+        log_debug(f"AI连接异常，将重试: {e}")
+        return {"retry": True, "error": str(e)}
     except Exception as e:
         log_debug(f"AI请求异常: {e}")
         return {"success": False, "error": str(e)}
@@ -1003,7 +1006,7 @@ def stream_test_job(job_id):
                     break
                 elif event_type == "status":
                     yield f"data: {json.dumps({'type': 'status', 'status': data['status'], 'message': data['message']}, ensure_ascii=False)}\n\n"
-                    if data['status'] in ("completed", "stopped", "error"):
+                    if data['status'] in ("stopped", "error"):
                         break
         except GeneratorExit:
             pass
