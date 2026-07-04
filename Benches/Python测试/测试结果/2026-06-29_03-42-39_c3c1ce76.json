@@ -1,0 +1,16 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "在 Python 中，装饰器的 `@` 语法本质上是**封装函数**。具体来说，它实现了以下核心作用：\n\n1. **创建新函数**  \n   `@decorator(func)` 等价于 `func = decorator(func)`。它接收一个已定义的函数作为参数，返回一个新的、带有新功能的函数对象。\n\n2. **添加额外功能**  \n   装饰器本质上是一个“黑盒”函数，它可以：\n   - 在调用原函数时执行自定义逻辑（如时间记录、权限校验）；\n   - 修改返回值行为（例如延迟异步任务完成）；\n   - 返回更高级别的函数对象。\n\n3. **结合高阶函数**  \n   装饰器本身也是函数，因此可以使用 `functools.wraps` 保留原函数的元信息（名称、文档字符串），同时支持类作为装饰器（通过实现 `__call__`）。\n\n---\n\n### 示例说明（基于课程内容）：\n```python\nimport time\n\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        print(f'{func.__name__} took {time.time()-start:.2f}s')\n        return result\n    return wrapper\n\n@timer\ndef count_calls():\n    \"Count how many times this function is called\"\n    # 实际实现中会执行自定义逻辑（如记录耗时、统计调用次数）\n```\n\n---\n\n### 关键总结：\n- `@` 只是**语法糖**，并非 Python 提供的内置装饰器。\n- 它通过返回一个新函数的方式，让开发者无需修改原代码即可增加功能。\n- 本质上是“在函数之上添加一层逻辑”，体现“装饰”的含义（decorate）。\n\n这是 Python 中实现动态功能注入的重要机制之一。"
+  }
+]

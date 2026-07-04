@@ -21,7 +21,7 @@ FormTest/
 │   ├── 教学视频测试/     # Lehrvideo-Inhaltstest
 │   ├── 企业信息测试/     # Unternehmensinformationstest
 │   ├── 运行日志测试/     # Systembetriebsprotokolltest
-│   └── Python进阶测试/   # Python-Fortgeschrittenentest
+│   └── Python测试/   # Python-Fortgeschrittenentest
 ├── .gitignore
 ├── LICENSE               # Apache License 2.0
 └── README*.md            # Mehrsprachige README-Dateien
@@ -69,7 +69,7 @@ Benches/<Name>/
 | 教学视频测试 (Lehrvideo) | Python-Programmiervorlesung |
 | 企业信息测试 (Unternehmen) | Fiktive Firmendaten |
 | 运行日志测试 (Betriebsprotokolle) | System-Logs |
-| Python进阶测试 (Python Fortgeschritten) | Python-Dekoratoren/Generatoren/Context-Manager |
+| Python测试 (Python Fortgeschritten) | Python-Dekoratoren/Generatoren/Context-Manager |
 
 ## Kernfunktionen
 

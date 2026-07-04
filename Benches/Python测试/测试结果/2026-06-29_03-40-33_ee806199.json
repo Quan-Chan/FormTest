@@ -1,0 +1,34 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-4b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-4b",
+    "prompt_tag": "DSL",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": null,
+    "error_type": "HTTP 400: {\n    \"error\": {\n        \"message\": \"Failed to load model \\\"qwen3.5-4b\\\". Error: Operation canceled.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": \"model\",\n        \"code\": null\n    }\n}",
+    "error_msg": "HTTP 400: {\n    \"error\": {\n        \"message\": \"Failed to load model \\\"qwen3.5-4b\\\". Error: Operation canceled.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": \"model\",\n        \"code\": null\n    }\n}"
+  },
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": null,
+    "error_type": "HTTP 400: {\n    \"error\": {\n        \"message\": \"Failed to load model \\\"qwen3.5-0.8b\\\". Error: Operation canceled.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": \"model\",\n        \"code\": null\n    }\n}",
+    "error_msg": "HTTP 400: {\n    \"error\": {\n        \"message\": \"Failed to load model \\\"qwen3.5-0.8b\\\". Error: Operation canceled.\",\n        \"type\": \"invalid_request_error\",\n        \"param\": \"model\",\n        \"code\": null\n    }\n}"
+  }
+]

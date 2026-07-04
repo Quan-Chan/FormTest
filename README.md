@@ -21,7 +21,7 @@ FormTest/
 │   ├── 教学视频测试/     # 教学视频内容理解测试
 │   ├── 企业信息测试/     # 企业结构化信息测试
 │   ├── 运行日志测试/     # 系统运行日志理解测试
-│   └── Python进阶测试/   # Python 进阶知识测试
+│   └── Python测试/   # Python 进阶知识测试
 ├── .gitignore
 ├── LICENSE               # Apache License 2.0
 ├── README.md
@@ -70,7 +70,7 @@ Benches/<名称>/
 | 教学视频测试 | Python 编程讲座转录稿 |
 | 企业信息测试 | 虚构企业工商信息 |
 | 运行日志测试 | 系统运维日志条目 |
-| Python进阶测试 | Python 装饰器/生成器/上下文管理器 |
+| Python测试 | Python 装饰器/生成器/上下文管理器 |
 
 ## 核心功能
 

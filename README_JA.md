@@ -21,7 +21,7 @@ FormTest/
 │   ├── 教学视频测试/     # 教学ビデオコンテンツテスト
 │   ├── 企业信息测试/     # 企業情報テスト
 │   ├── 运行日志测试/     # システム運用ログテスト
-│   └── Python进阶测试/   # Python発展的知識テスト
+│   └── Python测试/   # Python発展的知識テスト
 ├── .gitignore
 ├── LICENSE               # Apache License 2.0
 └── README*.md            # 多言語READMEファイル

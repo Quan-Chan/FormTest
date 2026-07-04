@@ -21,7 +21,7 @@ FormTest/
 │   ├── 教学视频测试/     # Prueba de contenido de video educativo
 │   ├── 企业信息测试/     # Prueba de información empresarial
 │   ├── 运行日志测试/     # Prueba de registros de operación
-│   └── Python进阶测试/   # Prueba de Python avanzado
+│   └── Python测试/   # Prueba de Python avanzado
 ├── .gitignore
 ├── LICENSE               # Apache License 2.0
 └── README*.md            # README multilingüe

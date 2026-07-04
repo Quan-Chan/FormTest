@@ -21,7 +21,7 @@ FormTest/
 │   ├── 教学视频测试/     # Teaching video content test
 │   ├── 企业信息测试/     # Enterprise information test
 │   ├── 运行日志测试/     # System operation log test
-│   └── Python进阶测试/   # Python advanced knowledge test
+│   └── Python测试/   # Python advanced knowledge test
 ├── .gitignore
 ├── LICENSE               # Apache License 2.0
 └── README*.md            # Multi-language README files
@@ -69,7 +69,7 @@ Benches/<name>/
 | 教学视频测试 (Teaching Video) | Python programming lecture transcript |
 | 企业信息测试 (Enterprise Info) | Fictional corporate registration data |
 | 运行日志测试 (Operation Logs) | System operation log entries |
-| Python进阶测试 (Python Advanced) | Python decorators/generators/context managers |
+| Python测试 (Python Advanced) | Python decorators/generators/context managers |
 
 ## Core Features
 

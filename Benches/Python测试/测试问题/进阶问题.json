@@ -1,0 +1,62 @@
+[
+  {
+    "id": 11,
+    "tag": "Python测试-进阶",
+    "question": "以下代码中，两次`print(greeting('World'))`的输出分别是什么？请解释原因。\n```python\ndef decorator(func):\n    def wrapper(*args, **kwargs):\n        print('before')\n        result = func(*args, **kwargs)\n        print('after')\n        return result\n    return wrapper\n\n@decorator\ndef greeting(name):\n    return f'Hello, {name}'\n\nprint(greeting('World'))\nprint(greeting.__name__)\n```",
+    "answer": "第一次输出：先打印'before'，再打印'after'，最后打印'Hello, World'（因为wrapper返回了func的返回值）。第二次输出：'wrapper'（因为装饰器没有使用@functools.wraps，greeting.__name__被改写为wrapper的__name__）。"
+  },
+  {
+    "id": 12,
+    "tag": "Python测试-进阶",
+    "question": "请解释以下生成器代码的输出，并说明为什么第二次`for`循环没有任何输出：\n```python\ndef count_up_to(n):\n    i = 1\n    while i <= n:\n        yield i\n        i += 1\n\ncounter = count_up_to(3)\nfor num in counter:\n    print(num)\nfor num in counter:\n    print(num)\n```",
+    "answer": "第一次for循环输出：1、2、3。第二次for循环没有任何输出。原因是生成器是迭代器，只能被遍历一次。第一次遍历后生成器已耗尽（StopIteration），第二次遍历时生成器已没有更多元素可产出。如果需要多次遍历，需要重新创建生成器对象或将结果转换为列表。"
+  },
+  {
+    "id": 13,
+    "tag": "Python测试-进阶",
+    "question": "以下上下文管理器的`__exit__`方法返回True，请问这对外部with块的异常处理有什么影响？请说明返回True和False的区别。\n```python\nclass SuppressErrors:\n    def __enter__(self):\n        return self\n    def __exit__(self, exc_type, exc_val, exc_tb):\n        if exc_type is ValueError:\n            print(f'Suppressed: {exc_val}')\n            return True\n        return False\n```",
+    "answer": "`__exit__`返回True会抑制异常（即阻止异常向外传播），with块内的异常被吞掉，程序继续正常执行。返回False时，异常会正常向外传播。以上代码中，ValueError会被抑制并打印消息，其他异常（如TypeError）不会被抑制，会正常抛出。同时注意exc_type为None（无异常）时，__exit__的返回值无意义。"
+  },
+  {
+    "id": 14,
+    "tag": "Python测试-进阶",
+    "question": "请比较`send()`方法和`yield`表达式在生成器中的交互方式，并说明`next(generator)`与`generator.send(None)`在行为上的等价关系。",
+    "answer": "`generator.send(value)`向生成器发送一个值，该值成为当前暂停的`yield`表达式的返回值。`next(generator)`等价于`generator.send(None)`。第一次启动生成器时必须使用`next(generator)`或`send(None)`（不能send非None值，因为还没有yield表达式接收）。send方法实现了生成器的双向通信，使调用方可以动态影响生成器的内部行为。"
+  },
+  {
+    "id": 15,
+    "tag": "Python测试-进阶",
+    "question": "设计一个装饰器，使其接受一个可选参数`retries`，当被装饰函数抛出异常时自动重试最多retries次。请说明实现思路和关键代码逻辑。",
+    "answer": "实现思路：使用两层嵌套装饰器（外层接收参数，内层接收函数）。关键逻辑：\n```python\ndef retry(retries=3):\n    def decorator(func):\n        @functools.wraps(func)\n        def wrapper(*args, **kwargs):\n            for i in range(retries):\n                try:\n                    return func(*args, **kwargs)\n                except Exception as e:\n                    if i == retries - 1:\n                        raise\n                    time.sleep(2**i)  # 指数退避\n            return wrapper\n        return decorator\n```\n使用`@retry(retries=5)`或默认`@retry()`。需要处理参数存在/不存在两种情况的关键在于外层函数接收retries参数并返回decorator。"
+  },
+  {
+    "id": 16,
+    "tag": "Python测试-进阶",
+    "question": "`contextlib.ExitStack`的作用是什么？在什么场景下比嵌套`with`语句更合适？请举例说明。",
+    "answer": "`ExitStack`用于动态管理多个上下文管理器，它允许在运行时按需添加和清理资源。比嵌套`with`更合适的场景：①不确定需要管理多少个上下文（如动态数量的文件）；②需要在with块中间条件式地添加或移除上下文管理器。例如：\n```python\nwith ExitStack() as stack:\n    files = [stack.enter_context(open(f)) for f in file_list]\n    # 所有文件会在退出with时自动关闭\n```\n而嵌套with无法处理动态数量的文件。"
+  },
+  {
+    "id": 17,
+    "tag": "Python测试-进阶",
+    "question": "Python 3.3+中引入的`yield from`与嵌套for循环的`yield`在异常处理和返回值传递方面有什么关键差异？",
+    "answer": "`yield from`与嵌套for循环的主要差异：①返回值传递：`yield from`可以接收子生成器的`return`返回值（赋值给变量），而for循环无法捕获`return`；②异常处理：`yield from`会自动将调用方的`throw()`和`close()`传递给子生成器，for循环需要手动处理；③调用方通过`send()`发送的值会直接传递给子生成器当前暂停的yield表达式，而for循环则需要额外的转发逻辑。"
+  },
+  {
+    "id": 18,
+    "tag": "Python测试-进阶",
+    "question": "多个装饰器堆叠使用时的执行顺序是什么？请分析以下代码的输出：\n```python\ndef A(f):\n    def wrapper():\n        print('A before')\n        f()\n        print('A after')\n    return wrapper\n\ndef B(f):\n    def wrapper():\n        print('B before')\n        f()\n        print('B after')\n    return wrapper\n\n@A\n@B\ndef test():\n    print('test')\n\ntest()\n```",
+    "answer": "输出顺序：'A before'、'B before'、'test'、'B after'、'A after'。堆叠装饰器`@A @B def test()`等价于`test = A(B(test))`，执行时从外到内进入（A先进入），从内到外执行（B先执行原始函数）。可以理解为洋葱模型：外层装饰器A在最外层，包裹内层装饰器B，B包裹原始函数test。"
+  },
+  {
+    "id": 19,
+    "tag": "Python测试-进阶",
+    "question": "利用`__enter__`和`__exit__`实现一个计时上下文管理器`Timer`，能够记录with块内代码的执行时间，并在退出时打印耗时。请写出完整的实现代码。",
+    "answer": "```python\nimport time\n\nclass Timer:\n    def __enter__(self):\n        self.start = time.perf_counter()\n        return self\n    \n    def __exit__(self, exc_type, exc_val, exc_tb):\n        self.elapsed = time.perf_counter() - self.start\n        print(f'执行耗时: {self.elapsed:.4f}秒')\n        return False  # 不抑制异常\n\n# 使用示例\nwith Timer() as t:\n    sum(range(1000000))\nprint(f'在外部也可访问: {t.elapsed:.4f}秒')\n```\n关键点：`__enter__`返回self以便外部访问计时结果；使用`time.perf_counter()`获取高精度时间；`__exit__`返回False确保异常正常传播。"
+  },
+  {
+    "id": 20,
+    "tag": "Python测试-进阶",
+    "question": "请解释`@property`装饰器的工作原理，以及它如何与装饰器和描述符协议相关联。请给出一个包含getter、setter和deleter的完整示例。",
+    "answer": "`@property`装饰器将方法转换为只读属性，本质上是创建了一个property描述符对象。property实现了描述符协议（`__get__`、`__set__`、`__delete__`）。\n```python\nclass Temperature:\n    def __init__(self, celsius):\n        self._celsius = celsius\n    \n    @property\n    def fahrenheit(self):\n        return self._celsius * 9/5 + 32\n    \n    @fahrenheit.setter\n    def fahrenheit(self, value):\n        self._celsius = (value - 32) * 5/9\n    \n    @fahrenheit.deleter\n    def fahrenheit(self):\n        del self._celsius\n```\n`@property`是装饰器的经典应用：`property(getter, setter, deleter)`本身是可调用的，`@property`是语法糖，`@fahrenheit.setter`进一步应用了property的setter方法作为装饰器。"
+  }
+]

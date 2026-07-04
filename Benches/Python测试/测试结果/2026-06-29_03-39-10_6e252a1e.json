@@ -1,0 +1,16 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "在 Python 中，`@` 语法本质上是一个**高阶函数或闭包机制的执行指令**。具体来说，它的作用是：\n\n## 🔄 核心原理\n\n当你写 `@decorator(func)` 时，实际上在语义上等价于：\n```python\nfunc = decorator(func)\n```\n\n这意味着：\n1. **定义一个新的函数对象**（`decorator`）\n2. **将原函数的返回值作为装饰器的参数传入**给新定义的函数\n3. **返回这个修饰后的新函数**\n\n## 📝 示例说明\n\n```python\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        print(f'{func.__name__} took {time.time()-start:.2f}s')\n        return result\n    return wrapper  # 返回新的 wrapper 函数\n\n@timer\ndef fibonacci(n=0):\n    a, b = 1, 1\n    while n > 0:\n        print(f'{a}')\n        a, b = b, a + b\n```\n\n**执行过程：**\n- `decorator`被定义（作为外层函数）\n- `func`接收到返回值，然后再次调用\n- 最终返回一个嵌套的 wrapper 函数\n\n## 🎯 总结\n\n`@` 语法本质上是：\n> **创建一个新的函数对象，并将原函数的结果作为其第一个参数进行继承式赋值**，从而在代码中实现了“装饰”的效果。"
+  }
+]

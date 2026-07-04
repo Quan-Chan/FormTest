@@ -1,0 +1,18 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "JSON",
+    "question_tag": "Python测试",
+    "question": "",
+    "expected_answer": "",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": null,
+    "error_type": "Empty AI response",
+    "error_msg": "Empty AI response"
+  }
+]
