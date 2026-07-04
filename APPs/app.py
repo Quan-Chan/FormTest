@@ -192,16 +192,8 @@ def validate_file_name(name):
     return True
 
 
-_LEGACY_DIR_NAMES = {
-    "prompts": "测试系统提示词",
-    "questions": "测试问题",
-    "results": "测试结果",
-}
-
 def find_test_set_part(test_set, part_type):
-    """Find a subdirectory within a test set by .test-set-part marker.
-    Falls back to the legacy Chinese directory name if no marker is found.
-    """
+    """Find a subdirectory within a test set by .test-set-part marker."""
     root = get_test_set_dir()
     ts_path = os.path.join(root, test_set)
     if not os.path.isdir(ts_path):
@@ -216,11 +208,6 @@ def find_test_set_part(test_set, part_type):
         content = read_file(marker)
         if content and content.strip() == part_type:
             return sub
-    legacy = _LEGACY_DIR_NAMES.get(part_type)
-    if legacy:
-        fallback = os.path.join(ts_path, legacy)
-        if os.path.isdir(fallback):
-            return fallback
     return None
 
 
@@ -891,7 +878,7 @@ class TestJob:
         with self.write_lock:
             for ts_name, results in self.results_by_set.items():
                 save_results_to_test_set(ts_name, list(results))
-                rdir = find_test_set_part(ts_name, "results") or resolve_test_set_path(ts_name, _LEGACY_DIR_NAMES["results"])
+                rdir = find_test_set_part(ts_name, "results")
                 incr_path = os.path.join(rdir, INCREMENTAL_FILE)
                 if os.path.exists(incr_path):
                     try:
@@ -1036,8 +1023,10 @@ INCREMENTAL_FILE = "_incremental.json"
 def save_results_to_test_set(test_set, results, incremental=False):
     results_dir = find_test_set_part(test_set, "results")
     if not results_dir:
-        results_dir = resolve_test_set_path(test_set, _LEGACY_DIR_NAMES["results"])
-    os.makedirs(results_dir, exist_ok=True)
+        results_dir = resolve_test_set_path(test_set, "测试结果")
+        os.makedirs(results_dir, exist_ok=True)
+        with open(os.path.join(results_dir, ".test-set-part"), "w", encoding="utf-8") as f:
+            f.write("results")
     if incremental:
         filepath = os.path.join(results_dir, INCREMENTAL_FILE)
     else:
