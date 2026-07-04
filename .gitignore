@@ -47,8 +47,6 @@ APPs/linksave/
 # Local config (contains API keys, paths)
 APPs/config.json
 
-# Test datasets - ignore result folders only
-Benches/*/测试结果/
 
 # Migration script (one-time use)
 APPs/migrate_data.py
