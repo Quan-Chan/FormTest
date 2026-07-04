@@ -80,6 +80,7 @@ default_config = {
     "test_set_dir": "",
     "timeout": 60,
     "auto_append_v1": True,
+    "auto_connect": True,
     "allowed_origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
 }
 
@@ -236,7 +237,7 @@ def handle_config():
     allowed_keys = {"api_key", "base_url", "model", "temperature", "top_p",
                     "top_k", "min_p", "context_size", "concurrency", "test_count",
                     "max_retries", "timeout", "streaming", "test_set_dir", "models",
-                    "auto_append_v1"}
+                    "auto_append_v1", "auto_connect"}
     numeric_ranges = {
         "temperature": (0.0, 2.0),
         "top_p": (0.0, 1.0),
@@ -684,6 +685,8 @@ class TestJob:
         self.results_by_set = {}
         self.concurrency = concurrency
         self.test_count = test_count
+        with config_lock:
+            self.max_retries = config.get("max_retries", 3)
         self.status = "running"
         self.stop_event = threading.Event()
         self.subscribers = []
@@ -813,9 +816,9 @@ class TestJob:
 
             if result.get("rate_limited") or result.get("retry"):
                 task.retry_count += 1
-                if task.retry_count > 12:
+                if task.retry_count > self.max_retries:
                     task.status = "error"
-                    task.result = {"success": False, "error": "Exceeded retry limit after 12 retries"}
+                    task.result = {"success": False, "error": f"Exceeded retry limit after {self.max_retries} retries"}
                     self.completed += 1
                     self.failed += 1
                 else:

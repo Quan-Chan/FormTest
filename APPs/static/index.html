@@ -6189,14 +6189,7 @@
                     document.getElementById('aiStreamStatus').textContent = '历史';
                     document.getElementById('resultCount').textContent = `${result.data.length} 题`;
                     for (const item of result.data) {
-                        this.addAiStreamItem({
-                            model_id: item.model_id,
-                            prompt_tag: item.prompt_tag,
-                            question_id: item.question_id,
-                            question: item.question,
-                            expected_answer: item.answer,
-                            ai_answer: item.model_reply
-                        });
+                        this.addAiStreamItem(item);
                     }
                 },
 
