@@ -190,8 +190,40 @@ def validate_file_name(name):
         return False
     return True
 
-# ============ Config ============
 
+_LEGACY_DIR_NAMES = {
+    "prompts": "测试系统提示词",
+    "questions": "测试问题",
+    "results": "测试结果",
+}
+
+def find_test_set_part(test_set, part_type):
+    """Find a subdirectory within a test set by .test-set-part marker.
+    Falls back to the legacy Chinese directory name if no marker is found.
+    """
+    root = get_test_set_dir()
+    ts_path = os.path.join(root, test_set)
+    if not os.path.isdir(ts_path):
+        return None
+    for entry in sorted(os.listdir(ts_path)):
+        if entry.startswith("."):
+            continue
+        sub = os.path.join(ts_path, entry)
+        if not os.path.isdir(sub):
+            continue
+        marker = os.path.join(sub, ".test-set-part")
+        content = read_file(marker)
+        if content and content.strip() == part_type:
+            return sub
+    legacy = _LEGACY_DIR_NAMES.get(part_type)
+    if legacy:
+        fallback = os.path.join(ts_path, legacy)
+        if os.path.isdir(fallback):
+            return fallback
+    return None
+
+
+# ============ Config ============
 @app.route("/api/v1/config", methods=["GET", "POST"])
 def handle_config():
     global config
@@ -286,10 +318,8 @@ def scan_test_sets():
     for entry in sorted(os.listdir(root)):
         entry_path = os.path.join(root, entry)
         if os.path.isdir(entry_path) and not entry.startswith("."):
-            prompts_dir = os.path.join(entry_path, "测试系统提示词")
-            questions_dir = os.path.join(entry_path, "测试问题")
-            has_prompts = os.path.exists(prompts_dir)
-            has_questions = os.path.exists(questions_dir)
+            has_prompts = find_test_set_part(entry, "prompts") is not None
+            has_questions = find_test_set_part(entry, "questions") is not None
             test_sets.append({
                 "name": entry,
                 "has_prompts": has_prompts,
@@ -305,9 +335,9 @@ def get_test_set_prompts():
         return jsonify({"error": "Missing test_set parameter"}), 400
     if not validate_test_set_name(test_set):
         return jsonify({"error": "Invalid test_set name"}), 400
-    prompts_dir = resolve_test_set_path(test_set, "测试系统提示词")
-    if not os.path.exists(prompts_dir):
-        return jsonify({"prompts": [], "warnings": ["目录不存在: 测试系统提示词/"]})
+    prompts_dir = find_test_set_part(test_set, "prompts")
+    if not prompts_dir:
+        return jsonify({"prompts": [], "warnings": ["prompts 目录不存在"]})
     prompts = []
     warnings = []
     for f in sorted(os.listdir(prompts_dir)):
@@ -341,9 +371,9 @@ def get_test_set_questions():
         return jsonify({"error": "Missing test_set parameter"}), 400
     if not validate_test_set_name(test_set):
         return jsonify({"error": "Invalid test_set name"}), 400
-    questions_dir = resolve_test_set_path(test_set, "测试问题")
-    if not os.path.exists(questions_dir):
-        return jsonify({"questions": [], "warnings": ["目录不存在: 测试问题/"]})
+    questions_dir = find_test_set_part(test_set, "questions")
+    if not questions_dir:
+        return jsonify({"questions": [], "warnings": ["questions 目录不存在"]})
     questions = []
     warnings = []
     for f in sorted(os.listdir(questions_dir)):
@@ -389,10 +419,10 @@ def get_all_tags():
         if not os.path.isdir(dir_path) or dir_name.startswith("."):
             continue
         test_set_tags = set()
-        prompts_dir = os.path.join(dir_path, "测试系统提示词")
-        questions_dir = os.path.join(dir_path, "测试问题")
+        prompts_dir = find_test_set_part(dir_name, "prompts")
+        questions_dir = find_test_set_part(dir_name, "questions")
         for d in [prompts_dir, questions_dir]:
-            if os.path.exists(d):
+            if d and os.path.exists(d):
                 for f in os.listdir(d):
                     if not f.endswith(".json"):
                         continue
@@ -420,8 +450,8 @@ def get_test_set_results():
         return jsonify({"error": "Missing test_set parameter"}), 400
     if not validate_test_set_name(test_set):
         return jsonify({"error": "Invalid test_set name"}), 400
-    results_dir = resolve_test_set_path(test_set, "测试结果")
-    if not os.path.exists(results_dir):
+    results_dir = find_test_set_part(test_set, "results")
+    if not results_dir:
         return jsonify({"results": []})
     files = []
     for f in sorted(os.listdir(results_dir), reverse=True):
@@ -855,7 +885,8 @@ class TestJob:
         with self.write_lock:
             for ts_name, results in self.results_by_set.items():
                 save_results_to_test_set(ts_name, list(results))
-                incr_path = resolve_test_set_path(ts_name, "测试结果", INCREMENTAL_FILE)
+                rdir = find_test_set_part(ts_name, "results") or resolve_test_set_path(ts_name, _LEGACY_DIR_NAMES["results"])
+                incr_path = os.path.join(rdir, INCREMENTAL_FILE)
                 if os.path.exists(incr_path):
                     try:
                         os.remove(incr_path)
@@ -997,7 +1028,9 @@ INCREMENTAL_SAVE_STEP = 10  # 可从config读取（若需要）
 INCREMENTAL_FILE = "_incremental.json"
 
 def save_results_to_test_set(test_set, results, incremental=False):
-    results_dir = resolve_test_set_path(test_set, "测试结果")
+    results_dir = find_test_set_part(test_set, "results")
+    if not results_dir:
+        results_dir = resolve_test_set_path(test_set, _LEGACY_DIR_NAMES["results"])
     os.makedirs(results_dir, exist_ok=True)
     if incremental:
         filepath = os.path.join(results_dir, INCREMENTAL_FILE)
