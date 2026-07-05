@@ -1,0 +1,16 @@
+[
+  {
+    "test_set": "运行日志测试",
+    "id": "p8_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 8,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "运行日志",
+    "question": "系统启动时检测到的内存总量是多少GB？",
+    "expected_answer": "64GB",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据提供的系统事件日志，在系统启动序列中明确提到了以下信息：\n\n*   **系统版本**：Ubuntu 22.04.3 LTS\n*   **内核信息**：5.15.0-91-generic\n*   **内存总量**：**64GB**\n    *   (原文显示：“内存总量64GB，当前可用58.2GB”)\n\n因此，系统启动时检测到的内存总量是 **64 GB**。"
+  }
+]

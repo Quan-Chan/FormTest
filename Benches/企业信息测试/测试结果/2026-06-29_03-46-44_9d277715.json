@@ -1,0 +1,44 @@
+[
+  {
+    "test_set": "企业信息测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "企业信息",
+    "question": "星云科技完成B轮融资后的投后估值是多少亿元人民币？",
+    "expected_answer": "15亿元",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据您提供的文件信息，在“公司名称”章节中显示星云科技的\"A轮投资方深创投”和\"B轮投资方红杉资本”均为**15%**的持股比例。\n\n然而，在“员工人数”这一字段中明确记载了：\n> “年营收\": \"约3.2亿元人民币\"\n> \"投后估值\": \"15亿元人民币\"\n\n这似乎存在数据不一致的情况（通常A/B轮估值应高于上轮融资后），但基于文件中直接列出的数值，**星云科技完成B轮融资后的投后估值是 15 亿元人民币**。"
+  },
+  {
+    "test_set": "企业信息测试",
+    "id": "p1_q2_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 2,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "企业信息",
+    "question": "技术研发部算法组负责人赵伟的工号是什么？",
+    "expected_answer": "T2019018",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据您提供的文件内容，技术研发部的算法组组长是**赵伟**。\n\n他的具体信息如下：\n*   **工号**：T2019018\n*   **职位**：算法组长\n*   **直属上级**：技术总监张明远"
+  },
+  {
+    "test_set": "企业信息测试",
+    "id": "p1_q3_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 3,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "企业信息",
+    "question": "公司创始人兼CEO陈志远的持股比例是多少？",
+    "expected_answer": "42%",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据提供的文件系统内容，**陈志远作为公司创始人兼 CEO 的持股比例为：42%**。\n\n这一信息位于“公司概况”下的股权结构部分，明确记载：“创始人兼 CEO 陈志远\": \"42%\"。"
+  }
+]

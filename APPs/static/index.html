@@ -5853,24 +5853,28 @@
                         prompts: bySet[ts].prompts,
                         questions: Array.from(bySet[ts].questions)
                     }));
-                    const payload = {
-                        test_sets: testSetsPayload,
-                        models: this.selectedModels
-                    };
 
                     try {
-                        const submitResp = await fetch('/api/v1/test-job/submit', {
+                        const hubResp = await fetch('/api/v1/test-job/hub', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify(payload)
+                            body: JSON.stringify({action: 'start', test_sets: testSetsPayload, models: this.selectedModels})
                         });
-                        if (!submitResp.ok) {
-                            const err = await submitResp.json();
-                            throw new Error(err.error || '提交测试任务失败');
+                        if (hubResp.status === 409) {
+                            const err = await hubResp.json();
+                            showToast(err.message || '已有测试任务在运行', 'warning');
+                            btn.disabled = false;
+                            btn.classList.remove('btn-loading');
+                            stopBtn.disabled = true;
+                            btn.innerHTML = '开始测试';
+                            this.isRunning = false;
+                            return;
                         }
-                        const { job_id, total_tasks } = await submitResp.json();
-
-                        localStorage.setItem('ft_active_job_id', job_id);
+                        if (!hubResp.ok) {
+                            const err = await hubResp.json();
+                            throw new Error(err.error || '启动测试失败');
+                        }
+                        const { job_id, total_tasks } = await hubResp.json();
                         this._activeJobId = job_id;
                         this.allResults = {};
                         this._allStreamItems = [];
@@ -5941,59 +5945,19 @@
                     }
                 },
 
-                async _recoverActiveJob(jobId) {
-                    try {
-                        const resp = await fetch(`/api/v1/test-job/status/${jobId}`);
-                        if (!resp.ok) {
-                            localStorage.removeItem('ft_active_job_id');
-                            return;
-                        }
-                        const st = await resp.json();
-                        if (st.status === 'running') {
-                            this._activeJobId = jobId;
-                            this.isRunning = true;
-                            this.allResults = {};
-                            this._allStreamItems = [];
-                            document.getElementById('aiStreamContent').innerHTML = '';
-                            document.getElementById('progressContainer').style.display = 'block';
-                            document.getElementById('progressContainer').dataset.total = st.total;
-                            document.getElementById('progressText').textContent = `已恢复 ${st.completed}/${st.total} 个任务...`;
-                            document.getElementById('runBtn').disabled = true;
-                            document.getElementById('stopBtn').disabled = false;
-                            document.getElementById('runBtn').innerHTML = '测试中...';
-                            document.getElementById('aiStreamStatus').textContent = '生成中';
-                            document.getElementById('aiStreamStatus').classList.add('active');
-
-                            this.abortController = new AbortController();
-                            this._connectJobStream(jobId).catch(() => {});
-                        } else if (st.status === 'completed') {
-                            localStorage.removeItem('ft_active_job_id');
-                            await this.loadHistoryResults();
-                            const entries = this.historyResultsList;
-                            if (entries.length > 0) {
-                                const newest = entries[entries.length - 1];
-                                const hs = document.getElementById('historySelector');
-                                if (hs) hs.value = newest.path || newest.name || '';
-                                await this.loadHistoryResult();
-                            }
-                        } else {
-                            localStorage.removeItem('ft_active_job_id');
-                        }
-                    } catch (e) {
-                        localStorage.removeItem('ft_active_job_id');
-                    }
                 },
 
                 async stopTests() {
-                    if (this._activeJobId) {
-                        try {
-                            await fetch(`/api/v1/test-job/stop/${this._activeJobId}`, { method: 'POST' });
-                        } catch (e) {}
-                    }
+                    try {
+                        await fetch('/api/v1/test-job/hub', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({action: 'stop'})
+                        });
+                    } catch (e) {}
                     if (this.abortController) {
                         this.abortController.abort();
                     }
-                    localStorage.removeItem('ft_active_job_id');
                     this._activeJobId = null;
                     showToast('测试已终止', 'warning');
                 },
@@ -6024,7 +5988,6 @@
                         document.getElementById('aiStreamStatus').classList.remove('active');
                         this.isRunning = false;
                         this._activeJobId = null;
-                        localStorage.removeItem('ft_active_job_id');
 
                         this.loadHistoryResults().then(() => {
                             const entries = this.historyResultsList;
@@ -6261,8 +6224,46 @@
                     this.renderPromptList();
                     this.renderQuestionList();
                     this.loadHistoryResults();
-                    const activeJobId = localStorage.getItem('ft_active_job_id');
-                    if (activeJobId) { await this._recoverActiveJob(activeJobId); }
+                    try {
+                        const resp = await fetch('/api/v1/test-job/hub', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({action: 'status'})
+                        });
+                        const st = await resp.json();
+                        if (st.status === 'running') {
+                            this._activeJobId = st.job_id;
+                            this.isRunning = true;
+                            this.allResults = {};
+                            this._allStreamItems = [];
+                            document.getElementById('aiStreamContent').innerHTML = '';
+                            document.getElementById('progressContainer').style.display = 'block';
+                            document.getElementById('progressContainer').dataset.total = st.total;
+                            document.getElementById('progressText').textContent = `已恢复 ${st.completed}/${st.total} 个任务...`;
+                            document.getElementById('progressPercent').textContent = st.total > 0 ? Math.round(st.completed/st.total*100) + '%' : '0%';
+                            document.getElementById('resultCount').textContent = `${st.completed} 题`;
+                            document.getElementById('runBtn').disabled = true;
+                            document.getElementById('stopBtn').disabled = false;
+                            document.getElementById('runBtn').innerHTML = '测试中...';
+                            document.getElementById('aiStreamStatus').textContent = '生成中';
+                            document.getElementById('aiStreamStatus').classList.add('active');
+                            this.abortController = new AbortController();
+                            this._connectJobStream(st.job_id).catch(() => {});
+                        } else if (st.status === 'completed') {
+                            await this.loadHistoryResults();
+                            const entries = this.historyResultsList;
+                            if (entries.length > 0) {
+                                const newest = entries[entries.length - 1];
+                                const hs = document.getElementById('historySelector');
+                                if (hs) {
+                                    hs.value = newest.path || newest.name || '';
+                                    const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
+                                    if (textEl) textEl.textContent = `[${newest.testSet}] ${newest.name}`;
+                                }
+                                this.loadHistoryResult();
+                            }
+                        }
+                    } catch(e) {}
                     this.canvasState.history = [];
                     this.canvasHistoryIndex = -1;
                     this.saveCanvasSnapshot();

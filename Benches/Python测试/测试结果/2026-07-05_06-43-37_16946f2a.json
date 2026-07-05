@@ -1,0 +1,16 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "`@` 语法糖在 Python 中本质上是一个**高阶函数（Higher-Order Function）**，它的作用是将一个普通函数封装成一个能够“调用”该函数的新函数。\n\n具体而言：\n\n1. **定义方式**：\n   ```python\n   @decorator\n   def original_function():\n       pass\n   \n   # 执行时会被自动调用\n   original_function()\n   ```\n\n2. **实现原理**（基于 `@` 与 `func = decorator(func)`）：\n   - Python 将 `@decorator` 视为一个函数定义。\n   - 当执行到 `original_function()` 时，系统会先调用 `decorator(original_function)`，返回一个新函数对象 `wrapper`。\n   - 这个新函数（wrapper）**接收原函数的参数和返回值作为第一个参数**，然后对参数进行后续处理、封装或扩展逻辑。\n   - 最终返回的 wrapper 就是真正被调用的“装饰器”函数。\n\n3. **本质动作总结**：\n   > `@` 语法将普通函数提升为高阶函数，并使其成为调用该函数的新函数对象。它通过返回一个函数（wrapper）来间接执行了原始函数的逻辑，同时保留了原函数的名称、文档等信息。\n\n简而言之：**`@` = “用 @ 包装一个函数 → 返回一个新函数 → 直接调用那个新函数”**。"
+  }
+]

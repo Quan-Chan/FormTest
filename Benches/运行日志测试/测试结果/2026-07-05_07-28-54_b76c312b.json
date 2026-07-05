@@ -1,0 +1,30 @@
+[
+  {
+    "test_set": "运行日志测试",
+    "id": "p8_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 8,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "运行日志",
+    "question": "系统启动时检测到的内存总量是多少GB？",
+    "expected_answer": "64GB",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据提供的系统事件日志，在【服务器 node-prod-07 启动完成】这一行中明确提到：\n\n> \"内存总量 **64GB**\"\n\n因此，系统启动时检测到的内存总量是 **64 GB**。"
+  },
+  {
+    "test_set": "运行日志测试",
+    "id": "p8_q2_mqwen3.5-0.8b_0",
+    "prompt_id": 8,
+    "question_id": 2,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "运行日志",
+    "question": "首个触发限流封禁的异常流量IP地址是什么？",
+    "expected_answer": "203.45.178.92",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据提供的系统事件日志，**第一个触发限流封禁的异常流量 IP 地址是：203.45.178.92**。\n\n具体依据如下（位于日志中的\"[10:15:33] 异常流量检测”部分）：\n*   **时间戳**：系统在凌晨 10:15 检测到该 IP。\n*   **触发条件**：请求频率达到每秒 **127 次**，超过阈值 **100 次每秒**。\n*   **封禁结果**：系统已触发限流规则，对该 IP 进行了封禁操作（封禁时长600秒）。"
+  }
+]

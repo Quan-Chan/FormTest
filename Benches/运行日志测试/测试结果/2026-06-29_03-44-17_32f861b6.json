@@ -1,0 +1,44 @@
+[
+  {
+    "test_set": "运行日志测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "运行日志",
+    "question": "系统启动时检测到的内存总量是多少GB？",
+    "expected_answer": "64GB",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据您提供的日志文件，系统在启动时的内存总量为 **64GB**。\n\n具体信息如下：\n*   在 `<System>` 系统的起始部分，有明确记录：`\"内存总量\": \"64GB\"`。"
+  },
+  {
+    "test_set": "运行日志测试",
+    "id": "p1_q3_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 3,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "运行日志",
+    "question": "数据库慢查询优化中创建的新索引完整名称是什么？",
+    "expected_answer": "idx_orders_user_status_time",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据您提供的系统日志，在**11:05:33**这个时间点下，执行了索引优化任务，生成的新索引为：\n\n`idx_orders_user_status_time`"
+  },
+  {
+    "test_set": "运行日志测试",
+    "id": "p1_q2_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 2,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "运行日志",
+    "question": "首个触发限流封禁的异常流量IP地址是什么？",
+    "expected_answer": "203.45.178.92",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "基于您提供的日志文件，我们可以追踪到首个触发**限流（Rate Limiting）**和**封禁**事件的 IP 地址如下：\n\n1.  **时间戳**: `[09:23:45]` - `系统启动序列`\n2.  **异常流量告警**: `[10:15:33]` - \"攻击 IP\": `203.45.178.92`, \"超过阈值\": \"100 次/秒\", \"处理\": \"封禁 600 秒\"\n3.  **第二波异常**: `[10:23:47]` - \"攻击 IP\": `45.33.32.156`, \"加入观察名单\"\n\n**结论：**\n首个触发限流（超过阈值）并随后被封禁的 IP 地址是：\n> **203.45.178.92**\n\n该 IP 在当天的启动时间（系统启动时）就发出了第一次的请求频率告警，超过了设定的阈值（100 次/秒），并被系统封禁了 600 秒。"
+  }
+]

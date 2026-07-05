@@ -1017,6 +1017,93 @@ def get_test_job_status(job_id):
     })
 
 
+@app.route("/api/v1/test-job/hub", methods=["POST"])
+def test_job_hub():
+    data = request.get_json(silent=True) or {}
+    action = data.get("action", "")
+    if action == "start":
+        return _hub_start(data)
+    elif action == "status":
+        return _hub_status()
+    elif action == "stop":
+        return _hub_stop()
+    return jsonify({"error": "未知 action"}), 400
+
+
+def _hub_start(data):
+    with active_jobs_lock:
+        for j in active_jobs.values():
+            if j.status == "running":
+                return jsonify({"status": "busy", "message": "已有测试任务在运行"}), 409
+
+        test_sets = data.get("test_sets", [])
+        models = data.get("models", [])
+
+        if not models:
+            with config_lock:
+                models = [config.get("model", "gpt-4o")]
+
+        if not test_sets:
+            return jsonify({"error": "No test sets specified"}), 400
+
+        for ts in test_sets:
+            if not validate_test_set_name(ts.get("name", "")):
+                return jsonify({"error": f"Invalid test_set name: {ts.get('name')}"}), 400
+
+        with config_lock:
+            concurrency = config.get("concurrency", 1)
+            test_count = config.get("test_count", 1)
+
+        job_id = uuid.uuid4().hex
+        job = TestJob(job_id, test_sets, models, concurrency, test_count)
+
+        if job.total == 0:
+            return jsonify({"error": "No test items (cartesian product is empty)"}), 400
+
+        MAX_TASKS = 10000
+        if job.total > MAX_TASKS:
+            return jsonify({"error": f"任务数 {job.total} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
+
+        active_jobs[job_id] = job
+
+    thread = threading.Thread(target=job.run_scheduler, name=f"Job-{job_id[:8]}")
+    thread.daemon = True
+    thread.start()
+
+    return jsonify({"status": "started", "job_id": job_id, "total_tasks": job.total}), 201
+
+
+def _hub_status():
+    with active_jobs_lock:
+        for j in active_jobs.values():
+            if j.status == "running":
+                return jsonify({
+                    "status": "running",
+                    "job_id": j.job_id,
+                    "completed": j.completed,
+                    "total": j.total,
+                    "failed": j.failed,
+                })
+            if j.status == "completed":
+                return jsonify({
+                    "status": "completed",
+                    "job_id": j.job_id,
+                    "completed": j.completed,
+                    "total": j.total,
+                    "failed": j.failed,
+                })
+    return jsonify({"status": "idle"})
+
+
+def _hub_stop():
+    with active_jobs_lock:
+        for j in active_jobs.values():
+            if j.status == "running":
+                j.stop()
+                return jsonify({"status": "ok", "message": "测试已终止"})
+    return jsonify({"status": "ok", "message": "没有运行中的任务"})
+
+
 INCREMENTAL_SAVE_STEP = 10  # 可从config读取（若需要）
 INCREMENTAL_FILE = "_incremental.json"
 

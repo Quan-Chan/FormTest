@@ -1,0 +1,44 @@
+[
+  {
+    "test_set": "运行日志测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "运行日志",
+    "question": "系统启动时检测到的内存总量是多少GB？",
+    "expected_answer": "64GB",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据提供的文件内容，系统在启动时的内存总量为 **64GB**。"
+  },
+  {
+    "test_set": "运行日志测试",
+    "id": "p1_q2_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 2,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "运行日志",
+    "question": "首个触发限流封禁的异常流量IP地址是什么？",
+    "expected_answer": "203.45.178.92",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据系统日志，**首个触发限流封禁的异常流量 IP 地址是 `203.45.178.92`**。\n\n以下是相关依据：在 `异常流量告警` 部分记录到如下内容：\n*   **时间戳**: `[10:15:33]`\n*   **攻击 IP**: `203.45.178.92`\n*   **处理**: \"封禁 600 秒\"\n\n该地址随后在 `[10:23:47]` 被标记为“第二波异常”，并进入观察名单。"
+  },
+  {
+    "test_set": "运行日志测试",
+    "id": "p1_q3_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 3,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "DSL",
+    "question_tag": "运行日志",
+    "question": "数据库慢查询优化中创建的新索引完整名称是什么？",
+    "expected_answer": "idx_orders_user_status_time",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "在提供的文档中，关于“数据库慢查询”和“索引优化”的描述如下：\n\n*   **慢查询信息**：显示执行时间为 `3.7 秒`，表记录数为约 `520万条`。\n*   **索引优化详情**：明确提到：“创建耗时：**7分42秒**”，并且给出了具体的**索引名称**：`idx_orders_user_status_time`（索引全称为 `idx_orders_user_status_time`）。\n\n因此，新创建的完整索引名称是：**idx_orders_user_status_time**。"
+  }
+]

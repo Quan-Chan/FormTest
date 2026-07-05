@@ -1,0 +1,30 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q2_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 2,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "Python测试",
+    "question": "Generators（生成器）函数与普通函数的区别是什么？",
+    "expected_answer": "生成器函数使用`yield`关键字代替`return`，每次调用`yield`会暂停函数执行并返回一个值，下次调用从暂停处继续执行，因此支持惰性求值（lazy evaluation），只在需要时才生成值。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据提供的文档内容，**生成器函数与普通函数的主要区别在于“执行顺序”和“内存占用”**：\n\n1.  **执行顺序不同（迭代 vs 一次性）**\n    *   **普通函数**：**一次性返回**。当你调用一个普通函数时，它会在调用完所有参数后立即结束并返回结果。如果你需要多次调用同一个函数来获取数据，必须手动将结果传递给下一个函数才能继续执行后续逻辑。\n    *   **生成器函数**：使用 `yield` 关键字实现**惰性求值（Lazy Evaluation）**。每次你调用生成器时，它不会立即开始工作；而是在暂停的地方继续执行，直到再次遇到 `yield` 或函数结束才真正进入运行状态。\n\n2.  **内存占用不同**\n    *   **普通函数**：一旦调用完成并返回数据，它就会将处理过的所有数据（无论数量多少）全部加载到内存中存储起来。这使得它非常适用于一次性需要大量数据的场景。\n    *   **生成器函数**：**按需生成**。每次调用时，它只执行一次暂停点，然后返回一个生成器对象供下一次调用使用。因此，即使处理的数据量极大，也不会占用额外的显式内存，非常适合处理大型数据集或无限序列（如斐波那契数列）。\n\n3.  **其他补充说明**\n    *   **语法不同**：普通函数通常不使用 `yield`；生成器需要使用 `yield` 关键字。\n    *   **返回值行为**：普通函数返回的是计算完成后的结果；生成器每次调用都会返回一个生成器对象，供上层代码继续处理。"
+  },
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "在 Python 中，`@` 语法**本质上是将当前函数转换为一个“闭包”并封装为高阶函数**。\n\n具体来说，它完成了以下三个层面的转换：\n\n1.  **创建新函数的过程（高阶函数）**  \n    `@decorator(func)` 内部执行的是 `func = decorator(func)`。这相当于在原始函数上**复制了一次自身的上下文环境**（包括作用域、参数和变量），从而返回出一个“新的函数”。这个新生成的函数拥有与原函数完全相同的参数类型和接收方式，只是多了一层调用逻辑。\n\n2.  **提升与包装过程（装饰器本质）**  \n    由于 `@decorator` 本身也是一个函数，它会自动**提升（upgrade）并重新绑定所有传入的参数**。因此：\n    *   原有的 `$args$` 会被提升到新的顶层参数位置。\n    *   原函数的变量名和符号会变为新函数的对应名称。\n    *   `__name__`、`__doc__` 等元信息也会被保留（通过 `functools.wraps`）。\n\n3.  **生成闭包的过程**  \n    上述两个过程共同作用的结果，是形成了一个新的函数对象。这个新生成的函数拥有“捕获”上一层函数的引用（即闭包），能够访问原函数内部的变量、方法甚至局部变量（如果存在的话）。这实现了**高阶函数**的核心特性。\n\n---\n\n### 直观示例理解\n\n```python\ndef add(a, b): return a + b\n\n# @decorator adds a wrapper that logs execution time\n@decorator\ndef my_decorator(func): \n    def wrapper(*args, **kwargs):\n        import time\n        start = time.time()\n        result = func(*args, **kwargs)\n        print(f'{func.__name__} took {time.time()-start:.2f}s')\n        return result\n    return wrapper\n\n# 使用\nresult = my_decorator(add)\nprint(result(10)) # Output: my_decorator took 0.00s (example, logic hides inside wrapper)\n```\n\n**本质总结：**  \n`@decorator` 操作 = **对函数进行“自复制 + 参数重新绑定”的过程**。它不直接修改原代码，而是通过创建一个新的函数对象，并在该新函数的内部引用到原函数。"
+  }
+]
