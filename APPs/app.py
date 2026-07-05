@@ -463,17 +463,6 @@ def handle_canvas_state():
 
 # ============ 废弃端点（前端已改用 hub） ============
 
-@app.route("/api/v1/test-job/stop/<job_id>", methods=["POST"])
-def stop_test_job(job_id):
-    """已废弃，请使用 POST /api/v1/test-job/hub {action:'stop'}"""
-    with active_jobs_lock:
-        job = active_jobs.get(job_id)
-    if job is None:
-        return jsonify({"error": "Job not found"}), 404
-    job.stop()
-    return jsonify({"status": "ok"})
-
-
 # ============ AI Call ============
 
 def _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k=None, min_p=None, context_size=None):
@@ -891,51 +880,6 @@ class TestJob:
         self.stop_event.set()
 
 
-@app.route("/api/v1/test-job/submit", methods=["POST"])
-def submit_test_job():
-    """已废弃，请使用 POST /api/v1/test-job/hub {action:'start'}"""
-    data = request.get_json()
-    if not data:
-        return jsonify({"error": "Invalid request"}), 400
-
-    with config_lock:
-        concurrency = config.get("concurrency", 1)
-        test_count = config.get("test_count", 1)
-
-    test_sets = data.get("test_sets", [])
-    models = data.get("models", [])
-
-    if not models:
-        with config_lock:
-            models = [config.get("model", "gpt-4o")]
-
-    if not test_sets:
-        return jsonify({"error": "No test sets specified"}), 400
-
-    for ts in test_sets:
-        if not validate_test_set_name(ts.get("name", "")):
-            return jsonify({"error": f"Invalid test_set name: {ts.get('name')}"}), 400
-
-    job_id = uuid.uuid4().hex
-    job = TestJob(job_id, test_sets, models, concurrency, test_count)
-
-    if job.total == 0:
-        return jsonify({"error": "No test items (cartesian product is empty)"}), 400
-
-    MAX_TASKS = 10000
-    if job.total > MAX_TASKS:
-        return jsonify({"error": f"任务数 {job.total} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
-
-    with active_jobs_lock:
-        active_jobs[job_id] = job
-
-    thread = threading.Thread(target=job.run_scheduler, name=f"Job-{job_id[:8]}")
-    thread.daemon = True
-    thread.start()
-
-    return jsonify({"job_id": job_id, "total_tasks": job.total})
-
-
 @app.route("/api/v1/test-job/stream/<job_id>", methods=["GET"])
 def stream_test_job(job_id):
     with active_jobs_lock:
@@ -994,21 +938,6 @@ def stream_test_job(job_id):
     return Response(generate(), mimetype="text/event-stream")
 
 
-@app.route("/api/v1/test-job/status/<job_id>", methods=["GET"])
-def get_test_job_status(job_id):
-    """已废弃，请使用 POST /api/v1/test-job/hub {action:'status'}"""
-    with active_jobs_lock:
-        job = active_jobs.get(job_id)
-    if job is None:
-        return jsonify({"status": "not_found"}), 404
-    return jsonify({
-        "status": job.status,
-        "completed": job.completed,
-        "total": job.total,
-        "failed": job.failed,
-    })
-
-
 @app.route("/api/v1/test-job/hub", methods=["POST"])
 def test_job_hub():
     data = request.get_json(silent=True) or {}
@@ -1023,39 +952,39 @@ def test_job_hub():
 
 
 def _hub_start(data):
+    # 锁外：解析 + 校验 + 构造
+    test_sets = data.get("test_sets", [])
+    models = data.get("models", [])
+
+    if not models:
+        with config_lock:
+            models = [config.get("model", "gpt-4o")]
+
+    if not test_sets:
+        return jsonify({"error": "No test sets specified"}), 400
+
+    for ts in test_sets:
+        if not validate_test_set_name(ts.get("name", "")):
+            return jsonify({"error": f"Invalid test_set name: {ts.get('name')}"}), 400
+
+    with config_lock:
+        concurrency = config.get("concurrency", 1)
+        test_count = config.get("test_count", 1)
+
+    job_id = uuid.uuid4().hex
+    job = TestJob(job_id, test_sets, models, concurrency, test_count)
+
+    if job.total == 0:
+        return jsonify({"error": "No test items (cartesian product is empty)"}), 400
+
+    if job.total > MAX_TASKS:
+        return jsonify({"error": f"任务数 {job.total} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
+
+    # 锁内：忙检查 + 插入
     with active_jobs_lock:
         for j in active_jobs.values():
-            if j.status == "running":
+            if j.status in ("running", "completed"):
                 return jsonify({"status": "busy", "message": "已有测试任务在运行"}), 409
-
-        test_sets = data.get("test_sets", [])
-        models = data.get("models", [])
-
-        if not models:
-            with config_lock:
-                models = [config.get("model", "gpt-4o")]
-
-        if not test_sets:
-            return jsonify({"error": "No test sets specified"}), 400
-
-        for ts in test_sets:
-            if not validate_test_set_name(ts.get("name", "")):
-                return jsonify({"error": f"Invalid test_set name: {ts.get('name')}"}), 400
-
-        with config_lock:
-            concurrency = config.get("concurrency", 1)
-            test_count = config.get("test_count", 1)
-
-        job_id = uuid.uuid4().hex
-        job = TestJob(job_id, test_sets, models, concurrency, test_count)
-
-        if job.total == 0:
-            return jsonify({"error": "No test items (cartesian product is empty)"}), 400
-
-        MAX_TASKS = 10000
-        if job.total > MAX_TASKS:
-            return jsonify({"error": f"任务数 {job.total} 超过上限 {MAX_TASKS}，请减少测试项数量"}), 400
-
         active_jobs[job_id] = job
 
     thread = threading.Thread(target=job.run_scheduler, name=f"Job-{job_id[:8]}")
@@ -1076,6 +1005,7 @@ def _hub_status():
                     "total": j.total,
                     "failed": j.failed,
                 })
+        for j in active_jobs.values():
             if j.status == "completed":
                 return jsonify({
                     "status": "completed",
@@ -1098,6 +1028,7 @@ def _hub_stop():
 
 INCREMENTAL_SAVE_STEP = 10  # 可从config读取（若需要）
 INCREMENTAL_FILE = "_incremental.json"
+MAX_TASKS = 10000
 
 def save_results_to_test_set(test_set, results, incremental=False):
     results_dir = find_test_set_part(test_set, "results")

@@ -1,0 +1,30 @@
+[
+  {
+    "test_set": "Python测试",
+    "id": "p1_q1_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 1,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "Python测试",
+    "question": "Python装饰器（Decorator）的`@`语法本质上是执行了什么操作？",
+    "expected_answer": "`@decorator`语法本质上是执行了`func = decorator(func)`的赋值操作，将原函数作为参数传递给装饰器函数，并将返回的新函数绑定到原函数名上。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "在 Python 中，`@` 修饰符所代表的**@decorator**是一个**高阶函数**。它的核心作用是：\n\n```python\ndef decorator(func):\n    pass  # 实际逻辑在这里定义\nreturn func\n```\n\n简而言之，它的作用是：**接收一个函数作为参数，返回一个新的包含原函数的“装饰器”对象。**\n\n从 Python 的闭包和函数式编程角度看，`@decorator` 等价于：\n\n```python\nfunc = decorator(func)\n```\n\n也就是说，`decorator` 是一个**匿名函数**。当你在代码中调用它时（例如 `@timer`），它会返回一个新的、由原函数的功能增强后的版本。\n\n### 具体执行流程：\n\n1. **接收参数**：装饰器函数会接收到一个目标函数作为第一个参数。\n2. **构建新函数**：对传入的函数进行封装，并返回一个新对象（即新的装饰器）。\n3. **闭包作用域**：新返回的对象中会包含原函数的名字等信息，这样当在调用它时，能自动保留原函数的元信息（如 `__name__`、`__doc__` 等），同时还能添加额外的功能。\n\n### 举例说明：\n\n```python\ndef timer(func):\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        print(f'{func.__name__} took {time.time()-start:.2f}s')\n        return result\n    return wrapper\n\n@timer\ndef greet(name=\"Hello\"):\n    print(f\"Hi, {name}!\")\n\ngreet()  # 输出：Hi, Hello! (函数名被保留)\n```\n\n### 总结：\n\n`@decorator` 的本质是**创建一个“包裹”自己的函数的新函数**，它通过返回一个新对象的方式实现装饰效果。这个新对象继承了原函数的命名和文档，并额外添加了功能，就像给函数戴上了“帽子”。"
+  },
+  {
+    "test_set": "Python测试",
+    "id": "p1_q2_mqwen3.5-0.8b_0",
+    "prompt_id": 1,
+    "question_id": 2,
+    "model_id": "qwen3.5-0.8b",
+    "prompt_tag": "原版",
+    "question_tag": "Python测试",
+    "question": "Generators（生成器）函数与普通函数的区别是什么？",
+    "expected_answer": "生成器函数使用`yield`关键字代替`return`，每次调用`yield`会暂停函数执行并返回一个值，下次调用从暂停处继续执行，因此支持惰性求值（lazy evaluation），只在需要时才生成值。",
+    "test_index": 1,
+    "test_count": 1,
+    "ai_answer": "根据你提供的文档内容，**Python 中的生成器函数与普通函数最大的核心区别在于“执行方式”和“内存占用”**：\n\n### 1. 执行机制不同 (In-Memory vs. List)\n*   **普通函数：** 是**有返回值**的。当你调用一个函数时（例如 `print(\"Hello\")`），它会在代码结束之前返回那个值，并立即停止执行。\n*   **生成器：** 是**无返回值**的（惰性）。它们通过 `yield` 关键字将函数变成生成器函数。每次调用生成器的 `__next__` 方法时，它会从上次暂停的位置继续执行，直到遇到 `yield` 或函数结束，**不会**立即返回结果。\n\n### 2. 内存占用不同 (Lazy vs. Persistent)\n*   **普通函数：** 由于已经返回值了，它会将处理完的数据（无论是列表、对象还是生成器对象）加载到**堆内存**中存储。这意味着如果调用次数很多且数据量大，会浪费大量存储空间。\n*   **生成器：** 在生成器内部是“无状态的”。每次 `yield` 时，只保存上一个暂停点，其他中间状态（如列表长度、索引等）被丢弃并重新计算。因此，**它不需要占用额外的堆内存**。\n\n### 3. 如何切换 (从普通函数到生成器)\n文档中明确指出，为了在普通函数和生成器之间进行转换，需要使用 `yield`：\n*   **方法：** 使用 `yield` 关键字。\n    *   例如：`def fibonacci(): a, b = 0, 1; while True: yield a; a, b = b, a + b; return None`（生成器）\n    *   对比普通函数：`def fibonacci(): return [i for i in range(10)]`（列表推导式/普通函数）\n\n### 总结\n简而言之，**普通函数是“用完即走并返回结果”，而生成器是“按需产生并暂停”。**"
+  }
+]
