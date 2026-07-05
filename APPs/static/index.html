@@ -3067,7 +3067,6 @@
                 availableModels: [],
                 allResults: {},
                 abortController: null,
-                _activeJobId: null,
                 isRunning: false,
                 openGroups: new Set(),
                 canvasState: { nodes: [], connections: [], history: [] },
@@ -5875,7 +5874,6 @@
                             throw new Error(err.error || '启动测试失败');
                         }
                         const { job_id, total_tasks } = await hubResp.json();
-                        this._activeJobId = job_id;
                         this.allResults = {};
                         this._allStreamItems = [];
                         document.getElementById('aiStreamContent').innerHTML = '';
@@ -5956,7 +5954,6 @@
                     if (this.abortController) {
                         this.abortController.abort();
                     }
-                    this._activeJobId = null;
                     showToast('测试已终止', 'warning');
                 },
 
@@ -5985,7 +5982,6 @@
                         document.getElementById('aiStreamStatus').textContent = '完成';
                         document.getElementById('aiStreamStatus').classList.remove('active');
                         this.isRunning = false;
-                        this._activeJobId = null;
 
                         this.loadHistoryResults().then(() => {
                             const entries = this.historyResultsList;
@@ -6230,7 +6226,6 @@
                         });
                         const st = await resp.json();
                         if (st.status === 'running') {
-                            this._activeJobId = st.job_id;
                             this.isRunning = true;
                             this.allResults = {};
                             this._allStreamItems = [];

@@ -384,19 +384,8 @@ def get_test_set_questions():
     return jsonify({"questions": questions, "warnings": warnings})
 
 
-_tags_cache = None
-_tags_cache_by_set = None
-
-def invalidate_tags_cache():
-    global _tags_cache, _tags_cache_by_set
-    _tags_cache = None
-    _tags_cache_by_set = None
-
 @app.route("/api/v1/tags", methods=["GET"])
 def get_all_tags():
-    global _tags_cache, _tags_cache_by_set
-    if _tags_cache is not None and _tags_cache_by_set is not None:
-        return jsonify({"tags": _tags_cache, "tags_by_set": _tags_cache_by_set})
     root = get_test_set_dir()
     all_tags = set()
     tags_by_set = {}
@@ -423,10 +412,8 @@ def get_all_tags():
                             all_tags.add(tag)
                             test_set_tags.add(tag)
         tags_by_set[dir_name] = sorted(test_set_tags)
-    _tags_cache = sorted(all_tags)
-    _tags_cache_by_set = tags_by_set
     return jsonify({
-        "tags": _tags_cache,
+        "tags": sorted(all_tags),
         "tags_by_set": tags_by_set,
     })
 
@@ -474,8 +461,11 @@ def handle_canvas_state():
     return jsonify({"status": "ok"})
 
 
+# ============ 废弃端点（前端已改用 hub） ============
+
 @app.route("/api/v1/test-job/stop/<job_id>", methods=["POST"])
 def stop_test_job(job_id):
+    """已废弃，请使用 POST /api/v1/test-job/hub {action:'stop'}"""
     with active_jobs_lock:
         job = active_jobs.get(job_id)
     if job is None:
@@ -903,6 +893,7 @@ class TestJob:
 
 @app.route("/api/v1/test-job/submit", methods=["POST"])
 def submit_test_job():
+    """已废弃，请使用 POST /api/v1/test-job/hub {action:'start'}"""
     data = request.get_json()
     if not data:
         return jsonify({"error": "Invalid request"}), 400
@@ -1005,6 +996,7 @@ def stream_test_job(job_id):
 
 @app.route("/api/v1/test-job/status/<job_id>", methods=["GET"])
 def get_test_job_status(job_id):
+    """已废弃，请使用 POST /api/v1/test-job/hub {action:'status'}"""
     with active_jobs_lock:
         job = active_jobs.get(job_id)
     if job is None:
