@@ -861,6 +861,12 @@ class TestJob:
             with self.lock:
                 self.executor = ThreadPoolExecutor(max_workers=self.concurrency)
 
+            while len(self.subscribers) == 0 and self.status == "running":
+                if self.stop_event.is_set():
+                    self.status = "stopped"
+                    break
+                time.sleep(0.01)
+
             while self.status == "running":
                 self._collect_futures()
                 self._check_rate_limited()
@@ -999,6 +1005,7 @@ class TestJob:
 
         with active_jobs_lock:
             active_jobs.pop(self.job_id, None)
+        self.stream_chunks.clear()
 
     def stop(self):
         self.stop_event.set()
