@@ -1194,6 +1194,11 @@
             }
         }
 
+        .result-item.streaming .result-content.ai {
+            border-color: var(--accent);
+            background: rgba(59, 130, 246, 0.06);
+        }
+
         .ai-stream-panel {
             flex: 0 0 40%;
             min-width: 280px;
@@ -3090,7 +3095,8 @@
                 _sseTimer: null,
                 _lastRemovedSelections: null,
                 _tabSearchText: { prompts: '', questions: '' },
-                _allStreamItems: [],
+                _liveItems: [],
+                _currentDisplay: '',
                 _confirmResolve: null,
                 _promptResolve: null,
 
@@ -5361,46 +5367,14 @@
                     const node = this.canvasState.nodes.find(n => n.id === nodeId);
                     if (!node) return;
 
-                    if (node.tag) {
-                        this.saveUndoSnapshot();
-                        if (type === 'prompt') {
-                            const matching = this.prompts.filter(p => (p.testSet || '未分类') === node.tag);
-                            const anySelected = matching.some(p => this.selectedPrompts.has(`p_${p.testSet || '未分类'}_${p.id}_${p.file || ''}`));
-                            if (anySelected) {
-                                matching.forEach(p => {
-                                    this.selectedPrompts.delete(`p_${p.testSet || '未分类'}_${p.id}_${p.file || ''}`);
-                                    this.autoDeselectQuestions(`p_${p.testSet || '未分类'}_${p.id}_${p.file || ''}`);
-                                });
-                            } else {
-                                matching.forEach(p => {
-                                    const key = `p_${p.testSet || '未分类'}_${p.id}_${p.file || ''}`;
-                                    this.selectedPrompts.add(key);
-                                    this.autoSelectQuestions(key);
-                                });
-                            }
-                        } else if (type === 'question') {
-                            const matching = this.questions.filter(q => (q.testSet || '未分类') === node.tag);
-                            const anySelected = matching.some(q => this.selectedQuestions.has(`q_${q.testSet || '未分类'}_${q.id}_${q.file || ''}`));
-                            if (anySelected) {
-                                matching.forEach(q => this.selectedQuestions.delete(`q_${q.testSet || '未分类'}_${q.id}_${q.file || ''}`));
-                            } else {
-                                matching.forEach(q => this.selectedQuestions.add(`q_${q.testSet || '未分类'}_${q.id}_${q.file || ''}`));
-                            }
-                        }
-                        this.renderPromptList();
-                        this.renderQuestionList();
-                        this.syncCanvasFromSelection();
-                        this._saveSelectionToLocalStorage();
-                        return;
-                    }
-
                     let items = [], groupData, groupKeyList;
                     if (type === 'prompt') {
                         this._markMissingPromptQuestions();
                         this.renderAssociationCanvas({ center: false });
+                        const prompts = node.tag ? this.prompts.filter(p => (p.testSet || '未分类') === node.tag) : this.prompts;
                         const groups = {};
                         const allByTestSet = {};
-                        for (const p of this.prompts) {
+                        for (const p of prompts) {
                             const ts = p.testSet || '未知';
                             const tag = p.tag || '未分类';
                             const key = `${ts} - ${tag}`;
@@ -5429,13 +5403,32 @@
                     } else if (type === 'question') {
                         this._markMissingPromptQuestions();
                         this.renderAssociationCanvas({ center: false });
+                        const questions = node.tag ? this.questions.filter(q => (q.testSet || '未分类') === node.tag) : this.questions;
                         const groups = {};
-                        for (const q of this.questions) {
+                        const allByTestSet = {};
+                        for (const q of questions) {
                             const ts = q.testSet || '未知';
-                            if (!groups[ts]) groups[ts] = { testSet: ts, items: [] };
-                            groups[ts].items.push(q);
+                            const tag = q.tag || '未分类';
+                            const key = `${ts} - ${tag}`;
+                            if (!groups[key]) groups[key] = { testSet: ts, tag, items: [] };
+                            groups[key].items.push(q);
+                            if (!allByTestSet[ts]) allByTestSet[ts] = [];
+                            allByTestSet[ts].push(q);
                         }
-                        const groupKeys = Object.keys(groups).sort();
+                        for (const [ts, items] of Object.entries(allByTestSet)) {
+                            const allKey = `${ts} - 全部`;
+                            if (!groups[allKey]) groups[allKey] = { testSet: ts, tag: '全部', items };
+                        }
+                        const groupKeys = Object.keys(groups).sort((a, b) => {
+                            const [tsA, tagA] = a.split(' - ');
+                            const [tsB, tagB] = b.split(' - ');
+                            const aIsAll = tagA === '全部';
+                            const bIsAll = tagB === '全部';
+                            if (aIsAll && !bIsAll) return -1;
+                            if (!aIsAll && bIsAll) return 1;
+                            if (tsA !== tsB) return tsA.localeCompare(tsB);
+                            return tagA.localeCompare(tagB);
+                        });
                         groupData = groups;
                         groupKeyList = groupKeys;
                         items = groupKeys.map(key => `${key} (${groups[key].items.length}个)`);
@@ -5875,7 +5868,7 @@
                         }
                         const { job_id, total_tasks } = await hubResp.json();
                         this.allResults = {};
-                        this._allStreamItems = [];
+                        this._liveItems = [];
                         document.getElementById('aiStreamContent').innerHTML = '';
                         document.getElementById('aiStreamStatus').textContent = '生成中';
                         document.getElementById('aiStreamStatus').classList.add('active');
@@ -5904,6 +5897,12 @@
                         btn.innerHTML = '开始测试';
                         this.isRunning = false;
                         this.abortController = null;
+                        document.getElementById('progressContainer').style.display = 'none';
+                        const st = document.getElementById('aiStreamStatus');
+                        if (st && st.textContent === '生成中') {
+                            st.textContent = '空闲';
+                            st.classList.remove('active');
+                        }
                     }
                 },
 
@@ -5951,10 +5950,6 @@
                             body: JSON.stringify({action: 'stop'})
                         });
                     } catch (e) {}
-                    if (this.abortController) {
-                        this.abortController.abort();
-                    }
-                    showToast('测试已终止', 'warning');
                 },
 
                 handleStreamData(data) {
@@ -5963,8 +5958,12 @@
                     const progressText = document.getElementById('progressText');
                     const progressPercent = document.getElementById('progressPercent');
 
-                    if (data.type === 'result') {
-                        this.addAiStreamItem(data);
+                    if (data.type === 'stream_chunk') {
+                        const item = this.addOrUpdateAiStreamItem(data);
+                        if (item) item.classList.add('streaming');
+                    } else if (data.type === 'result') {
+                        const item = this.addOrUpdateAiStreamItem(data);
+                        if (item) item.classList.remove('streaming');
                         this._updateModelFilterOptions(data.model_id || '');
                     } else if (data.type === 'progress') {
                         const total = parseInt(progressContainer.dataset.total || data.total || 0);
@@ -5981,24 +5980,26 @@
                         document.getElementById('runBtn').innerHTML = '开始测试';
                         document.getElementById('aiStreamStatus').textContent = '完成';
                         document.getElementById('aiStreamStatus').classList.remove('active');
+                        document.getElementById('progressContainer').style.display = 'none';
                         this.isRunning = false;
 
                         this.loadHistoryResults().then(() => {
-                            const entries = this.historyResultsList;
-                            if (entries.length > 0) {
-                                const newest = entries[entries.length - 1];
-                                const hs = document.getElementById('historySelector');
-                                if (hs) {
-                                    hs.value = newest.path || newest.name || '';
-                                    const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
-                                    if (textEl) textEl.textContent = `[${newest.testSet}] ${newest.name}`;
-                                }
-                                this.loadHistoryResult();
-                            }
+                            const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
+                            if (textEl) textEl.textContent = '当前运行';
                         });
                     } else if (data.type === 'status') {
                         if (data.status === 'stopped') {
                             progressText.textContent = data.message || '已终止';
+                            const runBtn = document.getElementById('runBtn');
+                            const stopBtn2 = document.getElementById('stopBtn');
+                            runBtn.disabled = false;
+                            runBtn.classList.remove('btn-loading');
+                            stopBtn2.disabled = true;
+                            runBtn.innerHTML = '开始测试';
+                            document.getElementById('aiStreamStatus').textContent = '已终止';
+                            document.getElementById('aiStreamStatus').classList.remove('active');
+                            document.getElementById('progressContainer').style.display = 'none';
+                            this.isRunning = false;
                         }
                         if (data.status === 'completed') {
                             progressText.textContent = data.message || '完成';
@@ -6007,52 +6008,77 @@
                             document.getElementById('aiStreamStatus').textContent = '生成中';
                             document.getElementById('aiStreamStatus').classList.add('active');
                         }
-                        if (data.message && data.message.includes('已终止')) {
-                            document.getElementById('runBtn').disabled = false;
-                            document.getElementById('stopBtn').disabled = true;
-                            document.getElementById('runBtn').innerHTML = '开始测试';
-                        }
                     }
                 },
 
-                addAiStreamItem(data) {
+                addOrUpdateAiStreamItem(data) {
                     const container = document.getElementById('aiStreamContent');
                     const empty = container.querySelector('.ai-empty');
                     if (empty) empty.remove();
-                    const item = document.createElement('div');
-                    item.className = 'result-item';
-                    const modelId = data.model_id || data.model || '';
-                    const hasError = data.error_type || data.ai_answer === null;
-                    if (hasError) item.classList.add('result-error');
-                    const promptTag = data.prompt_tag || '';
-                    const expected = data.expected_answer || data.answer || '';
-                    const aiReply = data.ai_answer || data.model_reply || '';
-                    item.innerHTML = `
-                    <div class="result-header">
-                        <span class="result-id">${this.escapeHtml(promptTag)} / #${this.escapeHtml(data.question_id || data.id || '')}</span>
-                        <span class="result-source">${this.escapeHtml(modelId)}</span>
-                    </div>
-                    <div class="result-row">
-                        <div class="result-label">问题</div>
-                        <div class="result-content" style="font-size:12px;background:var(--bg-card);">${this.escapeHtml(data.question || '')}</div>
-                    </div>
-                    <div style="display:flex;gap:8px;margin-top:6px;">
-                        <div style="flex:1;">
-                            <div class="result-label">期望答案</div>
-                            <div class="result-content expected">${this.escapeHtml(expected) || '暂无'}</div>
+
+                    const itemId = data.id;
+                    let item = container.querySelector(`[data-item-id="${itemId}"]`);
+
+                    if (!item) {
+                        item = document.createElement('div');
+                        item.className = 'result-item';
+                        item.dataset.itemId = itemId;
+                        item.dataset.seq = data.seq || '0';
+                        item.dataset.promptId = data.prompt_id || '';
+                        item.dataset.questionId = data.question_id || '';
+                        item.dataset.testIndex = data.test_index || '1';
+                        const modelId = data.model_id || data.model || '';
+                        const hasError = data.error_type || data.ai_answer === null;
+                        if (hasError) item.classList.add('result-error');
+                        const promptTag = data.prompt_tag || '';
+                        const expected = data.expected_answer || data.answer || '';
+                        const aiReply = data.ai_answer || data.model_reply || '';
+                        const displayId = (data.question_id || '?') + (data.test_count > 1 ? '-' + (data.test_index || 1) : '');
+                        item.innerHTML = `
+                        <div class="result-header">
+                            <span class="result-id">${this.escapeHtml(promptTag)} / #${this.escapeHtml(displayId)}</span>
+                            <span class="result-source">${this.escapeHtml(modelId)}</span>
                         </div>
-                        <div style="flex:1;">
-                            <div class="result-label">AI回复</div>
-                            <div class="result-content ai">${this.escapeHtml(aiReply) || '<span style="color:var(--text-muted)">无回复</span>'}</div>
+                        <div class="result-row">
+                            <div class="result-label">问题</div>
+                            <div class="result-content" style="font-size:12px;background:var(--bg-card);">${this.escapeHtml(data.question || '')}</div>
                         </div>
-                    </div>`;
-                    item.dataset.modelId = modelId;
-                    item.dataset.hasError = hasError ? '1' : '0';
-                    this._allStreamItems.push(item);
-                    this._updateModelFilterOptions(modelId);
-                    container.appendChild(item);
-                    const filter = this._getStreamFilter();
-                    if (!this._matchesFilter(item, filter)) item.style.display = 'none';
+                        <div style="display:flex;gap:8px;margin-top:6px;">
+                            <div style="flex:1;">
+                                <div class="result-label">期望答案</div>
+                                <div class="result-content expected">${this.escapeHtml(expected) || '暂无'}</div>
+                            </div>
+                            <div style="flex:1;">
+                                <div class="result-label">AI回复</div>
+                                <div class="result-content ai">${this.escapeHtml(aiReply) || '<span style="color:var(--text-muted)">无回复</span>'}</div>
+                            </div>
+                        </div>`;
+                        item.dataset.modelId = modelId;
+                        item.dataset.hasError = hasError ? '1' : '0';
+                        this._updateModelFilterOptions(modelId);
+                        const insertIdx = this._liveItems.findIndex(
+                            existing => this._compareByLogicalOrder(existing, data) > 0
+                        );
+                        if (insertIdx === -1) {
+                            this._liveItems.push(item);
+                            container.appendChild(item);
+                        } else {
+                            this._liveItems.splice(insertIdx, 0, item);
+                            container.insertBefore(item, container.children[insertIdx]);
+                        }
+                        const filter = this._getStreamFilter();
+                        if (!this._matchesFilter(item, filter)) item.style.display = 'none';
+                    }
+
+                    const aiDiv = item.querySelector('.result-content.ai');
+                    if (aiDiv) {
+                        if (data.ai_answer) {
+                            aiDiv.textContent = data.ai_answer;
+                        } else {
+                            aiDiv.innerHTML = '<span style="color:var(--text-muted)">无回复</span>';
+                        }
+                    }
+                    return item;
                 },
 
                 _getStreamFilter() {
@@ -6076,9 +6102,44 @@
 
                 applyStreamFilter() {
                     const filter = this._getStreamFilter();
-                    this._allStreamItems.forEach(item => {
+                    this._liveItems.forEach(item => {
                         item.style.display = this._matchesFilter(item, filter) ? '' : 'none';
                     });
+                },
+
+                _compareByLogicalOrder(a, b) {
+                    const getVal = (obj, camelKey, snakeKey) => {
+                        if (obj.dataset) {
+                            const v = obj.dataset[camelKey];
+                            if (v !== undefined) return v;
+                        }
+                        let v = obj[camelKey];
+                        if (v !== undefined) return v;
+                        v = obj[snakeKey];
+                        if (v !== undefined) return v;
+                        return undefined;
+                    };
+                    const getNum = (obj, camelKey, snakeKey) => {
+                        const v = getVal(obj, camelKey, snakeKey);
+                        if (v === undefined || v === null || v === '') return 0;
+                        return Number(v);
+                    };
+                    const getStr = (obj, camelKey, snakeKey) => {
+                        const v = getVal(obj, camelKey, snakeKey);
+                        if (v === undefined || v === null) return '';
+                        return String(v);
+                    };
+                    const pDiff = getNum(a, 'promptId', 'prompt_id') - getNum(b, 'promptId', 'prompt_id');
+                    if (pDiff !== 0) return pDiff;
+                    const qDiff = getNum(a, 'questionId', 'question_id') - getNum(b, 'questionId', 'question_id');
+                    if (qDiff !== 0) return qDiff;
+                    const tDiff = getNum(a, 'testIndex', 'test_index') - getNum(b, 'testIndex', 'test_index');
+                    if (tDiff !== 0) return tDiff;
+                    const mA = getStr(a, 'modelId', 'model_id');
+                    const mB = getStr(b, 'modelId', 'model_id');
+                    if (mA < mB) return -1;
+                    if (mA > mB) return 1;
+                    return 0;
                 },
 
                 _updateModelFilterOptions(modelId) {
@@ -6135,23 +6196,35 @@
                 async loadHistoryResult() {
                     const hidden = document.getElementById('historySelector');
                     const val = hidden ? hidden.value : '';
+                    if (val === this._currentDisplay) return;
                     if (!val) {
-                        document.getElementById('aiStreamContent').innerHTML = '';
-                        document.getElementById('aiStreamStatus').textContent = '等待中';
-                        document.getElementById('resultCount').textContent = '0 题';
-                        this._allStreamItems = [];
+                        if (this._liveItems.length > 0) {
+                            const container = document.getElementById('aiStreamContent');
+                            container.innerHTML = '';
+                            this._liveItems.forEach(item => container.appendChild(item));
+                            document.getElementById('aiStreamStatus').textContent = this.isRunning ? '运行中' : '待机';
+                            document.getElementById('resultCount').textContent = `${this._liveItems.length} 题`;
+                            this.applyStreamFilter();
+                        } else {
+                            document.getElementById('aiStreamContent').innerHTML = '';
+                            document.getElementById('aiStreamStatus').textContent = '等待中';
+                            document.getElementById('resultCount').textContent = '0 题';
+                        }
+                        this._currentDisplay = val;
                         return;
                     }
                     const result = this.historyResultsList.find(r => (r.path || r.name) === val);
                     if (!result || !result.data) return;
+                    const sorted = [...result.data].sort((a, b) => this._compareByLogicalOrder(a, b));
                     const container = document.getElementById('aiStreamContent');
                     container.innerHTML = '';
-                    this._allStreamItems = [];
+                    this._liveItems = [];
                     document.getElementById('aiStreamStatus').textContent = '历史';
-                    document.getElementById('resultCount').textContent = `${result.data.length} 题`;
-                    for (const item of result.data) {
-                        this.addAiStreamItem(item);
+                    document.getElementById('resultCount').textContent = `${sorted.length} 题`;
+                    for (const item of sorted) {
+                        this.addOrUpdateAiStreamItem(item);
                     }
+                    this._currentDisplay = val;
                 },
 
                 async init() {
@@ -6228,7 +6301,7 @@
                         if (st.status === 'running') {
                             this.isRunning = true;
                             this.allResults = {};
-                            this._allStreamItems = [];
+                            this._liveItems = [];
                             document.getElementById('aiStreamContent').innerHTML = '';
                             document.getElementById('progressContainer').style.display = 'block';
                             document.getElementById('progressContainer').dataset.total = st.total;
@@ -6370,10 +6443,15 @@
                 on(byId('paramsModal'), 'click', function(e) {
                     if (e.target === this) App.toggleParamsModal();
                 });
+                const pm = byId('paramsModal');
+                if (pm) {
+                    const pmClose = pm.querySelector('.params-modal-close');
+                    if (pmClose) on(pmClose, 'click', () => App.toggleParamsModal());
+                }
+
                 on(byId('modelModal'), 'click', function(e) {
                     if (e.target === this) App.closeModelModal();
                 });
-
                 const mm = byId('modelModal');
                 if (mm) {
                     const mmClose = mm.querySelector('.model-modal-close');

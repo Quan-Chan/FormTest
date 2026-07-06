@@ -508,6 +508,37 @@ def _parse_sse_lines(lines_iter):
     return content
 
 
+def _parse_sse_lines_streaming(lines_iter, on_chunk, stop_event=None):
+    content = ""
+    try:
+        for raw_line in lines_iter:
+            if stop_event and stop_event.is_set():
+                break
+            if not raw_line:
+                continue
+            try:
+                decoded = raw_line.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            if not decoded.startswith("data: "):
+                continue
+            data_str = decoded[6:].strip()
+            if data_str == "[DONE]":
+                break
+            try:
+                chunk = json.loads(data_str)
+                delta = chunk.get("choices", [{}])[0].get("delta", {})
+                content_delta = delta.get("content", "")
+                if content_delta:
+                    content += content_delta
+                    on_chunk(content)
+            except json.JSONDecodeError:
+                continue
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        pass
+    return content
+
+
 def _parse_sse_stream(response):
     return _parse_sse_lines(response.iter_lines())
 
@@ -613,6 +644,56 @@ def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
         return {"success": False, "error": str(e)}
 
 
+def call_ai_atomic_streaming(system_prompt, user_prompt, model=None, timeout=None, on_chunk=None, stop_event=None):
+    with config_lock:
+        if timeout is None:
+            timeout = config.get("timeout", 60)
+        api_key = config.get("api_key", "")
+        base_url = config.get("base_url", "http://localhost:8000/v1")
+        temperature = config.get("temperature", 0.7)
+        top_p = config.get("top_p", 1.0)
+        model_name = model or config.get("model", "gpt-4o")
+        top_k = config.get("top_k")
+        min_p = config.get("min_p")
+        context_size = config.get("context_size")
+
+    headers = {"Content-Type": "application/json"}
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+
+    payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size)
+    payload["stream"] = True
+
+    content = ""
+    try:
+        response = requests.post(
+            f"{base_url}/chat/completions",
+            headers=headers,
+            json=payload,
+            stream=True,
+            timeout=timeout,
+        )
+        if response.status_code == 200:
+            content = _parse_sse_lines_streaming(response.iter_lines(), on_chunk, stop_event=stop_event)
+            return {"success": True, "content": content}
+        elif response.status_code == 429:
+            return {"rate_limited": True}
+        elif 400 <= response.status_code < 500:
+            log_debug(f"AI流式请求客户端错误，status={response.status_code}，不重试")
+            return {"success": False, "error": f"HTTP {response.status_code}: {response.text[:200]}"}
+        else:
+            log_debug(f"AI流式请求失败，status={response.status_code}，将重试")
+            return {"retry": True}
+    except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+        log_debug(f"AI流式连接异常: {e}")
+        if content:
+            return {"success": True, "content": content}
+        return {"success": False, "error": "AI连接失败"}
+    except Exception as e:
+        log_debug(f"AI流式异常: {e}")
+        return {"success": False, "error": str(e)}
+
+
 # ============ Test Job System ============
 
 def _run_single_task(task):
@@ -666,6 +747,10 @@ class TestJob:
         self.futures = {}
         self.lock = threading.Lock()
         self.write_lock = threading.Lock()
+        self.stream_chunks = {}
+        self.chunk_lock = threading.Lock()
+        with config_lock:
+            self.streaming = config.get("streaming", False)
 
         seq = 0
         for ts in test_sets:
@@ -691,6 +776,14 @@ class TestJob:
         with self.lock:
             for seq in sorted(self.results.keys()):
                 q.put(("result", self.results[seq]))
+            with self.chunk_lock:
+                for seq in sorted(self.stream_chunks.keys()):
+                    if seq not in self.results:
+                        task = self._find_task(seq)
+                        if task:
+                            static = self._build_result_item(task, {"success": True, "content": ""})
+                            static["ai_answer"] = self.stream_chunks[seq]
+                            q.put(("stream_chunk", static))
             q.put(("progress", {"completed": self.completed, "total": self.total, "failed": self.failed}))
             self.subscribers.append(q)
 
@@ -716,9 +809,11 @@ class TestJob:
         return None
 
     def _build_result_item(self, task, result):
+        ts_safe = re.sub(r'[^\w\-]', '_', task.test_set_name)
         item = {
             "test_set": task.test_set_name,
-            "id": f"p{task.prompt.get('id', '?')}_q{task.question.get('id', '?')}_m{task.model}_{task.test_index}",
+            "id": f"{ts_safe}_p{task.prompt.get('id', '?')}_q{task.question.get('id', '?')}_m{task.model}_{task.test_index}",
+            "seq": task.seq,
             "prompt_id": task.prompt.get("id"),
             "question_id": task.question.get("id"),
             "model_id": task.model,
@@ -736,6 +831,30 @@ class TestJob:
             item["error_type"] = result.get("error", "")
             item["error_msg"] = result.get("error", "")
         return item
+
+    def _run_task_streaming(self, task):
+        system_prompt = task.prompt.get("content", "")
+        if system_prompt:
+            prompt_type = task.prompt.get("type", "content")
+            if prompt_type != "instruction":
+                wrapper = "以下是被测试的文件内容：\n\n{content}\n\n请根据以上文件内容回答用户的问题。"
+                system_prompt = wrapper.replace("{content}", system_prompt)
+        user_prompt = task.question.get("question", "")
+
+        static_item = self._build_result_item(task, {"success": True, "content": ""})
+
+        def on_chunk(accumulated):
+            with self.chunk_lock:
+                self.stream_chunks[task.seq] = accumulated
+            chunk_item = dict(static_item)
+            chunk_item["ai_answer"] = accumulated
+            self._broadcast("stream_chunk", chunk_item)
+
+        result = call_ai_atomic_streaming(
+            system_prompt, user_prompt, model=task.model,
+            on_chunk=on_chunk, stop_event=self.stop_event,
+        )
+        return result
 
     def run_scheduler(self):
         try:
@@ -814,6 +933,8 @@ class TestJob:
                 if ts_name not in self.results_by_set:
                     self.results_by_set[ts_name] = []
                 self.results_by_set[ts_name].append(item)
+                with self.chunk_lock:
+                    self.stream_chunks.pop(seq, None)
 
             self._broadcast("result", item)
             self._broadcast("progress", {"completed": self.completed, "total": self.total, "failed": self.failed})
@@ -841,7 +962,10 @@ class TestJob:
                     break
                 task = self.pending.pop(0)
                 task.status = "running"
-                future = self.executor.submit(_run_single_task, task)
+                if self.streaming:
+                    future = self.executor.submit(self._run_task_streaming, task)
+                else:
+                    future = self.executor.submit(_run_single_task, task)
                 self.futures[task.seq] = future
 
     def _is_done(self):
@@ -906,6 +1030,7 @@ def stream_test_job(job_id):
                         'type': 'result',
                         'test_set': data['test_set'],
                         'id': data['id'],
+                        'seq': data.get('seq', 0),
                         'prompt_id': data['prompt_id'],
                         'question_id': data['question_id'],
                         'model_id': data['model_id'],
@@ -920,6 +1045,22 @@ def stream_test_job(job_id):
                     if data.get('error_type'):
                         payload['error_type'] = data['error_type']
                         payload['error_msg'] = data['error_msg']
+                    yield "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
+                elif event_type == "stream_chunk":
+                    payload = {
+                        'type': 'stream_chunk',
+                        'id': data['id'],
+                        'seq': data.get('seq', 0),
+                        'prompt_id': data.get('prompt_id', ''),
+                        'model_id': data['model_id'],
+                        'prompt_tag': data['prompt_tag'],
+                        'question_id': data['question_id'],
+                        'question': data['question'],
+                        'expected_answer': data['expected_answer'],
+                        'ai_answer': data['ai_answer'] or '',
+                        'test_index': data['test_index'],
+                        'test_count': data['test_count'],
+                    }
                     yield "data: " + json.dumps(payload, ensure_ascii=False) + "\n\n"
                 elif event_type == "progress":
                     yield f"data: {json.dumps({'type': 'progress', 'completed': data['completed'], 'total': data['total'], 'failed': data.get('failed', 0)}, ensure_ascii=False)}\n\n"
