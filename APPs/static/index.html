@@ -1181,24 +1181,6 @@
             font-size: 12px;
         }
 
-        .streaming {
-            animation: pulse 1.5s infinite;
-        }
-        @keyframes pulse {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.4;
-            }
-        }
-
-        .result-item.streaming .result-content.ai {
-            border-color: var(--accent);
-            background: rgba(59, 130, 246, 0.06);
-        }
-
         .ai-stream-panel {
             flex: 0 0 40%;
             min-width: 280px;
@@ -5959,11 +5941,9 @@
                     const progressPercent = document.getElementById('progressPercent');
 
                     if (data.type === 'stream_chunk') {
-                        const item = this.addOrUpdateAiStreamItem(data);
-                        if (item) item.classList.add('streaming');
+                        this.addOrUpdateAiStreamItem(data);
                     } else if (data.type === 'result') {
-                        const item = this.addOrUpdateAiStreamItem(data);
-                        if (item) item.classList.remove('streaming');
+                        this.addOrUpdateAiStreamItem(data);
                         this._updateModelFilterOptions(data.model_id || '');
                     } else if (data.type === 'progress') {
                         const total = parseInt(progressContainer.dataset.total || data.total || 0);
