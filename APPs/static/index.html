@@ -840,7 +840,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             color: var(--text-primary);
-            font-size: 14px;
+            font-size: 13px;
             transition: all 0.2s;
             font-family: inherit;
         }
@@ -904,7 +904,7 @@
             transform: translateX(20px);
         }
         .toggle-label {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-secondary);
             font-weight: 500;
         }
@@ -1329,7 +1329,7 @@
             justify-content: center;
         }
         .ai-empty p {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--text-secondary);
         }
         @media (max-width: 1200px) {
@@ -1388,7 +1388,7 @@
             justify-content: space-between;
         }
         .model-modal-title {
-            font-size: 16px;
+            font-size: 15px;
             font-weight: 500;
         }
         .model-modal-close {
@@ -1791,7 +1791,7 @@
             box-sizing: border-box;
             padding: 10px 14px;
             color: #fff;
-            font-size: 12px;
+            font-size: 13px;
             font-weight: 500;
             letter-spacing: 0.3px;
             display: flex;
@@ -1822,8 +1822,9 @@
             height: 44px;
             box-sizing: border-box;
             padding: 12px 14px;
-            font-size: 13px;
-            color: var(--text-primary);
+            font-size: 12px;
+            font-weight: 400;
+            color: var(--text-secondary);
             min-width: 0;
             overflow: hidden;
             display: flex;
@@ -1849,7 +1850,7 @@
         }
         .comfy-node-empty {
             color: var(--text-muted);
-            font-style: italic;
+            font-style: normal;
             font-size: 11px;
         }
         .comfy-node-clear {
@@ -2132,12 +2133,12 @@
             padding: 0 10px;
             gap: 6px;
             border-radius: 6px;
-            font-size: 11px;
+            font-size: 12px;
             line-height: 1;
-            font-weight: 400;
+            font-weight: 500;
             background: var(--bg-card);
             border: 1px solid var(--border);
-            color: var(--text-primary);
+            color: var(--text-secondary);
             cursor: pointer;
             transition: all 0.15s;
             font-family: inherit;
@@ -5874,7 +5875,7 @@
                                 <span class="toggle-track"></span>
                             </label>
                         </div>
-                        <div class="thinking-row" style="margin-bottom:10px" id="ts-effort-row" style="${thinkingOn ? '' : 'opacity:0.4;pointer-events:none'}">
+                        <div class="thinking-row" id="ts-effort-row" style="margin-bottom:10px;${thinkingOn ? '' : 'opacity:0.4;pointer-events:none;'}">
                             <span class="thinking-label">推理强度</span>
                             <label class="toggle-switch">
                                 <input type="checkbox" id="ts-effort" ${effortOn ? 'checked' : ''} ${thinkingOn ? '' : 'disabled'}>
@@ -5883,7 +5884,7 @@
                         </div>
                         <div class="effort-control" id="ts-effort-control" style="${effortOn && thinkingOn ? '' : 'display:none'}">
                             <div class="custom-select" data-cs="ts-cs">
-                                <button class="custom-select-trigger" id="ts-cs-trigger">${this.escapeHtml(effortVal)}</button>
+                                <button class="custom-select-trigger" id="ts-cs-trigger"><span class="custom-select-text">${this.escapeHtml(effortVal)}</span><svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg></button>
                                 <div class="custom-select-dropdown" style="display:none">
                                     <div class="custom-select-option" data-value="low">low</div>
                                     <div class="custom-select-option" data-value="medium">medium</div>
@@ -5917,6 +5918,8 @@
                                 if (tgEffort) tgEffort.checked = false;
                                 if (effortControl) effortControl.style.display = 'none';
                                 if (customInput) customInput.style.display = 'none';
+                            } else if (tgEffort && tgEffort.checked && effortControl) {
+                                effortControl.style.display = '';
                             }
                         });
                     }
@@ -5932,7 +5935,11 @@
                             e.stopPropagation();
                             const isOpen = dropdown.style.display !== 'none';
                             document.querySelectorAll('.custom-select-dropdown').forEach(d => d.style.display = 'none');
-                            if (!isOpen) dropdown.style.display = '';
+                            document.querySelectorAll('.custom-select-trigger.open').forEach(el => el.classList.remove('open'));
+                            if (!isOpen) {
+                                dropdown.style.display = '';
+                                trigger.classList.add('open');
+                            }
                         });
                         dropdown.querySelectorAll('.custom-select-option').forEach(opt => {
                             opt.addEventListener('click', (e) => {
@@ -5944,7 +5951,8 @@
                                     dropdown.style.display = 'none';
                                 } else {
                                     customInput.style.display = 'none';
-                                    trigger.textContent = val;
+                                    const textEl = trigger.querySelector('.custom-select-text');
+                                    if (textEl) textEl.textContent = val;
                                     dropdown.style.display = 'none';
                                 }
                             });
@@ -5952,7 +5960,10 @@
                     }
                     if (customInput) {
                         customInput.addEventListener('blur', () => {
-                            if (customInput.value.trim()) trigger.textContent = customInput.value.trim();
+                            if (customInput.value.trim()) {
+                                const textEl = trigger.querySelector('.custom-select-text');
+                                if (textEl) textEl.textContent = customInput.value.trim();
+                            }
                             if (customInput.value.trim()) customInput.style.display = '';
                         });
                         customInput.addEventListener('keydown', (e) => {
@@ -5974,7 +5985,8 @@
                     if (tgThinking && tgThinking.checked) {
                         this._modelThinkingConfig[model].thinking = { type: 'enabled' };
                         if (tgEffort && tgEffort.checked && trigger) {
-                            const val = (customInput && customInput.style.display !== 'none' && customInput.value.trim()) ? customInput.value.trim() : trigger.textContent;
+                            const effortText = trigger.querySelector('.custom-select-text')?.textContent || trigger.textContent;
+                            const val = (customInput && customInput.style.display !== 'none' && customInput.value.trim()) ? customInput.value.trim() : effortText;
                             this._modelThinkingConfig[model].reasoning_effort = val;
                         } else {
                             delete this._modelThinkingConfig[model].reasoning_effort;
@@ -5984,6 +5996,11 @@
                         delete this._modelThinkingConfig[model].reasoning_effort;
                     }
                     overlay.classList.remove('show');
+                    this.renderModelCheckboxList();
+                    this.onConfigChange();
+                    if (this._savedModelThinkingConfig) {
+                        this._savedModelThinkingConfig[model] = JSON.parse(JSON.stringify(this._modelThinkingConfig[model]));
+                    }
                 },
 
                 _cancelThinkingModal() {
