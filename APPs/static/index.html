@@ -1468,6 +1468,98 @@
             justify-content: flex-end;
             gap: 10px;
         }
+        .model-lightbulb-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted);
+            padding: 4px;
+            border-radius: var(--radius-sm);
+            transition: all 0.15s;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .model-lightbulb-btn:hover {
+            color: var(--accent);
+            background: var(--accent-bg);
+        }
+        .model-lightbulb-btn.active {
+            color: var(--accent);
+            background: var(--accent-bg);
+        }
+        .model-lightbulb-btn:active {
+            transform: scale(0.9);
+        }
+        .thinking-inline-menu {
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            padding: 10px 12px;
+            margin: 4px 0 2px 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .thinking-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 14px;
+        }
+        .thinking-row .thinking-label {
+            font-size: 13px;
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+        .thinking-row .toggle-switch {
+            flex-shrink: 0;
+        }
+        .effort-control {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-left: 4px;
+        }
+        .effort-control .custom-select {
+            width: 100%;
+        }
+        .effort-control .effort-custom-input {
+            padding: 6px 10px;
+            font-size: 12px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-primary);
+            outline: none;
+            width: 100%;
+        }
+        .effort-control .effort-custom-input:focus {
+            border-color: var(--accent);
+        }
+        .thinking-popup {
+            position: fixed;
+            z-index: 200;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: var(--shadow-lg);
+            min-width: 240px;
+            padding: 12px 14px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .thinking-popup .thinking-row .thinking-label {
+            font-size: 12px;
+        }
+        .thinking-popup .effort-control .custom-select-trigger {
+            height: 28px;
+            padding: 0 10px;
+            font-size: 11px;
+        }
 
         .tab-header {
             display: flex;
@@ -3093,6 +3185,9 @@
                 _currentDisplay: '',
                 _userScrolledAway: false,
                 _scrollPending: false,
+                _modelThinkingConfig: {},
+                _savedModelThinkingConfig: null,
+                _activeThinkingMenuModel: null,
                 _confirmResolve: null,
                 _promptResolve: null,
 
@@ -3173,6 +3268,7 @@
                         top_k: pi('modal-topK'),
                         min_p: p('modal-minP'),
                         models: this.selectedModels,
+                        model_thinking_config: this._modelThinkingConfig,
                         auto_append_v1: document.getElementById('autoAppendV1').checked,
                         auto_connect: document.getElementById('autoConnectToggle').checked
                     };
@@ -5452,7 +5548,10 @@
                     } else {
                         popup.innerHTML = items.map((item, idx) => {
                             const sel = node.value === item;
-                            return `<div class="comfy-sel-item ${sel ? 'picked' : ''}" data-node-id="${nodeId}" data-type="${type}" data-index="${idx}"><span>${this.escapeHtml(item)}</span></div>`;
+                            const lb = type === 'model' ? `<button class="model-lightbulb-btn" data-sel-lb="${nodeId}" data-sel-model="${this.escapeHtml(item)}" title="推理设置">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+                            </button>` : '';
+                            return `<div class="comfy-sel-item ${sel ? 'picked' : ''}" data-node-id="${nodeId}" data-type="${type}" data-index="${idx}"><span>${this.escapeHtml(item)}</span>${lb}</div>`;
                         }).join('');
                         popup._items = items;
                     }
@@ -5612,6 +5711,8 @@
 
                 closeAllSelectors() {
                     document.querySelectorAll('.comfy-sel-popup').forEach(el => el.remove());
+                    document.querySelectorAll('.thinking-popup').forEach(el => el.remove());
+                    document.querySelectorAll('.custom-select-dropdown').forEach(el => el.style.display = 'none');
                 },
 
                 async _fetchModels() {
@@ -5643,6 +5744,7 @@
                     this._fetchModels()
                         .then(() => {
                             this._savedSelectedModels = JSON.parse(JSON.stringify(this.selectedModels));
+                            this._savedModelThinkingConfig = JSON.parse(JSON.stringify(this._modelThinkingConfig));
                             this.renderModelCheckboxList();
                             document.getElementById('modelModal').classList.add('show');
                         })
@@ -5681,6 +5783,9 @@
                 confirmModelSelection() {
                     this.updateSelectedModelCount();
                     this._savedSelectedModels = null;
+                    this._savedModelThinkingConfig = null;
+                    this._activeThinkingMenuModel = null;
+                    this._cleanupOrphanedThinkingConfig();
                     document.getElementById('modelModal').classList.remove('show');
                     this.onConfigChange();
                 },
@@ -5689,6 +5794,11 @@
                     if (this._savedSelectedModels) {
                         this.selectedModels = JSON.parse(JSON.stringify(this._savedSelectedModels));
                         this._savedSelectedModels = null;
+                        if (this._savedModelThinkingConfig) {
+                            this._modelThinkingConfig = JSON.parse(JSON.stringify(this._savedModelThinkingConfig));
+                            this._savedModelThinkingConfig = null;
+                        }
+                        this._activeThinkingMenuModel = null;
                         this.renderModelCheckboxList();
                     }
                     document.getElementById('modelModal').classList.remove('show');
@@ -5699,14 +5809,314 @@
                     container.innerHTML = this.availableModels.map(model => {
                         const index = this.selectedModels.indexOf(model);
                         const orderNum = index !== -1 ? index + 1 : null;
+                        const isOpen = this._activeThinkingMenuModel === model;
                         return `<div class="model-checkbox-item" data-model="${this.escapeHtml(model)}">
                         <span class="model-order-badge ${orderNum ? 'active' : ''}">${orderNum || ''}</span>
                         <span class="model-name">${this.escapeHtml(model)}</span>
-                    </div>`;
+                        <button class="model-lightbulb-btn ${isOpen ? 'active' : ''}" data-lb="${this.escapeHtml(model)}" title="推理设置">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
+                        </button>
+                    </div>
+                    ${isOpen ? this._renderThinkingMenuHtml(model) : ''}`;
                     }).join('');
                     container.querySelectorAll('.model-checkbox-item').forEach(el => {
-                        el.addEventListener('click', () => App.toggleModelSelection(el.dataset.model));
+                        el.addEventListener('click', (e) => {
+                            if (e.target.closest('.model-lightbulb-btn')) return;
+                            App.toggleModelSelection(el.dataset.model);
+                        });
                     });
+                    container.querySelectorAll('.model-lightbulb-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const model = btn.dataset.lb;
+                            App._activeThinkingMenuModel = App._activeThinkingMenuModel === model ? null : model;
+                            App.renderModelCheckboxList();
+                        });
+                    });
+                    this._bindThinkingMenuEvents(container);
+                },
+
+                _renderThinkingMenuHtml(model) {
+                    const cfg = this._modelThinkingConfig[model] || {};
+                    const thinkingOn = cfg.thinking?.type === 'enabled';
+                    const effortOn = !!cfg.reasoning_effort;
+                    const effortVal = cfg.reasoning_effort || 'medium';
+                    const showCustom = effortOn && !['low', 'medium', 'high', 'max'].includes(effortVal);
+                    return `<div class="thinking-inline-menu" data-tm="${this.escapeHtml(model)}">
+                        <div class="thinking-row">
+                            <span class="thinking-label">开启推理</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="tg-thinking" ${thinkingOn ? 'checked' : ''}>
+                                <span class="toggle-track"></span>
+                            </label>
+                        </div>
+                        ${thinkingOn ? `<div class="thinking-row">
+                            <span class="thinking-label">推理强度</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="tg-effort" ${effortOn ? 'checked' : ''}>
+                                <span class="toggle-track"></span>
+                            </label>
+                        </div>
+                        <div class="effort-control" style="${effortOn ? '' : 'display:none'}">
+                            <div class="custom-select" data-cs="effort">
+                                <button class="custom-select-trigger">${this.escapeHtml(effortVal)}</button>
+                                <div class="custom-select-dropdown" style="display:none">
+                                    <div class="custom-select-option" data-value="low">low</div>
+                                    <div class="custom-select-option" data-value="medium">medium</div>
+                                    <div class="custom-select-option" data-value="high">high</div>
+                                    <div class="custom-select-option" data-value="max">max</div>
+                                    <div class="custom-select-option" data-value="__custom__">自定义...</div>
+                                </div>
+                            </div>
+                            <input type="text" class="effort-custom-input" placeholder="输入推理强度" style="${showCustom ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
+                        </div>` : ''}
+                    </div>`;
+                },
+
+                _bindThinkingMenuEvents(container) {
+                    container.querySelectorAll('.thinking-inline-menu').forEach(menu => {
+                        const model = menu.dataset.tm;
+                        const tgThinking = menu.querySelector('.tg-thinking');
+                        const tgEffort = menu.querySelector('.tg-effort');
+                        const effortControl = menu.querySelector('.effort-control');
+                        const effortTrigger = menu.querySelector('.custom-select-trigger');
+                        const effortDropdown = menu.querySelector('.custom-select-dropdown');
+                        const effortInput = menu.querySelector('.effort-custom-input');
+
+                        if (tgThinking) {
+                            tgThinking.addEventListener('change', () => {
+                                if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
+                                this._modelThinkingConfig[model].thinking = {
+                                    type: tgThinking.checked ? 'enabled' : 'disabled'
+                                };
+                                if (!tgThinking.checked) {
+                                    delete this._modelThinkingConfig[model].reasoning_effort;
+                                }
+                                this.renderModelCheckboxList();
+                            });
+                        }
+                        if (tgEffort) {
+                            tgEffort.addEventListener('change', () => {
+                                if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
+                                this._modelThinkingConfig[model].thinking = { type: 'enabled' };
+                                if (tgEffort.checked) {
+                                    this._modelThinkingConfig[model].reasoning_effort = 'medium';
+                                } else {
+                                    delete this._modelThinkingConfig[model].reasoning_effort;
+                                }
+                                this.renderModelCheckboxList();
+                            });
+                        }
+                        if (effortTrigger && effortDropdown) {
+                            effortTrigger.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const isOpen = effortDropdown.style.display !== 'none';
+                                this.closeAllSelectors();
+                                if (!isOpen) effortDropdown.style.display = '';
+                            });
+                            effortDropdown.querySelectorAll('.custom-select-option').forEach(opt => {
+                                opt.addEventListener('click', (e) => {
+                                    e.stopPropagation();
+                                    const val = opt.dataset.value;
+                                    const isCustom = val === '__custom__';
+                                    if (isCustom) {
+                                        effortInput.style.display = '';
+                                        effortInput.focus();
+                                        const curVal = this._modelThinkingConfig[model]?.reasoning_effort || '';
+                                        this._modelThinkingConfig[model].reasoning_effort = curVal;
+                                    } else {
+                                        effortInput.style.display = 'none';
+                                        this._modelThinkingConfig[model].reasoning_effort = val;
+                                        effortTrigger.textContent = val;
+                                    }
+                                    effortDropdown.style.display = 'none';
+                                    if (!isCustom) this._onThinkingConfigChange();
+                                });
+                            });
+                        }
+                        if (effortInput) {
+                            effortInput.addEventListener('blur', () => {
+                                const val = effortInput.value.trim() || 'medium';
+                                this._modelThinkingConfig[model].reasoning_effort = val;
+                                effortTrigger.textContent = val;
+                                this._onThinkingConfigChange();
+                            });
+                            effortInput.addEventListener('keydown', (e) => {
+                                if (e.key === 'Enter') {
+                                    effortInput.blur();
+                                }
+                            });
+                        }
+                    });
+                },
+
+                _onThinkingConfigChange() {
+                    this._cleanupOrphanedThinkingConfig();
+                    this.onConfigChange();
+                },
+
+                _cleanupOrphanedThinkingConfig() {
+                    Object.keys(this._modelThinkingConfig).forEach(k => {
+                        if (!this.selectedModels.includes(k)) {
+                            delete this._modelThinkingConfig[k];
+                        }
+                    });
+                },
+
+                _showSelectorThinkingPopup(btnEl) {
+                    const popupId = btnEl.dataset.selLb;
+                    const model = btnEl.dataset.selModel;
+                    const existing = document.querySelector(`.thinking-popup[data-sel-lb-id="${popupId}"]`);
+                    if (existing) { existing.remove(); return; }
+                    document.querySelectorAll('.thinking-popup').forEach(el => el.remove());
+                    const rect = btnEl.getBoundingClientRect();
+                    const popup = document.createElement('div');
+                    popup.className = 'thinking-popup';
+                    popup.dataset.selLbId = popupId;
+                    popup.innerHTML = this._renderCanvasThinkingHtml(model);
+                    document.body.appendChild(popup);
+                    let left = rect.left - popup.offsetWidth - 4;
+                    let top = rect.top - 4;
+                    if (left < 0) left = rect.right + 4;
+                    if (top + popup.offsetHeight > window.innerHeight) {
+                        top = window.innerHeight - popup.offsetHeight - 6;
+                    }
+                    if (top < 0) top = 6;
+                    popup.style.left = left + 'px';
+                    popup.style.top = top + 'px';
+                    this._bindCanvasThinkingEvents(popup, model);
+                },
+
+                _renderCanvasThinkingHtml(model) {
+                    const cfg = this._modelThinkingConfig[model] || {};
+                    const thinkingOn = cfg.thinking?.type === 'enabled';
+                    const effortOn = !!cfg.reasoning_effort;
+                    const effortVal = cfg.reasoning_effort || 'medium';
+                    const showCustom = effortOn && !['low', 'medium', 'high', 'max'].includes(effortVal);
+                    return `<div style="display:flex;flex-direction:column;gap:10px" data-tm="${this.escapeHtml(model)}">
+                        <div style="font-size:12px;font-weight:500;color:var(--text-secondary)">${this.escapeHtml(model)}</div>
+                        <div class="thinking-row">
+                            <span class="thinking-label">开启推理</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="tg-thinking" ${thinkingOn ? 'checked' : ''}>
+                                <span class="toggle-track"></span>
+                            </label>
+                        </div>
+                        ${thinkingOn ? `<div class="thinking-row">
+                            <span class="thinking-label">推理强度</span>
+                            <label class="toggle-switch">
+                                <input type="checkbox" class="tg-effort" ${effortOn ? 'checked' : ''}>
+                                <span class="toggle-track"></span>
+                            </label>
+                        </div>
+                        <div class="effort-control" style="${effortOn ? '' : 'display:none'}">
+                            <div class="custom-select" data-cs="effort">
+                                <button class="custom-select-trigger">${this.escapeHtml(effortVal)}</button>
+                                <div class="custom-select-dropdown" style="display:none">
+                                    <div class="custom-select-option" data-value="low">low</div>
+                                    <div class="custom-select-option" data-value="medium">medium</div>
+                                    <div class="custom-select-option" data-value="high">high</div>
+                                    <div class="custom-select-option" data-value="max">max</div>
+                                    <div class="custom-select-option" data-value="__custom__">自定义...</div>
+                                </div>
+                            </div>
+                            <input type="text" class="effort-custom-input" placeholder="输入推理强度" style="${showCustom ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
+                        </div>` : ''}
+                    </div>`;
+                },
+
+                _bindCanvasThinkingEvents(popup, model) {
+                    const container = popup.querySelector('[data-tm]');
+                    if (!container) return;
+                    const tgThinking = container.querySelector('.tg-thinking');
+                    const tgEffort = container.querySelector('.tg-effort');
+                    const effortControl = container.querySelector('.effort-control');
+                    const effortTrigger = container.querySelector('.custom-select-trigger');
+                    const effortDropdown = container.querySelector('.custom-select-dropdown');
+                    const effortInput = container.querySelector('.effort-custom-input');
+
+                    if (tgThinking) {
+                        tgThinking.addEventListener('change', () => {
+                            if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
+                            this._modelThinkingConfig[model].thinking = {
+                                type: tgThinking.checked ? 'enabled' : 'disabled'
+                            };
+                            if (!tgThinking.checked) {
+                                delete this._modelThinkingConfig[model].reasoning_effort;
+                            }
+                            popup.innerHTML = this._renderCanvasThinkingHtml(model);
+                            this._bindCanvasThinkingEvents(popup, model);
+                            this._repositionCanvasPopup(popup);
+                            this._onThinkingConfigChange();
+                        });
+                    }
+                    if (tgEffort) {
+                        tgEffort.addEventListener('change', () => {
+                            if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
+                            this._modelThinkingConfig[model].thinking = { type: 'enabled' };
+                            if (tgEffort.checked) {
+                                this._modelThinkingConfig[model].reasoning_effort = 'medium';
+                            } else {
+                                delete this._modelThinkingConfig[model].reasoning_effort;
+                            }
+                            popup.innerHTML = this._renderCanvasThinkingHtml(model);
+                            this._bindCanvasThinkingEvents(popup, model);
+                            this._repositionCanvasPopup(popup);
+                            this._onThinkingConfigChange();
+                        });
+                    }
+                    if (effortTrigger && effortDropdown) {
+                        effortTrigger.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const isOpen = effortDropdown.style.display !== 'none';
+                            document.querySelectorAll('.custom-select-dropdown').forEach(d => d.style.display = 'none');
+                            if (!isOpen) effortDropdown.style.display = '';
+                        });
+                        effortDropdown.querySelectorAll('.custom-select-option').forEach(opt => {
+                            opt.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const val = opt.dataset.value;
+                                const isCustom = val === '__custom__';
+                                if (isCustom) {
+                                    effortInput.style.display = '';
+                                    effortInput.focus();
+                                } else {
+                                    effortInput.style.display = 'none';
+                                    this._modelThinkingConfig[model].reasoning_effort = val;
+                                    effortTrigger.textContent = val;
+                                }
+                                effortDropdown.style.display = 'none';
+                                if (!isCustom) this._onThinkingConfigChange();
+                            });
+                        });
+                    }
+                    if (effortInput) {
+                        effortInput.addEventListener('blur', () => {
+                            const val = effortInput.value.trim() || 'medium';
+                            this._modelThinkingConfig[model].reasoning_effort = val;
+                            effortTrigger.textContent = val;
+                            this._onThinkingConfigChange();
+                        });
+                        effortInput.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') effortInput.blur();
+                        });
+                    }
+                },
+
+                _repositionCanvasPopup(popup) {
+                    const nodeId = popup.dataset.cvLb || popup.dataset.selLbId;
+                    const btnEl = document.querySelector(`[data-cv-lb="${nodeId}"]`) || document.querySelector(`[data-sel-lb="${nodeId}"]`);
+                    if (!btnEl) return;
+                    const rect = btnEl.getBoundingClientRect();
+                    let left = rect.left - popup.offsetWidth - 4;
+                    let top = rect.top - 4;
+                    if (left < 0) left = rect.right + 4;
+                    if (top + popup.offsetHeight > window.innerHeight) {
+                        top = window.innerHeight - popup.offsetHeight - 6;
+                    }
+                    if (top < 0) top = 6;
+                    popup.style.left = left + 'px';
+                    popup.style.top = top + 'px';
                 },
 
                 toggleModelSelection(model) {
@@ -6392,6 +6802,9 @@
                             this.selectedModels = config.models;
                             document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
                         }
+                        if (config.model_thinking_config) {
+                            this._modelThinkingConfig = JSON.parse(JSON.stringify(config.model_thinking_config));
+                        }
                     } catch (error) {
                         handleError('loadConfig', error);
                     }
@@ -6531,6 +6944,12 @@
                 });
 
                 document.addEventListener('click', function(e) {
+                    const selLb = e.target.closest('[data-sel-lb]');
+                    if (selLb) {
+                        e.stopPropagation();
+                        App._showSelectorThinkingPopup(selLb);
+                        return;
+                    }
                     const selItem = e.target.closest('.comfy-sel-item');
                     if (selItem) {
                         const nodeId = selItem.dataset.nodeId;
@@ -6577,7 +6996,7 @@
                         App.selectDropdownOption(id, val, label);
                         return;
                     }
-                    if (!e.target.closest('.comfy-sel-popup') && !e.target.closest('.comfy-node-body') && !e.target.closest('.comfy-socket') && !e.target.closest('.custom-select')) {
+                    if (!e.target.closest('.comfy-sel-popup') && !e.target.closest('.comfy-node-body') && !e.target.closest('.comfy-socket') && !e.target.closest('.custom-select') && !e.target.closest('.thinking-popup')) {
                         App.closeAllSelectors();
                         document.querySelectorAll('.custom-select-dropdown.show').forEach(d => {
                             d.classList.remove('show');

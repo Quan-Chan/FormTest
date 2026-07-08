@@ -82,6 +82,7 @@ default_config = {
     "auto_append_v1": True,
     "auto_connect": True,
     "allowed_origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
+    "model_thinking_config": {},
 }
 
 config = dict(default_config)
@@ -224,7 +225,7 @@ def handle_config():
     allowed_keys = {"api_key", "base_url", "model", "temperature", "top_p",
                     "top_k", "min_p", "context_size", "concurrency", "test_count",
                     "max_retries", "timeout", "streaming", "test_set_dir", "models",
-                    "auto_append_v1", "auto_connect"}
+                     "auto_append_v1", "auto_connect", "model_thinking_config"}
     numeric_ranges = {
         "temperature": (0.0, 2.0),
         "top_p": (0.0, 1.0),
@@ -465,7 +466,7 @@ def handle_canvas_state():
 
 # ============ AI Call ============
 
-def _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k=None, min_p=None, context_size=None):
+def _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k=None, min_p=None, context_size=None, thinking_cfg=None):
     payload = {
         "model": model_name,
         "messages": [
@@ -481,6 +482,13 @@ def _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, t
         payload["min_p"] = min_p
     if context_size is not None and context_size > 0:
         payload["context_size"] = context_size
+    if thinking_cfg:
+        thinking = thinking_cfg.get("thinking", {})
+        if thinking.get("type") == "enabled":
+            payload["thinking"] = {"type": "enabled"}
+        effort = thinking_cfg.get("reasoning_effort")
+        if effort:
+            payload["reasoning_effort"] = effort
     return payload
 
 
@@ -599,12 +607,13 @@ def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
         min_p = config.get("min_p")
         context_size = config.get("context_size")
         streaming = config.get("streaming", False)
+        thinking_cfg = config.get("model_thinking_config", {}).get(model_name, {})
 
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size)
+    payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size, thinking_cfg)
 
     try:
         req_payload = dict(payload)
@@ -656,12 +665,13 @@ def call_ai_atomic_streaming(system_prompt, user_prompt, model=None, timeout=Non
         top_k = config.get("top_k")
         min_p = config.get("min_p")
         context_size = config.get("context_size")
+        thinking_cfg = config.get("model_thinking_config", {}).get(model_name, {})
 
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
-    payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size)
+    payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size, thinking_cfg)
     payload["stream"] = True
 
     content = ""
