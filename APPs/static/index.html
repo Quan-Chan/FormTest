@@ -1140,6 +1140,13 @@
         .result-content.ai {
             border-color: var(--accent-light);
             background: var(--accent-bg);
+            max-height: var(--ai-reply-max-height);
+            overflow-y: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .result-content.ai::-webkit-scrollbar {
+            display: none;
         }
         .result-content.expected {
             border-color: #f59e0b;
@@ -2953,6 +2960,10 @@
             const $ = (sel, ctx = document) => ctx.querySelector(sel);
             const $$ = (sel, ctx = document) => Array.from(ctx.querySelectorAll(sel));
 
+            /** AI 回复预览窗口的最大高度（px），可在此修改 */
+            const AI_REPLY_MAX_HEIGHT = 220;
+            document.documentElement.style.setProperty('--ai-reply-max-height', AI_REPLY_MAX_HEIGHT + 'px');
+
             let toastId = 0;
             const _toastMessages = new Set();
 
@@ -3078,7 +3089,10 @@
                 _lastRemovedSelections: null,
                 _tabSearchText: { prompts: '', questions: '' },
                 _liveItems: [],
+                _savedLiveItems: [],
                 _currentDisplay: '',
+                _userScrolledAway: false,
+                _scrollPending: false,
                 _confirmResolve: null,
                 _promptResolve: null,
 
@@ -5851,6 +5865,7 @@
                         const { job_id, total_tasks } = await hubResp.json();
                         this.allResults = {};
                         this._liveItems = [];
+                        this._userScrolledAway = false;
                         document.getElementById('aiStreamContent').innerHTML = '';
                         document.getElementById('aiStreamStatus').textContent = '生成中';
                         document.getElementById('aiStreamStatus').classList.add('active');
@@ -6053,11 +6068,14 @@
                     const aiDiv = item.querySelector('.result-content.ai');
                     if (aiDiv) {
                         if (data.ai_answer) {
+                            const atBottom = aiDiv.scrollTop + aiDiv.clientHeight >= aiDiv.scrollHeight - 5;
                             aiDiv.textContent = data.ai_answer;
+                            if (atBottom) aiDiv.scrollTop = aiDiv.scrollHeight;
                         } else {
                             aiDiv.innerHTML = '<span style="color:var(--text-muted)">无回复</span>';
                         }
                     }
+                    this._scheduleAutoScroll();
                     return item;
                 },
 
@@ -6084,6 +6102,21 @@
                     const filter = this._getStreamFilter();
                     this._liveItems.forEach(item => {
                         item.style.display = this._matchesFilter(item, filter) ? '' : 'none';
+                    });
+                },
+
+                _isAtBottom(container) {
+                    return container.scrollTop + container.clientHeight >= container.scrollHeight - 30;
+                },
+
+                _scheduleAutoScroll() {
+                    if (this._scrollPending) return;
+                    this._scrollPending = true;
+                    requestAnimationFrame(() => {
+                        this._scrollPending = false;
+                        if (this._userScrolledAway) return;
+                        const container = document.getElementById('aiStreamContent');
+                        if (container) container.scrollTop = container.scrollHeight;
                     });
                 },
 
@@ -6178,6 +6211,8 @@
                     const val = hidden ? hidden.value : '';
                     if (val === this._currentDisplay) return;
                     if (!val) {
+                        this._liveItems = this._savedLiveItems || [];
+                        this._userScrolledAway = false;
                         if (this._liveItems.length > 0) {
                             const container = document.getElementById('aiStreamContent');
                             container.innerHTML = '';
@@ -6198,7 +6233,9 @@
                     const sorted = [...result.data].sort((a, b) => this._compareByLogicalOrder(a, b));
                     const container = document.getElementById('aiStreamContent');
                     container.innerHTML = '';
+                    this._savedLiveItems = this._liveItems;
                     this._liveItems = [];
+                    this._userScrolledAway = true;
                     document.getElementById('aiStreamStatus').textContent = '历史';
                     document.getElementById('resultCount').textContent = `${sorted.length} 题`;
                     for (const item of sorted) {
@@ -6282,6 +6319,7 @@
                             this.isRunning = true;
                             this.allResults = {};
                             this._liveItems = [];
+                            this._userScrolledAway = false;
                             document.getElementById('aiStreamContent').innerHTML = '';
                             document.getElementById('progressContainer').style.display = 'block';
                             document.getElementById('progressContainer').dataset.total = st.total;
@@ -6384,6 +6422,17 @@
                 on(byId('historyRetryBtn'), 'click', () => App.retryLoadHistory());
                 on(byId('modal-streaming'), 'change', () => App.onConfigChange());
                 on(byId('autoConnectToggle'), 'change', () => App.onConfigChange());
+
+                const streamContent = byId('aiStreamContent');
+                if (streamContent) {
+                    on(streamContent, 'scroll', () => {
+                        if (streamContent.scrollTop + streamContent.clientHeight >= streamContent.scrollHeight - 30) {
+                            App._userScrolledAway = false;
+                        } else {
+                            App._userScrolledAway = true;
+                        }
+                    });
+                }
 
                 $$('[data-action]').forEach(el => {
                     const action = el.dataset.action;
