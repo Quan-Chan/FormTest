@@ -4520,6 +4520,7 @@
                         selectedPrompts: selectedPromptItems,
                         selectedQuestions: selectedQuestionItems,
                         selectedModels: [...this.selectedModels],
+                        modelThinkingConfig: JSON.parse(JSON.stringify(this._modelThinkingConfig)),
                         viewport: { panX: this.panX, panY: this.panY, scale: this.scale }
                     };
                     const saves = await this._getLinkSaves();
@@ -4561,6 +4562,7 @@
                     if (archive.selectedModels) {
                         this.selectedModels = [...archive.selectedModels];
                     }
+                    this._modelThinkingConfig = archive.modelThinkingConfig ? JSON.parse(JSON.stringify(archive.modelThinkingConfig)) : {};
                     this.updateSelectedModelCount();
                     this.canvasToSelectedModels();
                     this._markMissingModels();
