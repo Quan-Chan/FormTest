@@ -1537,16 +1537,44 @@
         .thinking-row .toggle-switch {
             flex-shrink: 0;
         }
-        .effort-control {
+        .effort-options {
             display: flex;
-            flex-direction: column;
+            flex-wrap: wrap;
             gap: 6px;
             padding-left: 4px;
         }
-        .effort-control .custom-select {
-            width: 100%;
+        .effort-option {
+            padding: 4px 14px;
+            border-radius: 20px;
+            font-size: 12px;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            transition: all 0.15s;
+            font-family: inherit;
+            user-select: none;
+            line-height: 1.5;
         }
-        .effort-control .effort-custom-input {
+        .effort-option:hover:not(:disabled) {
+            border-color: var(--accent);
+            background: var(--accent-bg);
+            color: var(--accent);
+        }
+        .effort-option:active:not(:disabled) {
+            transform: scale(0.96);
+        }
+        .effort-option.active {
+            background: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+        .effort-option:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+        .effort-custom-input {
             padding: 6px 10px;
             font-size: 12px;
             background: var(--bg-card);
@@ -1556,7 +1584,7 @@
             outline: none;
             width: 100%;
         }
-        .effort-control .effort-custom-input:focus {
+        .effort-custom-input:focus {
             border-color: var(--accent);
         }
         .thinking-popup {
@@ -1574,11 +1602,6 @@
         }
         .thinking-popup .thinking-row .thinking-label {
             font-size: 12px;
-        }
-        .thinking-popup .effort-control .custom-select-trigger {
-            height: 28px;
-            padding: 0 10px;
-            font-size: 11px;
         }
 
         .tab-header {
@@ -5577,7 +5600,8 @@
                     } else {
                         popup.innerHTML = items.map((item, idx) => {
                             const sel = node.value === item;
-                            const lb = type === 'model' ? `<button class="model-lightbulb-btn" data-sel-lb="${nodeId}" data-sel-model="${this.escapeHtml(item)}" title="推理设置">
+                            const lbActive = type === 'model' && this._modelThinkingConfig[item]?.thinking?.type === 'enabled';
+                            const lb = type === 'model' ? `<button class="model-lightbulb-btn ${lbActive ? 'active' : ''}" data-sel-lb="${nodeId}" data-sel-model="${this.escapeHtml(item)}" title="推理设置">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
                             </button>` : '';
                             return `<div class="comfy-sel-item ${sel ? 'picked' : ''}" data-node-id="${nodeId}" data-type="${type}" data-index="${idx}"><span>${this.escapeHtml(item)}</span>${lb}</div>`;
@@ -5835,10 +5859,11 @@
                     container.innerHTML = this.availableModels.map(model => {
                         const index = this.selectedModels.indexOf(model);
                         const orderNum = index !== -1 ? index + 1 : null;
+                        const thinkingActive = this._modelThinkingConfig[model]?.thinking?.type === 'enabled';
                         return `<div class="model-checkbox-item" data-model="${this.escapeHtml(model)}">
                         <span class="model-order-badge ${orderNum ? 'active' : ''}">${orderNum || ''}</span>
                         <span class="model-name">${this.escapeHtml(model)}</span>
-                        <button class="model-lightbulb-btn" data-lb="${this.escapeHtml(model)}" title="推理设置">
+                        <button class="model-lightbulb-btn ${thinkingActive ? 'active' : ''}" data-lb="${this.escapeHtml(model)}" title="推理设置">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
                         </button>
                     </div>`;
@@ -5866,6 +5891,9 @@
                     const effortOn = !!cfg.reasoning_effort;
                     const effortVal = cfg.reasoning_effort || 'medium';
                     const showCustom = effortOn && !['low', 'medium', 'high', 'max'].includes(effortVal);
+                    const presetValues = ['low', 'medium', 'high', 'max'];
+                    const disabled = thinkingOn ? '' : 'disabled';
+                    const effortStyle = thinkingOn ? '' : 'opacity:0.4;pointer-events:none;';
                     const body = overlay.querySelector('.thinking-submodal-body');
                     body.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text-primary)">推理设置 — ${this.escapeHtml(model)}</div>
                         <div class="thinking-row" style="margin-bottom:10px">
@@ -5875,96 +5903,68 @@
                                 <span class="toggle-track"></span>
                             </label>
                         </div>
-                        <div class="thinking-row" id="ts-effort-row" style="margin-bottom:10px;${thinkingOn ? '' : 'opacity:0.4;pointer-events:none;'}">
+                        <div class="thinking-row" style="margin-bottom:6px;${effortStyle}">
                             <span class="thinking-label">推理强度</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="ts-effort" ${effortOn ? 'checked' : ''} ${thinkingOn ? '' : 'disabled'}>
-                                <span class="toggle-track"></span>
-                            </label>
                         </div>
-                        <div class="effort-control" id="ts-effort-control" style="${effortOn && thinkingOn ? '' : 'display:none'}">
-                            <div class="custom-select" data-cs="ts-cs">
-                                <button class="custom-select-trigger" id="ts-cs-trigger"><span class="custom-select-text">${this.escapeHtml(effortVal)}</span><svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg></button>
-                                <div class="custom-select-dropdown" style="display:none">
-                                    <div class="custom-select-option" data-value="low">low</div>
-                                    <div class="custom-select-option" data-value="medium">medium</div>
-                                    <div class="custom-select-option" data-value="high">high</div>
-                                    <div class="custom-select-option" data-value="max">max</div>
-                                    <div class="custom-select-option" data-value="__custom__">自定义...</div>
-                                </div>
-                            </div>
-                            <input type="text" class="effort-custom-input" id="ts-custom-input" placeholder="输入推理强度" style="${showCustom ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
-                        </div>`;
+                        <div class="effort-options" id="ts-effort-options" style="${effortStyle}">
+                            ${presetValues.map(v => `<button class="effort-option${effortOn && effortVal === v && !showCustom ? ' active' : ''}" data-value="${v}" ${disabled}>${v}</button>`).join('')}
+                            <button class="effort-option${showCustom ? ' active' : ''}" data-value="__custom__" ${disabled}>自定义</button>
+                        </div>
+                        <input type="text" class="effort-custom-input" id="ts-custom-input" placeholder="输入自定义推理强度" style="margin-top:8px;${showCustom && thinkingOn ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">`;
                     this._bindThinkingSubmodalEvents(model);
                     overlay.classList.add('show');
                 },
 
                 _bindThinkingSubmodalEvents(model) {
                     const tgThinking = document.getElementById('ts-thinking');
-                    const tgEffort = document.getElementById('ts-effort');
-                    const effortRow = document.getElementById('ts-effort-row');
-                    const effortControl = document.getElementById('ts-effort-control');
-                    const trigger = document.getElementById('ts-cs-trigger');
-                    const dropdown = document.querySelector('#ts-effort-control .custom-select-dropdown');
+                    const effortOptions = document.querySelectorAll('.effort-option');
                     const customInput = document.getElementById('ts-custom-input');
+                    const effortRow = document.querySelector('.thinking-row:nth-child(3)');
+                    const effortOptionsDiv = document.getElementById('ts-effort-options');
 
                     if (tgThinking) {
                         tgThinking.addEventListener('change', () => {
                             const on = tgThinking.checked;
-                            if (effortRow) effortRow.style.opacity = on ? '' : '0.4';
-                            if (effortRow) effortRow.style.pointerEvents = on ? '' : 'none';
-                            if (tgEffort) tgEffort.disabled = !on;
-                            if (!on) {
-                                if (tgEffort) tgEffort.checked = false;
-                                if (effortControl) effortControl.style.display = 'none';
-                                if (customInput) customInput.style.display = 'none';
-                            } else if (tgEffort && tgEffort.checked && effortControl) {
-                                effortControl.style.display = '';
+                            if (effortRow) {
+                                effortRow.style.opacity = on ? '' : '0.4';
+                                effortRow.style.pointerEvents = on ? '' : 'none';
                             }
+                            if (effortOptionsDiv) {
+                                effortOptionsDiv.style.opacity = on ? '' : '0.4';
+                                effortOptionsDiv.style.pointerEvents = on ? '' : 'none';
+                            }
+                            effortOptions.forEach(btn => btn.disabled = !on);
+                            if (!on && customInput) customInput.style.display = 'none';
                         });
                     }
-                    if (tgEffort) {
-                        tgEffort.addEventListener('change', () => {
-                            const on = tgEffort.checked;
-                            if (effortControl) effortControl.style.display = on ? '' : 'none';
-                            if (customInput) customInput.style.display = 'none';
-                        });
-                    }
-                    if (trigger && dropdown) {
-                        trigger.addEventListener('click', (e) => {
+
+                    effortOptions.forEach(btn => {
+                        btn.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            const isOpen = dropdown.style.display !== 'none';
-                            document.querySelectorAll('.custom-select-dropdown').forEach(d => d.style.display = 'none');
-                            document.querySelectorAll('.custom-select-trigger.open').forEach(el => el.classList.remove('open'));
-                            if (!isOpen) {
-                                dropdown.style.display = '';
-                                trigger.classList.add('open');
+                            const isActive = btn.classList.contains('active');
+                            effortOptions.forEach(b => b.classList.remove('active'));
+                            if (isActive) {
+                                if (customInput) customInput.style.display = 'none';
+                            } else {
+                                btn.classList.add('active');
+                                if (btn.dataset.value === '__custom__') {
+                                    if (customInput) {
+                                        customInput.style.display = '';
+                                        customInput.focus();
+                                    }
+                                } else {
+                                    if (customInput) customInput.style.display = 'none';
+                                }
                             }
                         });
-                        dropdown.querySelectorAll('.custom-select-option').forEach(opt => {
-                            opt.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                const val = opt.dataset.value;
-                                if (val === '__custom__') {
-                                    customInput.style.display = '';
-                                    customInput.focus();
-                                    dropdown.style.display = 'none';
-                                } else {
-                                    customInput.style.display = 'none';
-                                    const textEl = trigger.querySelector('.custom-select-text');
-                                    if (textEl) textEl.textContent = val;
-                                    dropdown.style.display = 'none';
-                                }
-                            });
-                        });
-                    }
+                    });
+
                     if (customInput) {
                         customInput.addEventListener('blur', () => {
-                            if (customInput.value.trim()) {
-                                const textEl = trigger.querySelector('.custom-select-text');
-                                if (textEl) textEl.textContent = customInput.value.trim();
+                            if (!customInput.value.trim()) {
+                                document.querySelector('.effort-option[data-value="__custom__"]')?.classList.remove('active');
+                                customInput.style.display = 'none';
                             }
-                            if (customInput.value.trim()) customInput.style.display = '';
                         });
                         customInput.addEventListener('keydown', (e) => {
                             if (e.key === 'Enter') customInput.blur();
@@ -5978,16 +5978,22 @@
                     const model = this._thinkingModalModel;
                     if (!model) { overlay.classList.remove('show'); return; }
                     const tgThinking = document.getElementById('ts-thinking');
-                    const tgEffort = document.getElementById('ts-effort');
-                    const trigger = document.getElementById('ts-cs-trigger');
+                    const activeOption = document.querySelector('.effort-option.active');
                     const customInput = document.getElementById('ts-custom-input');
                     if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
-                    if (tgThinking && tgThinking.checked) {
+                    if (tgThinking?.checked) {
                         this._modelThinkingConfig[model].thinking = { type: 'enabled' };
-                        if (tgEffort && tgEffort.checked && trigger) {
-                            const effortText = trigger.querySelector('.custom-select-text')?.textContent || trigger.textContent;
-                            const val = (customInput && customInput.style.display !== 'none' && customInput.value.trim()) ? customInput.value.trim() : effortText;
-                            this._modelThinkingConfig[model].reasoning_effort = val;
+                        if (activeOption) {
+                            if (activeOption.dataset.value === '__custom__') {
+                                const val = customInput?.value.trim() || '';
+                                if (val) {
+                                    this._modelThinkingConfig[model].reasoning_effort = val;
+                                } else {
+                                    delete this._modelThinkingConfig[model].reasoning_effort;
+                                }
+                            } else {
+                                this._modelThinkingConfig[model].reasoning_effort = activeOption.dataset.value;
+                            }
                         } else {
                             delete this._modelThinkingConfig[model].reasoning_effort;
                         }
@@ -6038,7 +6044,10 @@
                     const effortOn = !!cfg.reasoning_effort;
                     const effortVal = cfg.reasoning_effort || 'medium';
                     const showCustom = effortOn && !['low', 'medium', 'high', 'max'].includes(effortVal);
-                    return `<div style="display:flex;flex-direction:column;gap:10px" data-tm="${this.escapeHtml(model)}">
+                    const presetValues = ['low', 'medium', 'high', 'max'];
+                    const disabled = thinkingOn ? '' : 'disabled';
+                    const effortStyle = thinkingOn ? '' : 'opacity:0.4;pointer-events:none;';
+                    return `<div style="display:flex;flex-direction:column;gap:8px" data-tm="${this.escapeHtml(model)}">
                         <div style="font-size:12px;font-weight:500;color:var(--text-secondary)">${this.escapeHtml(model)}</div>
                         <div class="thinking-row">
                             <span class="thinking-label">开启推理</span>
@@ -6047,26 +6056,14 @@
                                 <span class="toggle-track"></span>
                             </label>
                         </div>
-                        <div class="thinking-row" style="opacity:${thinkingOn ? '1' : '0.4'};pointer-events:${thinkingOn ? 'auto' : 'none'}">
+                        <div class="thinking-row" style="${effortStyle};margin-bottom:4px">
                             <span class="thinking-label">推理强度</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" class="tg-effort" ${effortOn ? 'checked' : ''} ${thinkingOn ? '' : 'disabled'}>
-                                <span class="toggle-track"></span>
-                            </label>
                         </div>
-                        <div class="effort-control" style="${thinkingOn && effortOn ? '' : 'display:none'}">
-                            <div class="custom-select" data-cs="effort">
-                                <button class="custom-select-trigger">${this.escapeHtml(effortVal)}</button>
-                                <div class="custom-select-dropdown" style="display:none">
-                                    <div class="custom-select-option" data-value="low">low</div>
-                                    <div class="custom-select-option" data-value="medium">medium</div>
-                                    <div class="custom-select-option" data-value="high">high</div>
-                                    <div class="custom-select-option" data-value="max">max</div>
-                                    <div class="custom-select-option" data-value="__custom__">自定义...</div>
-                                </div>
-                            </div>
-                            <input type="text" class="effort-custom-input" placeholder="输入推理强度" style="${showCustom ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
+                        <div class="effort-options" style="${effortStyle}">
+                            ${presetValues.map(v => `<button class="effort-option${effortOn && effortVal === v && !showCustom ? ' active' : ''}" data-value="${v}" ${disabled}>${v}</button>`).join('')}
+                            <button class="effort-option${showCustom ? ' active' : ''}" data-value="__custom__" ${disabled}>自定义</button>
                         </div>
+                        <input type="text" class="effort-custom-input" placeholder="输入自定义推理强度" style="margin-top:4px;${showCustom && thinkingOn ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
                     </div>`;
                 },
 
@@ -6074,82 +6071,65 @@
                     const container = popup.querySelector('[data-tm]');
                     if (!container) return;
                     const tgThinking = container.querySelector('.tg-thinking');
-                    const tgEffort = container.querySelector('.tg-effort');
-                    const effortControl = container.querySelector('.effort-control');
+                    const effortOptions = container.querySelectorAll('.effort-option');
+                    const customInput = container.querySelector('.effort-custom-input');
                     const effortRow = container.querySelector('.thinking-row:nth-child(3)');
-                    const effortTrigger = container.querySelector('.custom-select-trigger');
-                    const effortDropdown = container.querySelector('.custom-select-dropdown');
-                    const effortInput = container.querySelector('.effort-custom-input');
+                    const effortOptionsDiv = container.querySelector('.effort-options');
 
                     if (tgThinking) {
                         tgThinking.addEventListener('change', () => {
                             if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
+                            const on = tgThinking.checked;
                             this._modelThinkingConfig[model].thinking = {
-                                type: tgThinking.checked ? 'enabled' : 'disabled'
+                                type: on ? 'enabled' : 'disabled'
                             };
-                            if (!tgThinking.checked) {
+                            if (!on) {
                                 delete this._modelThinkingConfig[model].reasoning_effort;
                             }
                             if (effortRow) {
-                                effortRow.style.opacity = tgThinking.checked ? '1' : '0.4';
-                                effortRow.style.pointerEvents = tgThinking.checked ? 'auto' : 'none';
+                                effortRow.style.opacity = on ? '1' : '0.4';
+                                effortRow.style.pointerEvents = on ? 'auto' : 'none';
                             }
-                            if (tgEffort) tgEffort.disabled = !tgThinking.checked;
-                            if (!tgThinking.checked) {
-                                tgEffort.checked = false;
-                                if (effortControl) effortControl.style.display = 'none';
+                            if (effortOptionsDiv) {
+                                effortOptionsDiv.style.opacity = on ? '' : '0.4';
+                                effortOptionsDiv.style.pointerEvents = on ? '' : 'none';
                             }
+                            effortOptions.forEach(btn => btn.disabled = !on);
+                            if (!on && customInput) customInput.style.display = 'none';
                             this.onConfigChange();
                         });
                     }
-                    if (tgEffort) {
-                        tgEffort.addEventListener('change', () => {
-                            if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
-                            this._modelThinkingConfig[model].thinking = { type: 'enabled' };
-                            if (tgEffort.checked) {
-                                this._modelThinkingConfig[model].reasoning_effort = 'medium';
-                                if (effortControl) effortControl.style.display = '';
-                            } else {
-                                delete this._modelThinkingConfig[model].reasoning_effort;
-                                if (effortControl) effortControl.style.display = 'none';
-                            }
-                            this.onConfigChange();
-                        });
-                    }
-                    if (effortTrigger && effortDropdown) {
-                        effortTrigger.addEventListener('click', (e) => {
+
+                    effortOptions.forEach(btn => {
+                        btn.addEventListener('click', (e) => {
                             e.stopPropagation();
-                            const isOpen = effortDropdown.style.display !== 'none';
-                            document.querySelectorAll('.custom-select-dropdown').forEach(d => d.style.display = 'none');
-                            if (!isOpen) effortDropdown.style.display = '';
-                        });
-                        effortDropdown.querySelectorAll('.custom-select-option').forEach(opt => {
-                            opt.addEventListener('click', (e) => {
-                                e.stopPropagation();
-                                const val = opt.dataset.value;
-                                const isCustom = val === '__custom__';
-                                if (isCustom) {
-                                    effortInput.style.display = '';
-                                    effortInput.focus();
+                            const isActive = btn.classList.contains('active');
+                            effortOptions.forEach(b => b.classList.remove('active'));
+                            if (isActive) {
+                                if (customInput) customInput.style.display = 'none';
+                                delete this._modelThinkingConfig[model]?.reasoning_effort;
+                            } else {
+                                btn.classList.add('active');
+                                if (btn.dataset.value === '__custom__') {
+                                    if (customInput) customInput.style.display = '';
                                 } else {
-                                    effortInput.style.display = 'none';
-                                    this._modelThinkingConfig[model].reasoning_effort = val;
-                                    effortTrigger.textContent = val;
+                                    if (customInput) customInput.style.display = 'none';
+                                    this._modelThinkingConfig[model].reasoning_effort = btn.dataset.value;
                                 }
-                                effortDropdown.style.display = 'none';
-                                if (!isCustom) this.onConfigChange();
-                            });
-                        });
-                    }
-                    if (effortInput) {
-                        effortInput.addEventListener('blur', () => {
-                            const val = effortInput.value.trim() || 'medium';
-                            this._modelThinkingConfig[model].reasoning_effort = val;
-                            effortTrigger.textContent = val;
+                            }
                             this.onConfigChange();
                         });
-                        effortInput.addEventListener('keydown', (e) => {
-                            if (e.key === 'Enter') effortInput.blur();
+                    });
+
+                    if (customInput) {
+                        customInput.addEventListener('blur', () => {
+                            if (!customInput.value.trim()) {
+                                container.querySelector('.effort-option[data-value="__custom__"]')?.classList.remove('active');
+                                customInput.style.display = 'none';
+                            }
+                        });
+                        customInput.addEventListener('keydown', (e) => {
+                            if (e.key === 'Enter') customInput.blur();
                         });
                     }
                 },
