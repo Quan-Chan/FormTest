@@ -3306,6 +3306,7 @@
                 _collectConfig() {
                     const p = (id) => parseFloat(document.getElementById(id + 'Input').value) || 0;
                     const pi = (id) => parseInt(document.getElementById(id + 'Input').value) || 0;
+                    this.canvasToSelectedModels();
                     return {
                         test_set_dir: document.getElementById('testSetDir').value || '',
                         api_key: document.getElementById('apiKey').value,
@@ -5798,6 +5799,12 @@
                     btn.classList.add('btn-loading');
                     this._fetchModels()
                         .then(() => {
+                            this.selectedModels = this.selectedModels.filter(m => this.availableModels.includes(m));
+                            Object.keys(this._modelThinkingConfig).forEach(k => {
+                                if (!this.availableModels.includes(k)) delete this._modelThinkingConfig[k];
+                            });
+                            this._markMissingModels();
+                            this.renderAssociationCanvas({ center: false });
                             this._savedSelectedModels = JSON.parse(JSON.stringify(this.selectedModels));
                             this._savedModelThinkingConfig = JSON.parse(JSON.stringify(this._modelThinkingConfig));
                             this.renderModelCheckboxList();
@@ -5817,6 +5824,12 @@
                     await this.onBaseUrlBlur();
                     this._fetchModels()
                         .then(() => {
+                            this.selectedModels = this.selectedModels.filter(m => this.availableModels.includes(m));
+                            Object.keys(this._modelThinkingConfig).forEach(k => {
+                                if (!this.availableModels.includes(k)) delete this._modelThinkingConfig[k];
+                            });
+                            this._markMissingModels();
+                            this.renderAssociationCanvas({ center: false });
                             showToast('模型列表已刷新，共 ' + this.availableModels.length + ' 个模型', 'success');
                         })
                         .catch(error => { handleError('refreshModels', error); })
@@ -5858,7 +5871,11 @@
 
                 renderModelCheckboxList() {
                     const container = document.getElementById('modelCheckboxList');
-                    container.innerHTML = this.availableModels.map(model => {
+                    const missingSelected = this.selectedModels.filter(m => !this.availableModels.includes(m));
+                    const warningHtml = missingSelected.length > 0
+                        ? `<div style="padding:8px 12px;font-size:12px;color:#ef4444;background:#fef2f2;border-radius:6px;margin-bottom:8px;">${missingSelected.length} 个已选模型在当前 API 中不可用</div>`
+                        : '';
+                    container.innerHTML = warningHtml + this.availableModels.map(model => {
                         const index = this.selectedModels.indexOf(model);
                         const orderNum = index !== -1 ? index + 1 : null;
                         const thinkingActive = this._modelThinkingConfig[model]?.thinking?.type === 'enabled';
