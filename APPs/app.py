@@ -83,6 +83,8 @@ default_config = {
     "auto_connect": True,
     "allowed_origins": ["http://localhost:5000", "http://127.0.0.1:5000"],
     "model_thinking_config": {},
+    "anthropic_mode": False,
+    "force_openai_endpoint": False,
 }
 
 config = dict(default_config)
@@ -225,7 +227,8 @@ def handle_config():
     allowed_keys = {"api_key", "base_url", "model", "temperature", "top_p",
                     "top_k", "min_p", "context_size", "concurrency", "test_count",
                     "max_retries", "timeout", "streaming", "test_set_dir", "models",
-                     "auto_append_v1", "auto_connect", "model_thinking_config"}
+                     "auto_append_v1", "auto_connect", "model_thinking_config",
+                     "anthropic_mode", "force_openai_endpoint"}
     numeric_ranges = {
         "temperature": (0.0, 2.0),
         "top_p": (0.0, 1.0),
@@ -482,14 +485,131 @@ def _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, t
         payload["min_p"] = min_p
     if context_size is not None and context_size > 0:
         payload["context_size"] = context_size
-    if thinking_cfg:
-        thinking = thinking_cfg.get("thinking", {})
-        if thinking.get("type") == "enabled":
-            payload["thinking"] = {"type": "enabled"}
-        effort = thinking_cfg.get("reasoning_effort")
+    return payload
+
+
+def _detect_api_type(base_url):
+    url = base_url.lower()
+    if "deepseek.com" in url:
+        return "deepseek"
+    if "open.bigmodel.cn" in url:
+        return "zhipu"
+    if "openai.com" in url:
+        return "openai"
+    if "moonshot.cn" in url:
+        return "kimi"
+    if "dashscope.aliyuncs.com" in url:
+        return "alibaba"
+    if "anthropic.com" in url:
+        return "anthropic"
+    return "unknown"
+
+
+def _apply_thinking(payload, thinking_cfg, api_type):
+    if not thinking_cfg:
+        return
+    t_type = thinking_cfg.get("thinking", {}).get("type")
+    effort = thinking_cfg.get("reasoning_effort")
+    if t_type == "disabled":
+        if api_type == "deepseek" or api_type == "kimi":
+            payload["thinking"] = {"type": "disabled"}
+        return
+    if t_type != "enabled":
+        return
+    if api_type == "deepseek":
+        payload["thinking"] = {"type": "enabled"}
+        if effort:
+            payload["thinking"]["reasoning_effort"] = effort
+    elif api_type == "zhipu":
+        payload["thinking"] = {"type": "enabled"}
         if effort:
             payload["reasoning_effort"] = effort
+    elif api_type == "kimi":
+        payload["thinking"] = {"type": "enabled"}
+    else:
+        if effort:
+            payload["reasoning_effort"] = effort
+
+
+def _build_anthropic_payload(model, system_prompt, messages, temperature, top_p, thinking_cfg, max_tokens=8192):
+    payload = {
+        "model": model,
+        "max_tokens": max_tokens,
+        "messages": messages,
+    }
+    if system_prompt:
+        payload["system"] = system_prompt
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if top_p is not None:
+        payload["top_p"] = top_p
+    if thinking_cfg:
+        t_type = thinking_cfg.get("thinking", {}).get("type")
+        effort = thinking_cfg.get("reasoning_effort")
+        if t_type == "enabled":
+            payload["thinking"] = {"type": "enabled", "budget_tokens": 4096}
+            if effort:
+                payload["output_config"] = {"effort": effort}
+        elif t_type == "disabled":
+            payload["thinking"] = {"type": "disabled"}
     return payload
+
+
+def _handle_anthropic_response(response, attempt):
+    try:
+        result = response.json()
+    except Exception:
+        return None
+    content = ""
+    reasoning = ""
+    for block in result.get("content", []):
+        if block.get("type") == "text":
+            content += block.get("text", "")
+        elif block.get("type") == "thinking":
+            reasoning += block.get("thinking", "")
+        elif block.get("type") == "redacted_thinking":
+            reasoning += "[REDACTED: " + block.get("data", "") + "]"
+    if content or reasoning:
+        return {"success": True, "content": content, "reasoning_content": reasoning}
+    log_debug(f"Anthropic返回为空，attempt={attempt}, response={result}")
+    return None
+
+
+def _parse_anthropic_sse_lines(lines_iter, on_chunk, stop_event=None):
+    content = ""
+    reasoning_content = ""
+    try:
+        for raw_line in lines_iter:
+            if stop_event and stop_event.is_set():
+                break
+            if not raw_line:
+                continue
+            try:
+                decoded = raw_line.decode("utf-8")
+            except UnicodeDecodeError:
+                continue
+            trimmed = decoded.strip()
+            if not trimmed:
+                continue
+            try:
+                data = json.loads(trimmed)
+            except json.JSONDecodeError:
+                continue
+            etype = data.get("type", "")
+            if etype == "content_block_delta":
+                delta = data.get("delta", {})
+                dt = delta.get("type", "")
+                if dt == "text_delta":
+                    content += delta.get("text", "")
+                    on_chunk(content, reasoning_content)
+                elif dt == "thinking_delta":
+                    reasoning_content += delta.get("thinking", "")
+                    on_chunk(content, reasoning_content)
+            elif etype == "message_stop":
+                break
+    except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
+        pass
+    return content, reasoning_content
 
 
 def _parse_sse_lines(lines_iter):
@@ -518,6 +638,7 @@ def _parse_sse_lines(lines_iter):
 
 def _parse_sse_lines_streaming(lines_iter, on_chunk, stop_event=None):
     content = ""
+    reasoning_content = ""
     try:
         for raw_line in lines_iter:
             if stop_event and stop_event.is_set():
@@ -539,12 +660,16 @@ def _parse_sse_lines_streaming(lines_iter, on_chunk, stop_event=None):
                 content_delta = delta.get("content", "")
                 if content_delta:
                     content += content_delta
-                    on_chunk(content)
+                reasoning_delta = delta.get("reasoning_content", "")
+                if reasoning_delta:
+                    reasoning_content += reasoning_delta
+                if content_delta or reasoning_delta:
+                    on_chunk(content, reasoning_content)
             except json.JSONDecodeError:
                 continue
     except (requests.exceptions.ConnectionError, requests.exceptions.Timeout):
         pass
-    return content
+    return content, reasoning_content
 
 
 def _parse_sse_stream(response):
@@ -561,20 +686,20 @@ def _handle_streaming_response(response, attempt):
     if "text/event-stream" in content_type:
         content = _parse_sse_stream(response)
     if content:
-        return {"success": True, "content": content}
+        return {"success": True, "content": content, "reasoning_content": ""}
     raw_body = response.content
     try:
         result = json.loads(raw_body)
         if result.get("choices") and result["choices"][0].get("message"):
             content = result["choices"][0]["message"].get("content")
             if content:
-                return {"success": True, "content": content}
+                return {"success": True, "content": content, "reasoning_content": ""}
         log_debug(f"AI流式模式返回JSON，attempt={attempt}, response={result}")
     except Exception:
         pass
     content = _parse_sse_from_body(raw_body)
     if content:
-        return {"success": True, "content": content}
+        return {"success": True, "content": content, "reasoning_content": ""}
     log_debug(f"AI流式返回为空，attempt={attempt}")
     return None
 
@@ -587,8 +712,9 @@ def _handle_non_streaming_response(response, attempt):
         return None
     if result.get("choices") and result["choices"][0].get("message"):
         content = result["choices"][0]["message"].get("content")
+        reasoning = result["choices"][0]["message"].get("reasoning_content", "")
         if content:
-            return {"success": True, "content": content}
+            return {"success": True, "content": content, "reasoning_content": reasoning}
     log_debug(f"AI返回为空，attempt={attempt}, response={result}")
     return None
 
@@ -608,12 +734,58 @@ def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
         context_size = config.get("context_size")
         streaming = config.get("streaming", False)
         thinking_cfg = config.get("model_thinking_config", {}).get(model_name, {})
+        anthropic_mode = config.get("anthropic_mode", False)
+        force_openai = config.get("force_openai_endpoint", False)
+
+    use_anthropic = anthropic_mode or (not force_openai and _detect_api_type(base_url) == "anthropic")
+
+    if use_anthropic:
+        messages = [{"role": "user", "content": user_prompt}]
+        payload = _build_anthropic_payload(
+            model_name, system_prompt or None, messages,
+            temperature, top_p, thinking_cfg
+        )
+        headers = {
+            "x-api-key": api_key,
+            "Content-Type": "application/json",
+            "anthropic-version": "2023-06-01",
+        }
+        url = f"{base_url.rstrip('/')}/messages"
+        if streaming:
+            payload["stream"] = True
+        try:
+            response = requests.post(url, headers=headers, json=payload, stream=streaming, timeout=timeout)
+            if response.status_code == 200:
+                if streaming:
+                    content, reasoning = _parse_sse_lines_streaming(response.iter_lines(), lambda c, r: None, stop_event=None)
+                    return {"success": True, "content": content, "reasoning_content": reasoning}
+                return _handle_anthropic_response(response, 0)
+            elif response.status_code == 429:
+                return {"rate_limited": True}
+            elif 400 <= response.status_code < 500:
+                log_debug(f"Anthropic请求客户端错误，status={response.status_code}，不重试")
+                return {"success": False, "error": f"HTTP {response.status_code}: {response.text[:200]}"}
+            else:
+                log_debug(f"Anthropic请求失败，status={response.status_code}，将重试")
+                return {"retry": True}
+        except requests.exceptions.Timeout:
+            log_debug("Anthropic请求超时，将重试")
+            return {"retry": True}
+        except requests.exceptions.ConnectionError as e:
+            log_debug(f"Anthropic连接异常，将重试: {e}")
+            return {"retry": True, "error": str(e)}
+        except Exception as e:
+            log_debug(f"Anthropic请求异常: {e}")
+            return {"success": False, "error": str(e)}
+
+    api_type = "openai" if force_openai else _detect_api_type(base_url)
 
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
     payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size, thinking_cfg)
+    _apply_thinking(payload, thinking_cfg, api_type)
 
     try:
         req_payload = dict(payload)
@@ -666,12 +838,52 @@ def call_ai_atomic_streaming(system_prompt, user_prompt, model=None, timeout=Non
         min_p = config.get("min_p")
         context_size = config.get("context_size")
         thinking_cfg = config.get("model_thinking_config", {}).get(model_name, {})
+        anthropic_mode = config.get("anthropic_mode", False)
+        force_openai = config.get("force_openai_endpoint", False)
+
+    use_anthropic = anthropic_mode or (not force_openai and _detect_api_type(base_url) == "anthropic")
+
+    if use_anthropic:
+        messages = [{"role": "user", "content": user_prompt}]
+        payload = _build_anthropic_payload(
+            model_name, system_prompt or None, messages,
+            temperature, top_p, thinking_cfg
+        )
+        payload["stream"] = True
+        headers = {
+            "x-api-key": api_key,
+            "Content-Type": "application/json",
+            "anthropic-version": "2023-06-01",
+        }
+        url = f"{base_url.rstrip('/')}/messages"
+        try:
+            response = requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout)
+            if response.status_code == 200:
+                content, reasoning = _parse_anthropic_sse_lines(response.iter_lines(), on_chunk, stop_event=stop_event)
+                return {"success": True, "content": content, "reasoning_content": reasoning}
+            elif response.status_code == 429:
+                return {"rate_limited": True}
+            elif 400 <= response.status_code < 500:
+                log_debug(f"Anthropic流式请求客户端错误，status={response.status_code}，不重试")
+                return {"success": False, "error": f"HTTP {response.status_code}: {response.text[:200]}"}
+            else:
+                log_debug(f"Anthropic流式请求失败，status={response.status_code}，将重试")
+                return {"retry": True}
+        except (requests.exceptions.Timeout, requests.exceptions.ConnectionError) as e:
+            log_debug(f"Anthropic流式连接异常: {e}")
+            return {"success": False, "error": "AI连接失败"}
+        except Exception as e:
+            log_debug(f"Anthropic流式异常: {e}")
+            return {"success": False, "error": str(e)}
+
+    api_type = "openai" if force_openai else _detect_api_type(base_url)
 
     headers = {"Content-Type": "application/json"}
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
 
     payload = _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, top_k, min_p, context_size, thinking_cfg)
+    _apply_thinking(payload, thinking_cfg, api_type)
     payload["stream"] = True
 
     content = ""
@@ -684,8 +896,8 @@ def call_ai_atomic_streaming(system_prompt, user_prompt, model=None, timeout=Non
             timeout=timeout,
         )
         if response.status_code == 200:
-            content = _parse_sse_lines_streaming(response.iter_lines(), on_chunk, stop_event=stop_event)
-            return {"success": True, "content": content}
+            content, reasoning = _parse_sse_lines_streaming(response.iter_lines(), on_chunk, stop_event=stop_event)
+            return {"success": True, "content": content, "reasoning_content": reasoning}
         elif response.status_code == 429:
             return {"rate_limited": True}
         elif 400 <= response.status_code < 500:
@@ -853,7 +1065,7 @@ class TestJob:
 
         static_item = self._build_result_item(task, {"success": True, "content": ""})
 
-        def on_chunk(accumulated):
+        def on_chunk(accumulated, reasoning_accumulated=None):
             with self.chunk_lock:
                 self.stream_chunks[task.seq] = accumulated
             chunk_item = dict(static_item)

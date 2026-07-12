@@ -19,5 +19,7 @@
     "http://127.0.0.1:5000"
   ],
   "models": [],
-  "model_thinking_config": {}
+  "model_thinking_config": {},
+  "anthropic_mode": false,
+  "force_openai_endpoint": false
 }

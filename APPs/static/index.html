@@ -264,6 +264,7 @@
             max-height: 80vh;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
             box-shadow: var(--shadow-lg);
         }
         .params-modal-header {
@@ -321,6 +322,56 @@
         }
         @media (max-width: 768px) {
             .params-modal-grid { grid-template-columns: 1fr; }
+        }
+        .params-modal .toggle-switch {
+            flex-direction: column;
+            text-align: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
+        }
+        .params-expand-bar {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            padding: 1px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 6px;
+            font-weight: 400;
+            background: rgba(0,0,0,0.04);
+            user-select: none;
+            transition: opacity 0.2s, background 0.2s;
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+            border-top: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .params-expand-bar:hover {
+            color: var(--accent);
+            background: var(--bg-hover);
+        }
+        .params-expand-icon {
+            font-size: 7px;
+        }
+        }
+        .params-expand-bar.open {
+            border-radius: 0;
+        }
+        .params-expand-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.25s ease, padding 0.25s ease;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 0 20px;
+        }
+        .params-expand-content.open {
+            max-height: 100px;
+            padding: 12px 20px;
+        }
+        .params-expand-content.open + .params-expand-bar {
+            border-radius: 0 0 var(--radius-lg) var(--radius-lg);
         }
 
         .main {
@@ -2999,13 +3050,13 @@
                         <div class="slider-label">上下文大小 (contextSize)</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-contextSize">
-                                <div class="slider-track"><div class="slider-fill" style="width:6%"></div></div>
-                                <div class="slider-thumb" style="left:6%"></div>
-                                <input type="range" class="slider-native" step="1024" min="0" max="128000" value="8192" data-slider="contextSize">
+                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
+                                <div class="slider-thumb" style="left:0%"></div>
+                                <input type="range" class="slider-native" step="1024" min="-1" max="128000" value="-1" data-slider="contextSize">
                             </div>
                             <div class="stepper-input">
                                 <button class="stepper-btn" data-stepper="contextSize" data-delta="-1024">-</button>
-                                <input type="number" class="stepper-value" id="modal-contextSizeInput" step="1024" min="0" max="128000" value="8192">
+                                <input type="number" class="stepper-value" id="modal-contextSizeInput" step="1024" min="-1" max="128000" value="-1">
                                 <button class="stepper-btn" data-stepper="contextSize" data-delta="1024">+</button>
                             </div>
                         </div>
@@ -3014,13 +3065,13 @@
                         <div class="slider-label">Top-P (topP)</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-topP">
-                                <div class="slider-track"><div class="slider-fill" style="width:100%"></div></div>
-                                <div class="slider-thumb" style="left:100%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="1.0" data-slider="topP">
+                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
+                                <div class="slider-thumb" style="left:0%"></div>
+                                <input type="range" class="slider-native" step="0.05" min="-1" max="1" value="-1" data-slider="topP">
                             </div>
                             <div class="stepper-input">
                                 <button class="stepper-btn" data-stepper="topP" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-topPInput" step="0.05" min="0" max="1" value="1.0">
+                                <input type="number" class="stepper-value" id="modal-topPInput" step="0.05" min="-1" max="1" value="-1">
                                 <button class="stepper-btn" data-stepper="topP" data-delta="0.05">+</button>
                             </div>
                         </div>
@@ -3029,13 +3080,13 @@
                         <div class="slider-label">Min-P (minP)</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-minP">
-                                <div class="slider-track"><div class="slider-fill" style="width:5%"></div></div>
-                                <div class="slider-thumb" style="left:5%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="0.05" data-slider="minP">
+                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
+                                <div class="slider-thumb" style="left:0%"></div>
+                                <input type="range" class="slider-native" step="0.05" min="-1" max="1" value="-1" data-slider="minP">
                             </div>
                             <div class="stepper-input">
                                 <button class="stepper-btn" data-stepper="minP" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-minPInput" step="0.05" min="0" max="1" value="0.05">
+                                <input type="number" class="stepper-value" id="modal-minPInput" step="0.05" min="-1" max="1" value="-1">
                                 <button class="stepper-btn" data-stepper="minP" data-delta="0.05">+</button>
                             </div>
                         </div>
@@ -3044,19 +3095,24 @@
                         <div class="slider-label">Top-K (topK)</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-topK">
-                                <div class="slider-track"><div class="slider-fill" style="width:39%"></div></div>
-                                <div class="slider-thumb" style="left:39%"></div>
-                                <input type="range" class="slider-native" step="1" min="1" max="100" value="40" data-slider="topK">
+                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
+                                <div class="slider-thumb" style="left:0%"></div>
+                                <input type="range" class="slider-native" step="1" min="-1" max="100" value="-1" data-slider="topK">
                             </div>
                             <div class="stepper-input">
                                 <button class="stepper-btn" data-stepper="topK" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-topKInput" step="1" min="1" max="100" value="40">
+                                <input type="number" class="stepper-value" id="modal-topKInput" step="1" min="-1" max="100" value="-1">
                                 <button class="stepper-btn" data-stepper="topK" data-delta="1">+</button>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;padding:16px 0 0;border-top:1px solid var(--border);">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="forceOpenAIEndpoint">
+                        <span class="toggle-track"></span>
+                        <span class="toggle-label">强制 OpenAI 端点</span>
+                    </label>
                     <label class="toggle-switch">
                         <input type="checkbox" id="modal-streaming" checked>
                         <span class="toggle-track"></span>
@@ -3073,6 +3129,17 @@
                         <span class="toggle-label">自动关联节点</span>
                     </label>
                 </div>
+                </div>
+            <div class="params-expand-bar" id="paramsExpandBar">
+                <span class="params-expand-icon">▼</span>
+            </div>
+            <div class="params-expand-content" id="paramsExpandContent">
+                <div style="display:flex;align-items:center;justify-content:center;">
+                    <label class="toggle-switch">
+                        <input type="checkbox" id="anthropicMode">
+                        <span class="toggle-track"></span>
+                        <span class="toggle-label">Anthropic API 格式</span>
+                    </label>
                 </div>
             </div>
         </div>
@@ -3304,8 +3371,8 @@
                 },
 
                 _collectConfig() {
-                    const p = (id) => parseFloat(document.getElementById(id + 'Input').value) || 0;
-                    const pi = (id) => parseInt(document.getElementById(id + 'Input').value) || 0;
+                    const p = (id) => { const v = parseFloat(document.getElementById(id + 'Input').value); return v === -1 ? null : v || 0; };
+                    const pi = (id) => { const v = parseInt(document.getElementById(id + 'Input').value); return v === -1 ? null : v || 0; };
                     this.canvasToSelectedModels();
                     return {
                         test_set_dir: document.getElementById('testSetDir').value || '',
@@ -3323,6 +3390,8 @@
                         models: this.selectedModels,
                         model_thinking_config: this._modelThinkingConfig,
                         auto_append_v1: document.getElementById('autoAppendV1').checked,
+                        anthropic_mode: document.getElementById('anthropicMode').checked,
+                        force_openai_endpoint: document.getElementById('forceOpenAIEndpoint').checked,
                         auto_connect: document.getElementById('autoConnectToggle').checked
                     };
                 },
@@ -3480,7 +3549,6 @@
                             testSetCounts[ts] = (testSetCounts[ts] || 0) + 1;
                         });
                         this.openGroups.clear();
-                        this.onTestSetChange();
                         this.computeCurrentTags();
                         this.renderSetFilterPanel();
                         if (total > 0) {
@@ -6840,12 +6908,14 @@
                         setSlider('concurrency', config.concurrency ?? 1);
                         setSlider('testCount', config.test_count ?? 1);
                         setSlider('maxRetries', config.max_retries ?? 3);
-                        setSlider('contextSize', config.context_size ?? 8192);
-                        setSlider('topP', config.top_p ?? 1.0);
-                        setSlider('topK', config.top_k ?? 40);
-                        setSlider('minP', config.min_p ?? 0.05);
+                        setSlider('contextSize', config.context_size ?? -1);
+                        setSlider('topP', config.top_p ?? -1);
+                        setSlider('topK', config.top_k ?? -1);
+                        setSlider('minP', config.min_p ?? -1);
                         document.getElementById('modal-streaming').checked = config.streaming === true;
                         document.getElementById('autoAppendV1').checked = config.auto_append_v1 !== false;
+                        document.getElementById('anthropicMode').checked = config.anthropic_mode === true;
+                        document.getElementById('forceOpenAIEndpoint').checked = config.force_openai_endpoint === true;
                         document.getElementById('autoConnectToggle').checked = config.auto_connect !== false;
                         if (config.api_key) { await this.loadModels(); }
                         if (config.models && Array.isArray(config.models)) {
@@ -6932,6 +7002,17 @@
                     on(el, 'change', () => App.onModalNumberChange(param, el.value));
                 });
 
+                on(byId('paramsExpandBar'), 'click', function() {
+                    const content = byId('paramsExpandContent');
+                    const bar = byId('paramsExpandBar');
+                    if (content.classList.contains('open')) {
+                        content.classList.remove('open');
+                        bar.classList.remove('open');
+                    } else {
+                        content.classList.add('open');
+                        bar.classList.add('open');
+                    }
+                });
                 on(byId('paramsModal'), 'click', function(e) {
                     if (e.target === this) App.toggleParamsModal();
                 });
