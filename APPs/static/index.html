@@ -3707,6 +3707,7 @@
                         d.previousElementSibling?.classList.remove('open');
                     });
                     if (!isOpen) {
+                        dropdown.style.display = '';
                         dropdown.classList.add('show');
                         trigger?.classList.add('open');
                     }
@@ -5875,7 +5876,11 @@
                 closeAllSelectors() {
                     document.querySelectorAll('.comfy-sel-popup').forEach(el => el.remove());
                     document.querySelectorAll('.thinking-popup').forEach(el => el.remove());
-                    document.querySelectorAll('.custom-select-dropdown').forEach(el => el.style.display = 'none');
+                    document.querySelectorAll('.custom-select-dropdown').forEach(el => {
+                        el.classList.remove('show');
+                        el.style.display = '';
+                    });
+                    document.querySelectorAll('.custom-select-trigger.open').forEach(el => el.classList.remove('open'));
                 },
 
                 async _fetchModels() {
@@ -6595,6 +6600,16 @@
                         const promptTag = data.prompt_tag || '';
                         const expected = data.expected_answer || data.answer || '';
                         const aiReply = data.ai_answer || data.model_reply || '';
+                        const reasoning = data.reasoning_content || '';
+                        let aiContent = '';
+                        if (reasoning) {
+                            aiContent += '&lt;think&gt;\n' + this.escapeHtml(reasoning) + '\n&lt;/think&gt;\n';
+                        }
+                        if (aiReply) {
+                            aiContent += (aiContent ? '\n' : '') + this.escapeHtml(aiReply);
+                        } else if (!reasoning) {
+                            aiContent += '<span style="color:var(--text-muted)">无回复</span>';
+                        }
                         const displayId = (data.question_id || '?') + (data.test_count > 1 ? '-' + (data.test_index || 1) : '');
                         item.innerHTML = `
                         <div class="result-header">
@@ -6612,7 +6627,7 @@
                             </div>
                             <div style="flex:1;">
                                 <div class="result-label">AI回复</div>
-                                <div class="result-content ai">${this.escapeHtml(aiReply) || '<span style="color:var(--text-muted)">无回复</span>'}</div>
+                                <div class="result-content ai">${aiContent}</div>
                             </div>
                         </div>`;
                         item.dataset.modelId = modelId;
@@ -6634,13 +6649,14 @@
 
                     const aiDiv = item.querySelector('.result-content.ai');
                     if (aiDiv) {
-                        if (data.ai_answer) {
-                            const atBottom = aiDiv.scrollTop + aiDiv.clientHeight >= aiDiv.scrollHeight - 5;
-                            aiDiv.textContent = data.ai_answer;
-                            if (atBottom) aiDiv.scrollTop = aiDiv.scrollHeight;
-                        } else {
-                            aiDiv.innerHTML = '<span style="color:var(--text-muted)">无回复</span>';
+                        let text = '';
+                        if (data.reasoning_content) {
+                            text += '<think>\n' + data.reasoning_content + '\n</think>\n';
                         }
+                        if (data.ai_answer) {
+                            text += (text ? '\n' : '') + data.ai_answer;
+                        }
+                        aiDiv.textContent = text || '无回复';
                     }
                     this._scheduleAutoScroll();
                     return item;

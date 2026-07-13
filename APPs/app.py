@@ -148,6 +148,12 @@ def read_file(filepath):
     return None
 
 
+def _get_api_url(base_url, endpoint):
+    url = base_url.rstrip("/")
+    if not url.endswith("/v1"):
+        url += "/v1"
+    return url + endpoint
+
 def get_test_set_dir():
     with config_lock:
         d = config.get("test_set_dir")
@@ -283,7 +289,7 @@ def get_models():
 
     try:
         response = requests.get(
-            f"{cfg_base_url}/models", headers=headers, timeout=30
+            _get_api_url(cfg_base_url, "/models"), headers=headers, timeout=30
         )
         if response.status_code == 200:
             models = response.json().get("data", [])
@@ -616,6 +622,7 @@ def _parse_anthropic_sse_lines(lines_iter, on_chunk, stop_event=None):
 
 def _parse_sse_lines(lines_iter):
     content = ""
+    reasoning_content = ""
     for raw_line in lines_iter:
         if raw_line:
             try:
@@ -633,9 +640,12 @@ def _parse_sse_lines(lines_iter):
                 content_delta = delta.get("content", "")
                 if content_delta:
                     content += content_delta
+                reasoning_delta = delta.get("reasoning_content", "")
+                if reasoning_delta:
+                    reasoning_content += reasoning_delta
             except json.JSONDecodeError:
                 continue
-    return content
+    return content, reasoning_content
 
 
 def _parse_sse_lines_streaming(lines_iter, on_chunk, stop_event=None):
@@ -675,33 +685,38 @@ def _parse_sse_lines_streaming(lines_iter, on_chunk, stop_event=None):
 
 
 def _parse_sse_stream(response):
-    return _parse_sse_lines(response.iter_lines())
+    content, reasoning = _parse_sse_lines(response.iter_lines())
+    return content, reasoning
 
 
 def _parse_sse_from_body(raw_body):
-    return _parse_sse_lines(raw_body.split(b'\n'))
+    content, reasoning = _parse_sse_lines(raw_body.split(b'\n'))
+    return content, reasoning
 
 
 def _handle_streaming_response(response, attempt):
     content_type = response.headers.get("Content-Type", "")
     content = None
+    reasoning = ""
     if "text/event-stream" in content_type:
-        content = _parse_sse_stream(response)
+        content, reasoning = _parse_sse_stream(response)
     if content:
-        return {"success": True, "content": content, "reasoning_content": ""}
+        return {"success": True, "content": content, "reasoning_content": reasoning}
     raw_body = response.content
     try:
         result = json.loads(raw_body)
         if result.get("choices") and result["choices"][0].get("message"):
-            content = result["choices"][0]["message"].get("content")
+            msg = result["choices"][0]["message"]
+            content = msg.get("content")
+            reasoning = msg.get("reasoning_content", "")
             if content:
-                return {"success": True, "content": content, "reasoning_content": ""}
+                return {"success": True, "content": content, "reasoning_content": reasoning}
         log_debug(f"AI流式模式返回JSON，attempt={attempt}, response={result}")
     except Exception:
         pass
-    content = _parse_sse_from_body(raw_body)
+    content, reasoning = _parse_sse_from_body(raw_body)
     if content:
-        return {"success": True, "content": content, "reasoning_content": ""}
+        return {"success": True, "content": content, "reasoning_content": reasoning}
     log_debug(f"AI流式返回为空，attempt={attempt}")
     return None
 
@@ -752,7 +767,7 @@ def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
             "Content-Type": "application/json",
             "anthropic-version": "2023-06-01",
         }
-        url = f"{base_url.rstrip('/')}/messages"
+        url = _get_api_url(base_url, "/messages")
         if streaming:
             payload["stream"] = True
         try:
@@ -794,7 +809,7 @@ def call_ai_atomic(system_prompt, user_prompt, model=None, timeout=None):
         if streaming:
             req_payload["stream"] = True
         response = requests.post(
-            f"{base_url}/chat/completions",
+            _get_api_url(base_url, "/chat/completions"),
             headers=headers,
             json=req_payload,
             stream=streaming,
@@ -857,7 +872,7 @@ def call_ai_atomic_streaming(system_prompt, user_prompt, model=None, timeout=Non
             "Content-Type": "application/json",
             "anthropic-version": "2023-06-01",
         }
-        url = f"{base_url.rstrip('/')}/messages"
+        url = _get_api_url(base_url, "/messages")
         try:
             response = requests.post(url, headers=headers, json=payload, stream=True, timeout=timeout)
             if response.status_code == 200:
@@ -891,7 +906,7 @@ def call_ai_atomic_streaming(system_prompt, user_prompt, model=None, timeout=Non
     content = ""
     try:
         response = requests.post(
-            f"{base_url}/chat/completions",
+            _get_api_url(base_url, "/chat/completions"),
             headers=headers,
             json=payload,
             stream=True,
@@ -1006,7 +1021,12 @@ class TestJob:
                         task = self._find_task(seq)
                         if task:
                             static = self._build_result_item(task, {"success": True, "content": ""})
-                            static["ai_answer"] = self.stream_chunks[seq]
+                            chunk_data = self.stream_chunks[seq]
+                            if isinstance(chunk_data, tuple):
+                                static["ai_answer"] = chunk_data[0]
+                                static["reasoning_content"] = chunk_data[1]
+                            else:
+                                static["ai_answer"] = chunk_data
                             q.put(("stream_chunk", static))
             q.put(("progress", {"completed": self.completed, "total": self.total, "failed": self.failed}))
             self.subscribers.append(q)
@@ -1050,6 +1070,7 @@ class TestJob:
         }
         if result.get("success"):
             item["ai_answer"] = result["content"]
+            item["reasoning_content"] = result.get("reasoning_content", "")
         else:
             item["ai_answer"] = None
             item["error_type"] = result.get("error", "")
@@ -1069,9 +1090,10 @@ class TestJob:
 
         def on_chunk(accumulated, reasoning_accumulated=None):
             with self.chunk_lock:
-                self.stream_chunks[task.seq] = accumulated
+                self.stream_chunks[task.seq] = (accumulated, reasoning_accumulated or "")
             chunk_item = dict(static_item)
             chunk_item["ai_answer"] = accumulated
+            chunk_item["reasoning_content"] = reasoning_accumulated or ""
             self._broadcast("stream_chunk", chunk_item)
 
         result = call_ai_atomic_streaming(
@@ -1270,6 +1292,7 @@ def stream_test_job(job_id):
                         'question': data['question'],
                         'expected_answer': data['expected_answer'],
                         'ai_answer': data['ai_answer'] or '',
+                        'reasoning_content': data.get('reasoning_content', ''),
                         'test_index': data['test_index'],
                         'test_count': data['test_count'],
                     }
@@ -1289,6 +1312,7 @@ def stream_test_job(job_id):
                         'question': data['question'],
                         'expected_answer': data['expected_answer'],
                         'ai_answer': data['ai_answer'] or '',
+                        'reasoning_content': data.get('reasoning_content', ''),
                         'test_index': data['test_index'],
                         'test_count': data['test_count'],
                     }
