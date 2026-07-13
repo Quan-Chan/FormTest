@@ -44,7 +44,7 @@
         .global-transition * {
             transition: none !important;
         }
-        
+
         .toast-container {
             position: fixed;
             bottom: 16px;
@@ -323,12 +323,42 @@
         @media (max-width: 768px) {
             .params-modal-grid { grid-template-columns: 1fr; }
         }
+        .params-modal .slider-label {
+            display: flex;
+            align-items: center;
+        }
         .params-modal .toggle-switch {
             flex-direction: column;
             text-align: center;
             gap: 4px;
             flex: 1;
             min-width: 0;
+        }
+        .dot-toggle {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            border: 3px solid var(--text-muted);
+            cursor: pointer;
+            vertical-align: middle;
+            margin-right: 6px;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+        .dot-toggle.on {
+            border-color: var(--accent);
+            background: var(--accent);
+            box-shadow: inset 0 0 0 3px var(--bg-card);
+        }
+        .dot-toggle:hover {
+            border-color: var(--accent);
+        }
+        .slider-group.disabled {
+            opacity: 0.35;
+        }
+        .slider-group.disabled .dot-toggle {
+            pointer-events: auto;
         }
         .params-expand-bar {
             display: flex;
@@ -367,7 +397,7 @@
             padding: 0 20px;
         }
         .params-expand-content.open {
-            max-height: 100px;
+            max-height: 600px;
             padding: 12px 20px;
         }
         .params-expand-content.open + .params-expand-bar {
@@ -978,8 +1008,8 @@
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 24px;
+            height: 24px;
             border-radius: 50%;
             background: var(--accent);
             cursor: pointer;
@@ -2986,8 +3016,8 @@
             </div>
             <div class="params-modal-body">
                 <div class="params-modal-grid">
-                    <div class="slider-group">
-                        <div class="slider-label">温度 (temperature)</div>
+                    <div class="slider-group" data-param="temperature">
+                        <div class="slider-label"><span class="dot-toggle" data-dot="temperature"></span>温度 (temperature)</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-temperature">
                                 <div class="slider-track"><div class="slider-fill" style="width:35%"></div></div>
@@ -3016,6 +3046,7 @@
                             </div>
                         </div>
                     </div>
+                    <div></div><div></div>
                     <div class="slider-group">
                         <div class="slider-label">测试次数 (testCount)</div>
                         <div class="slider-row">
@@ -3046,66 +3077,7 @@
                             </div>
                         </div>
                     </div>
-                    <div class="slider-group">
-                        <div class="slider-label">上下文大小 (contextSize)</div>
-                        <div class="slider-row">
-                            <div class="custom-slider" id="modal-contextSize">
-                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
-                                <div class="slider-thumb" style="left:0%"></div>
-                                <input type="range" class="slider-native" step="1024" min="-1" max="128000" value="-1" data-slider="contextSize">
-                            </div>
-                            <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="contextSize" data-delta="-1024">-</button>
-                                <input type="number" class="stepper-value" id="modal-contextSizeInput" step="1024" min="-1" max="128000" value="-1">
-                                <button class="stepper-btn" data-stepper="contextSize" data-delta="1024">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="slider-group">
-                        <div class="slider-label">Top-P (topP)</div>
-                        <div class="slider-row">
-                            <div class="custom-slider" id="modal-topP">
-                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
-                                <div class="slider-thumb" style="left:0%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="-1" max="1" value="-1" data-slider="topP">
-                            </div>
-                            <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="topP" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-topPInput" step="0.05" min="-1" max="1" value="-1">
-                                <button class="stepper-btn" data-stepper="topP" data-delta="0.05">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="slider-group">
-                        <div class="slider-label">Min-P (minP)</div>
-                        <div class="slider-row">
-                            <div class="custom-slider" id="modal-minP">
-                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
-                                <div class="slider-thumb" style="left:0%"></div>
-                                <input type="range" class="slider-native" step="0.05" min="-1" max="1" value="-1" data-slider="minP">
-                            </div>
-                            <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="minP" data-delta="-0.05">-</button>
-                                <input type="number" class="stepper-value" id="modal-minPInput" step="0.05" min="-1" max="1" value="-1">
-                                <button class="stepper-btn" data-stepper="minP" data-delta="0.05">+</button>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="slider-group">
-                        <div class="slider-label">Top-K (topK)</div>
-                        <div class="slider-row">
-                            <div class="custom-slider" id="modal-topK">
-                                <div class="slider-track"><div class="slider-fill" style="width:0%"></div></div>
-                                <div class="slider-thumb" style="left:0%"></div>
-                                <input type="range" class="slider-native" step="1" min="-1" max="100" value="-1" data-slider="topK">
-                            </div>
-                            <div class="stepper-input">
-                                <button class="stepper-btn" data-stepper="topK" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-topKInput" step="1" min="-1" max="100" value="-1">
-                                <button class="stepper-btn" data-stepper="topK" data-delta="1">+</button>
-                            </div>
-                        </div>
-                    </div>
+                    <div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div><div></div>
                 </div>
                 <div style="display:flex;align-items:center;justify-content:center;gap:24px;margin-top:20px;padding:16px 0 0;border-top:1px solid var(--border);">
                     <label class="toggle-switch">
@@ -3134,12 +3106,77 @@
                 <span class="params-expand-icon">▼</span>
             </div>
             <div class="params-expand-content" id="paramsExpandContent">
-                <div style="display:flex;align-items:center;justify-content:center;">
+                <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:12px;">
+                    <div class="slider-group" data-param="contextSize">
+                        <div class="slider-label"><span class="dot-toggle" data-dot="contextSize"></span>上下文大小</div>
+                        <div class="slider-row">
+                            <div class="custom-slider" id="modal-contextSize">
+                                <div class="slider-track"><div class="slider-fill" style="width:6%"></div></div>
+                                <div class="slider-thumb" style="left:6%"></div>
+                                <input type="range" class="slider-native" step="4096" min="0" max="131072" value="8192" data-slider="contextSize">
+                            </div>
+                            <div class="stepper-input">
+                                <button class="stepper-btn" data-stepper="contextSize" data-delta="-4096">-</button>
+                                <input type="number" class="stepper-value" id="modal-contextSizeInput" step="1" min="0" max="1000000" value="8192">
+                                <button class="stepper-btn" data-stepper="contextSize" data-delta="4096">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slider-group" data-param="topP">
+                        <div class="slider-label"><span class="dot-toggle" data-dot="topP"></span>Top-P</div>
+                        <div class="slider-row">
+                            <div class="custom-slider" id="modal-topP">
+                                <div class="slider-track"><div class="slider-fill" style="width:100%"></div></div>
+                                <div class="slider-thumb" style="left:100%"></div>
+                                <input type="range" class="slider-native" step="0.05" min="0" max="1" value="1.0" data-slider="topP">
+                            </div>
+                            <div class="stepper-input">
+                                <button class="stepper-btn" data-stepper="topP" data-delta="-0.05">-</button>
+                                <input type="number" class="stepper-value" id="modal-topPInput" step="0.05" min="0" max="1" value="1.0">
+                                <button class="stepper-btn" data-stepper="topP" data-delta="0.05">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slider-group" data-param="minP">
+                        <div class="slider-label"><span class="dot-toggle" data-dot="minP"></span>Min-P</div>
+                        <div class="slider-row">
+                            <div class="custom-slider" id="modal-minP">
+                                <div class="slider-track"><div class="slider-fill" style="width:5%"></div></div>
+                                <div class="slider-thumb" style="left:5%"></div>
+                                <input type="range" class="slider-native" step="0.01" min="0" max="1" value="0.05" data-slider="minP">
+                            </div>
+                            <div class="stepper-input">
+                                <button class="stepper-btn" data-stepper="minP" data-delta="-0.01">-</button>
+                                <input type="number" class="stepper-value" id="modal-minPInput" step="0.01" min="0" max="1" value="0.05">
+                                <button class="stepper-btn" data-stepper="minP" data-delta="0.01">+</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="slider-group" data-param="topK">
+                        <div class="slider-label"><span class="dot-toggle" data-dot="topK"></span>Top-K</div>
+                        <div class="slider-row">
+                            <div class="custom-slider" id="modal-topK">
+                                <div class="slider-track"><div class="slider-fill" style="width:39%"></div></div>
+                                <div class="slider-thumb" style="left:39%"></div>
+                                <input type="range" class="slider-native" step="1" min="1" max="100" value="40" data-slider="topK">
+                            </div>
+                            <div class="stepper-input">
+                                <button class="stepper-btn" data-stepper="topK" data-delta="-1">-</button>
+                                <input type="number" class="stepper-value" id="modal-topKInput" step="1" min="1" max="100" value="40">
+                                <button class="stepper-btn" data-stepper="topK" data-delta="1">+</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div style="display:flex;align-items:center;border-top:1px solid var(--border);padding-top:12px;margin-top:4px;">
                     <label class="toggle-switch">
                         <input type="checkbox" id="anthropicMode">
                         <span class="toggle-track"></span>
                         <span class="toggle-label">Anthropic API 格式</span>
                     </label>
+                    <div style="flex:1;"></div>
+                    <div style="flex:1;"></div>
+                    <div style="flex:1;"></div>
                 </div>
             </div>
         </div>
@@ -3371,28 +3408,31 @@
                 },
 
                 _collectConfig() {
-                    const p = (id) => { const v = parseFloat(document.getElementById(id + 'Input').value); return v === -1 ? null : v || 0; };
-                    const pi = (id) => { const v = parseInt(document.getElementById(id + 'Input').value); return v === -1 ? null : v || 0; };
+                    const p = (id) => parseFloat(document.getElementById(id + 'Input').value) || 0;
+                    const pi = (id) => parseInt(document.getElementById(id + 'Input').value) || 0;
                     this.canvasToSelectedModels();
                     return {
                         test_set_dir: document.getElementById('testSetDir').value || '',
                         api_key: document.getElementById('apiKey').value,
                         base_url: document.getElementById('baseUrl').value,
-                        temperature: p('modal-temperature'),
+                        temperature: document.querySelector('[data-dot="temperature"]')?.classList.contains('on') ? p('modal-temperature') : null,
                         concurrency: pi('modal-concurrency'),
                         test_count: pi('modal-testCount'),
                         max_retries: pi('modal-maxRetries'),
-                        context_size: pi('modal-contextSize'),
+                        context_size: document.querySelector('[data-dot="contextSize"]')?.classList.contains('on') ? pi('modal-contextSize') : null,
                         streaming: document.getElementById('modal-streaming').checked,
-                        top_p: p('modal-topP'),
-                        top_k: pi('modal-topK'),
-                        min_p: p('modal-minP'),
+                        top_p: document.querySelector('[data-dot="topP"]')?.classList.contains('on') ? p('modal-topP') : null,
+                        top_k: document.querySelector('[data-dot="topK"]')?.classList.contains('on') ? pi('modal-topK') : null,
+                        min_p: document.querySelector('[data-dot="minP"]')?.classList.contains('on') ? p('modal-minP') : null,
                         models: this.selectedModels,
                         model_thinking_config: this._modelThinkingConfig,
                         auto_append_v1: document.getElementById('autoAppendV1').checked,
                         anthropic_mode: document.getElementById('anthropicMode').checked,
                         force_openai_endpoint: document.getElementById('forceOpenAIEndpoint').checked,
-                        auto_connect: document.getElementById('autoConnectToggle').checked
+                        auto_connect: document.getElementById('autoConnectToggle').checked,
+                        disabled_params: ['contextSize', 'topP', 'minP', 'topK', 'temperature'].filter(
+                            p => !document.querySelector(`[data-dot="${p}"]`)?.classList.contains('on')
+                        )
                     };
                 },
 
@@ -3452,7 +3492,7 @@
                         const native = slider.querySelector('.slider-native');
                         if (native) native.value = value;
                     }
-                    if (input) input.value = parseFloat(value).toFixed(id === 'temperature' || id === 'topP' ? 1 : 0);
+                    if (input) input.value = parseFloat(value).toFixed(id === 'minP' ? 2 : (id === 'temperature' || id === 'topP' ? 1 : 0));
                     this.updateSliderVisual(id);
                 },
                 onModalSliderCommit(id, value) {
@@ -3462,23 +3502,20 @@
 
                 onModalNumberChange(id, value) {
                     let num = parseFloat(value);
+                    const input = document.getElementById('modal-' + id + 'Input');
                     const slider = document.getElementById('modal-' + id);
-                    if (slider) {
-                        const native = slider.querySelector('.slider-native');
-                        if (native) {
-                            const min = parseFloat(native.min);
-                            const max = parseFloat(native.max);
-                            const clamped = Math.min(max, Math.max(min, num));
-                            if (clamped !== num) {
-                                const toastKey = `clamp-${id}`;
-                                const existing = document.getElementById(`toast-${toastKey}`);
-                                if (existing) existing.remove();
-                                showToast(`数值已调整为 ${clamped}（有效范围 ${min}-${max}）`, 'warning', 2000);
-                                num = clamped;
-                            }
+                    const min = input && input.min !== '' ? parseFloat(input.min) : (slider ? parseFloat(slider.querySelector('.slider-native').min) : NaN);
+                    const max = input && input.max !== '' ? parseFloat(input.max) : (slider ? parseFloat(slider.querySelector('.slider-native').max) : NaN);
+                    if (!isNaN(min) && !isNaN(max)) {
+                        const clamped = Math.min(max, Math.max(min, num));
+                        if (clamped !== num) {
+                            const toastKey = `clamp-${id}`;
+                            const existing = document.getElementById(`toast-${toastKey}`);
+                            if (existing) existing.remove();
+                            showToast(`数值已调整为 ${clamped}（有效范围 ${min}-${max}）`, 'warning', 2000);
+                            num = clamped;
                         }
                     }
-                    const input = document.getElementById('modal-' + id + 'Input');
                     if (input) input.value = num;
                     if (slider) {
                         const native = slider.querySelector('.slider-native');
@@ -3699,8 +3736,8 @@
                     if (!slider || !input) return;
                     const native = slider.querySelector('.slider-native');
                     if (!native) return;
-                    const min = parseFloat(native.min);
-                    const max = parseFloat(native.max);
+                    const min = input.min !== '' ? parseFloat(input.min) : parseFloat(native.min);
+                    const max = input.max !== '' ? parseFloat(input.max) : parseFloat(native.max);
                     const step = parseFloat(native.step);
                     let current = parseFloat(input.value) || 0;
                     let newVal = current + delta;
@@ -3720,10 +3757,12 @@
                     if (!native || !fill || !thumb) return;
                     const min = parseFloat(native.min);
                     const max = parseFloat(native.max);
-                    const val = parseFloat(native.value);
+                    const input = document.getElementById('modal-' + param + 'Input');
+                    const raw = input ? parseFloat(input.value) : parseFloat(native.value);
+                    const val = Math.min(max, Math.max(min, raw || 0));
                     const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
-                    fill.style.width = pct + '%';
-                    thumb.style.left = pct + '%';
+                    fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
+                    thumb.style.left = Math.min(100, Math.max(0, pct)) + '%';
                 },
 
                 toggleSetFilterPanel() {
@@ -6823,6 +6862,9 @@
                         document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
                     }
 
+                    this.renderAssociationCanvas({ center: false });
+                    this.renderPromptList();
+                    this.renderQuestionList();
                     // Validate model nodes: auto-refresh if selected models not in availableModels
                     const modelNodes = this.canvasState.nodes.filter(n => n.type === 'model' && n.value);
                     const missingModels = modelNodes.filter(n => !this.availableModels.includes(n.value));
@@ -6831,10 +6873,6 @@
                     }
                     this._markMissingModels();
                     this._markMissingPromptQuestions();
-
-                    this.renderAssociationCanvas({ center: false });
-                    this.renderPromptList();
-                    this.renderQuestionList();
                     this.loadHistoryResults();
                     try {
                         const resp = await fetch('/api/v1/test-job/hub', {
@@ -6899,7 +6937,14 @@
                             const input = document.getElementById('modal-' + id + 'Input');
                             if (container) {
                                 const native = container.querySelector('.slider-native');
-                                if (native) native.value = val;
+                                if (native) {
+                                    const min = input && input.min !== '' ? parseFloat(input.min) : parseFloat(native.min);
+                                    const max = input && input.max !== '' ? parseFloat(input.max) : parseFloat(native.max);
+                                    const num = isNaN(val) ? min : parseFloat(val);
+                                    const clamped = Math.round(Math.min(max, Math.max(min, num)) / parseFloat(native.step)) * parseFloat(native.step);
+                                    native.value = clamped;
+                                    val = clamped;
+                                }
                             }
                             if (input) input.value = val;
                             this.updateSliderVisual(id);
@@ -6908,16 +6953,16 @@
                         setSlider('concurrency', config.concurrency ?? 1);
                         setSlider('testCount', config.test_count ?? 1);
                         setSlider('maxRetries', config.max_retries ?? 3);
-                        setSlider('contextSize', config.context_size ?? -1);
-                        setSlider('topP', config.top_p ?? -1);
-                        setSlider('topK', config.top_k ?? -1);
-                        setSlider('minP', config.min_p ?? -1);
+                        setSlider('contextSize', config.context_size ?? 8192);
+                        setSlider('topP', config.top_p ?? 1.0);
+                        setSlider('topK', config.top_k ?? 40);
+                        setSlider('minP', config.min_p ?? 0.05);
                         document.getElementById('modal-streaming').checked = config.streaming === true;
                         document.getElementById('autoAppendV1').checked = config.auto_append_v1 !== false;
                         document.getElementById('anthropicMode').checked = config.anthropic_mode === true;
                         document.getElementById('forceOpenAIEndpoint').checked = config.force_openai_endpoint === true;
                         document.getElementById('autoConnectToggle').checked = config.auto_connect !== false;
-                        if (config.api_key) { await this.loadModels(); }
+                        if (config.api_key) { this.loadModels(); }
                         if (config.models && Array.isArray(config.models)) {
                             this.selectedModels = config.models;
                             document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
@@ -6925,6 +6970,21 @@
                         if (config.model_thinking_config) {
                             this._modelThinkingConfig = JSON.parse(JSON.stringify(config.model_thinking_config));
                         }
+                        const disabled = config.disabled_params || ['contextSize', 'topP', 'minP', 'topK'];
+                        ['temperature', 'contextSize', 'topP', 'minP', 'topK'].forEach(p => {
+                            const dot = document.querySelector(`[data-dot="${p}"]`);
+                            const group = dot?.closest('.slider-group');
+                            if (disabled.includes(p)) {
+                                if (dot) dot.classList.remove('on');
+                                if (group) group.classList.add('disabled');
+                                const native = group?.querySelector('.slider-native');
+                                const input = group?.querySelector('.stepper-value');
+                                if (native) native.disabled = true;
+                                if (input) input.disabled = true;
+                            } else {
+                                if (dot) dot.classList.add('on');
+                            }
+                        });
                     } catch (error) {
                         handleError('loadConfig', error);
                     }
@@ -7012,6 +7072,20 @@
                         content.classList.add('open');
                         bar.classList.add('open');
                     }
+                });
+                $$('.dot-toggle').forEach(el => {
+                    on(el, 'click', function(e) {
+                        e.stopPropagation();
+                        const param = this.dataset.dot;
+                        const group = this.closest('.slider-group');
+                        this.classList.toggle('on');
+                        group.classList.toggle('disabled');
+                        const native = group.querySelector('.slider-native');
+                        const input = group.querySelector('.stepper-value');
+                        if (native) native.disabled = group.classList.contains('disabled');
+                        if (input) input.disabled = group.classList.contains('disabled');
+                        App.debouncedConfigChange();
+                    });
                 });
                 on(byId('paramsModal'), 'click', function(e) {
                     if (e.target === this) App.toggleParamsModal();

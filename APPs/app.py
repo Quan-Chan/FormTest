@@ -228,7 +228,7 @@ def handle_config():
                     "top_k", "min_p", "context_size", "concurrency", "test_count",
                     "max_retries", "timeout", "streaming", "test_set_dir", "models",
                      "auto_append_v1", "auto_connect", "model_thinking_config",
-                     "anthropic_mode", "force_openai_endpoint"}
+                     "anthropic_mode", "force_openai_endpoint", "disabled_params"}
     numeric_ranges = {
         "temperature": (0.0, 2.0),
         "top_p": (0.0, 1.0),
@@ -476,9 +476,11 @@ def _build_payload(model_name, system_prompt, user_prompt, temperature, top_p, t
             {"role": "system", "content": system_prompt},
             {"role": "user", "content": user_prompt},
         ],
-        "temperature": temperature,
-        "top_p": top_p,
     }
+    if temperature is not None:
+        payload["temperature"] = temperature
+    if top_p is not None:
+        payload["top_p"] = top_p
     if top_k is not None:
         payload["top_k"] = top_k
     if min_p is not None:
