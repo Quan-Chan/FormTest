@@ -51,3 +51,6 @@ AGENTS.md
 
 # Backup / draft files — for reference only, not tracked
 APPs/static/备份勿动.html
+
+# Test run results — generated at runtime, not part of source
+**/测试结果/*.json

@@ -3456,6 +3456,9 @@
                         el.value = val;
                     }
                     await this.onConfigChange();
+                    await this.loadModels();
+                    this._markMissingModels();
+                    this.renderAssociationCanvas({ center: false });
                 },
 
                 async onConfigChange() {
@@ -5796,6 +5799,7 @@
                         this.updateSelectedModelCount();
                         this.autoConnectCanvas();
                     }
+                    this._markMissingModels();
                     this.closeAllSelectors();
                     this.renderAssociationCanvas({ center: false });
                     this.saveCanvasSnapshot();
