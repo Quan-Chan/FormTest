@@ -45,6 +45,34 @@
             transition: none !important;
         }
 
+        /* ===== 统一滚动条样式 (基于下拉菜单 4px 简洁风格) ===== */
+        /* Firefox */
+        * {
+            scrollbar-width: thin;
+            scrollbar-color: var(--border) transparent;
+        }
+        /* WebKit / Chromium (Chrome/Edge/Safari) */
+        *::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        *::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        *::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 3px;
+            /* 平滑过渡，避免 hover 变色突兀 */
+            transition: background 0.15s ease;
+        }
+        *::-webkit-scrollbar-thumb:hover {
+            /* 变色幅度更柔和：仅比默认 border 深 ~6% */
+            background: color-mix(in srgb, var(--border) 80%, var(--text-muted) 20%);
+        }
+        *::-webkit-scrollbar-corner {
+            background: transparent;
+        }
+        
         .toast-container {
             position: fixed;
             bottom: 16px;
@@ -168,9 +196,6 @@
             border-radius: 20px;
             font-weight: 500;
         }
-        .header-badge.pulse {
-            animation: pulse 1.5s ease-in-out;
-        }
         .header-actions {
             display: flex;
             align-items: center;
@@ -186,10 +211,13 @@
             cursor: pointer;
             display: flex;
             align-items: center;
+            justify-content: center;
             gap: 6px;
             transition: all 0.2s;
             font-family: inherit;
             user-select: none;
+            white-space: nowrap;
+            flex-shrink: 0;
         }
         .settings-toggle:hover {
             background: var(--bg-hover);
@@ -311,8 +339,8 @@
             box-shadow: 0 0 0 3px var(--accent-light);
         }
         .params-modal-body {
-            flex: 1;
-            overflow-y: auto;
+            flex: 0 0 auto;
+            overflow: hidden;
             padding: 20px;
         }
         .params-modal-grid {
@@ -322,43 +350,6 @@
         }
         @media (max-width: 768px) {
             .params-modal-grid { grid-template-columns: 1fr; }
-        }
-        .params-modal .slider-label {
-            display: flex;
-            align-items: center;
-        }
-        .params-modal .toggle-switch {
-            flex-direction: column;
-            text-align: center;
-            gap: 4px;
-            flex: 1;
-            min-width: 0;
-        }
-        .dot-toggle {
-            display: inline-block;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            border: 3px solid var(--text-muted);
-            cursor: pointer;
-            vertical-align: middle;
-            margin-right: 6px;
-            transition: all 0.2s;
-            flex-shrink: 0;
-        }
-        .dot-toggle.on {
-            border-color: var(--accent);
-            background: var(--accent);
-            box-shadow: inset 0 0 0 3px var(--bg-card);
-        }
-        .dot-toggle:hover {
-            border-color: var(--accent);
-        }
-        .slider-group.disabled {
-            opacity: 0.35;
-        }
-        .slider-group.disabled .dot-toggle {
-            pointer-events: auto;
         }
         .params-expand-bar {
             display: flex;
@@ -384,7 +375,6 @@
         .params-expand-icon {
             font-size: 7px;
         }
-        }
         .params-expand-bar.open {
             border-radius: 0;
         }
@@ -399,10 +389,26 @@
         .params-expand-content.open {
             max-height: 600px;
             padding: 12px 20px;
-        }
-        .params-expand-content.open + .params-expand-bar {
             border-radius: 0 0 var(--radius-lg) var(--radius-lg);
         }
+        .params-expand-content.open + .params-expand-bar {
+            border-radius: 0;
+        }
+        .dot-toggle {
+            display: inline-block;             width: 24px;
+            height: 24px;
+            border-radius: 50%; border: 3px solid var(--text-muted);
+            cursor: pointer; vertical-align: middle;
+            margin-right: 6px; transition: all 0.2s; flex-shrink: 0;
+        }
+        .dot-toggle.on {
+            border-color: var(--accent); background: var(--accent);
+            box-shadow: inset 0 0 0 3px var(--bg-card);
+        }
+        .dot-toggle:hover { border-color: var(--accent); }
+        .slider-group.disabled { opacity: 0.35; }
+        .slider-group.disabled .dot-toggle { pointer-events: auto; }
+        .params-modal .slider-label { display: flex; align-items: center; }
 
         .main {
             display: flex;
@@ -573,6 +579,8 @@
             gap: 6px;
             line-height: 1.4;
             user-select: none;
+            white-space: nowrap;     /* 防止"开始测试/终止测试"等按钮在窄宽度下被换行 */
+            flex-shrink: 0;
         }
         .btn:active {
             transform: scale(0.97);
@@ -931,6 +939,13 @@
             background: var(--bg-card);
             box-shadow: 0 0 0 3px var(--accent-light);
         }
+        .form-input:-webkit-autofill,
+        .form-input:-webkit-autofill:hover,
+        .form-input:-webkit-autofill:focus {
+            -webkit-text-fill-color: var(--text-primary);
+            -webkit-box-shadow: 0 0 0px 1000px var(--bg-input) inset;
+            transition: background-color 5000s ease-in-out 0s;
+        }
 
         .slider-group {
             display: flex;
@@ -953,6 +968,13 @@
             gap: 10px;
             cursor: pointer;
             user-select: none;
+        }
+        .params-modal .toggle-switch {
+            flex-direction: column;
+            text-align: center;
+            gap: 4px;
+            flex: 1;
+            min-width: 0;
         }
         .toggle-switch input {
             display: none;
@@ -1008,8 +1030,8 @@
         }
         input[type="range"]::-webkit-slider-thumb {
             -webkit-appearance: none;
-            width: 24px;
-            height: 24px;
+            width: 18px;
+            height: 18px;
             border-radius: 50%;
             background: var(--accent);
             cursor: pointer;
@@ -1173,9 +1195,6 @@
         .result-item:last-child {
             border-bottom: none;
         }
-        .result-item:hover {
-            background: var(--bg-hover);
-        }
         .result-header {
             display: flex;
             align-items: center;
@@ -1283,7 +1302,7 @@
                 width: 280px;
             }
         }
-        .ai-stream-header {
+.ai-stream-header {
             flex-shrink: 0;
             padding: 0 14px;
             height: 48px;
@@ -1291,8 +1310,6 @@
             align-items: center;
             justify-content: space-between;
             gap: 10px;
-            position: relative;
-            z-index: 1;
         }
         .ai-stream-content {
             flex: 1;
@@ -1337,6 +1354,20 @@
             height: 16px;
             color: var(--accent);
         }
+        .ai-stream-setname {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            padding: 0 0 10px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 10px;
+        }
+        .ai-stream-setname:empty {
+            display: none;
+        }
         .ai-stream-status {
             font-size: 11px;
             padding: 4px 10px;
@@ -1353,43 +1384,6 @@
             background: var(--accent-bg);
             color: var(--accent);
             border-color: rgba(59, 130, 246, 0.2);
-        }
-        .ai-message {
-            margin-bottom: 14px;
-        }
-        .ai-message:last-child {
-            margin-bottom: 0;
-        }
-        .ai-message-header {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            margin-bottom: 6px;
-        }
-        .ai-message-label {
-            font-size: 10px;
-            font-weight: 500;
-            color: var(--text-muted);
-            text-transform: uppercase;
-        }
-        .ai-message-time {
-            font-size: 10px;
-            color: var(--text-muted);
-        }
-        .ai-message-content {
-            font-size: 12px;
-            line-height: 1.5;
-            padding: 10px 12px;
-            background: var(--bg-input);
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            color: var(--text-primary);
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .ai-message-content.streaming {
-            border-color: var(--accent-light);
-            background: var(--accent-bg);
         }
         .ai-empty {
             text-align: center;
@@ -1454,7 +1448,7 @@
             background: var(--bg-card);
             border-radius: var(--radius-lg);
             width: 90%;
-            max-width: 500px;
+            max-width: 625px;
             max-height: 80vh;
             display: flex;
             flex-direction: column;
@@ -1568,9 +1562,20 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
-            width: 320px;
+            width: 500px;
             max-width: 90%;
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            max-height: 80vh;
+        }
+        .thinking-submodal-body {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .thinking-submodal-overlay.ts-top {
+            align-items: flex-start;
+            padding-top: 20px;
         }
         .thinking-submodal-footer {
             display: flex;
@@ -1610,6 +1615,31 @@
             align-items: center;
             justify-content: space-between;
             gap: 14px;
+        }
+        .mode-capsule {
+            display: flex;
+            background: var(--bg-input);
+            border-radius: 999px;
+            padding: 3px;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 14px;
+        }
+        .mode-segment {
+            flex: 1;
+            text-align: center;
+            padding: 7px 8px;
+            border-radius: 999px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            transition: all 0.15s ease;
+            white-space: nowrap;
+        }
+        .mode-segment.active {
+            background: var(--accent);
+            color: #fff;
+            font-weight: 500;
+            box-shadow: 0 1px 4px rgba(79, 110, 247, 0.3);
         }
         .thinking-row .thinking-label {
             font-size: 13px;
@@ -1668,6 +1698,24 @@
         .effort-custom-input:focus {
             border-color: var(--accent);
         }
+        .param-slider {
+            -webkit-appearance: none; appearance: none;
+            background: var(--border); border-radius: 2px;
+            outline: none; height: 4px; cursor: pointer;
+        }
+        .param-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--accent); cursor: pointer;
+            border: 2px solid var(--bg-card);
+        }
+        .param-slider::-moz-range-thumb {
+            width: 12px; height: 12px; border-radius: 50%;
+            background: var(--accent); cursor: pointer;
+            border: 2px solid var(--bg-card);
+        }
+        .param-slider:disabled { opacity: 0.4; cursor: default; }
+        .param-slider:disabled::-webkit-slider-thumb { background: var(--text-muted); }
         .thinking-popup {
             position: fixed;
             z-index: 200;
@@ -1676,6 +1724,7 @@
             border-radius: var(--radius-md);
             box-shadow: var(--shadow-lg);
             min-width: 240px;
+            min-height: 420px;
             padding: 12px 14px;
             display: flex;
             flex-direction: column;
@@ -2149,6 +2198,7 @@
             transition: background 0.1s;
             user-select: none;
         }
+        .comfy-sel-item > span { flex: 1; min-width: 0; }
         .comfy-sel-item:hover {
             background: var(--bg-hover);
         }
@@ -2163,7 +2213,6 @@
             background: var(--accent-light);
             color: var(--accent);
         }
-        .ai-toolbar .ai-search-input:focus,
         .ai-toolbar .ai-retry-btn:focus-visible {
             outline: none;
             border-color: var(--accent) !important;
@@ -2177,10 +2226,14 @@
             gap: 6px;
             flex-wrap: nowrap;
             min-width: 0;
+            /* 让 .ai-toolbar 形成独立层叠上下文，保证下拉菜单的 z-index 200 在 aiPanel 内
+               不会被同层 .ai-stream-content 等遮挡 */
+            position: relative;
+            z-index: 5;
+            isolation: isolate;
         }
         .ai-toolbar .custom-select {
-            min-width: 0;
-            flex-shrink: 1;
+            flex-shrink: 0;
         }
         .ai-toolbar .custom-select-trigger {
             height: 28px;
@@ -2226,6 +2279,10 @@
             flex-wrap: nowrap;
             min-width: 0;
         }
+        .canvas-toolbar.wrap {
+            flex-wrap: wrap;
+            row-gap: 6px;
+        }
         .canvas-toolbar .custom-select {
             min-width: 0;
             flex-shrink: 1;
@@ -2248,6 +2305,26 @@
             font-family: inherit;
             white-space: nowrap;
             flex-shrink: 0;
+        }
+        /* 关联管理：存档/读取存档 在空间不足时优先隐藏文字与 chevron */
+        .canvas-toolbar .archive-btn,
+        .canvas-toolbar #archiveSelectorWrap .custom-select-trigger {
+            flex-shrink: 0;
+        }
+        .canvas-toolbar.compact .archive-btn .archive-text {
+            display: none;
+        }
+        .canvas-toolbar.ultra-compact .archive-btn,
+        .canvas-toolbar.ultra-compact #archiveSelectorWrap .custom-select-trigger {
+            padding: 0 8px;
+            gap: 0;
+            width: 28px;
+            justify-content: center;
+        }
+        .canvas-toolbar.ultra-compact .archive-btn .archive-text,
+        .canvas-toolbar.ultra-compact #archiveSelectorWrap .custom-select-text,
+        .canvas-toolbar.ultra-compact #archiveSelectorWrap .custom-select-chevron {
+            display: none;
         }
         .canvas-toolbar #canvasUndoBtn,
         .canvas-toolbar #canvasRedoBtn {
@@ -2357,51 +2434,6 @@
             cursor: not-allowed;
             transform: none;
         }
-        .ai-toolbar .ai-search-input {
-            height: 28px;
-            padding: 0 10px 0 28px;
-            font-size: 11px;
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            background: var(--bg-card);
-            color: var(--text-primary);
-            width: 80px;
-            min-width: 0;
-            flex-shrink: 1;
-            transition: all 0.2s;
-            font-family: inherit;
-            outline: none;
-            line-height: 1;
-        }
-        .ai-toolbar .ai-search-input:hover {
-            border-color: var(--border-light);
-        }
-        .ai-toolbar .ai-search-input:focus {
-            border-color: var(--accent);
-            box-shadow: 0 0 0 3px var(--accent-light);
-            width: 140px;
-            background: var(--bg-card);
-        }
-        .ai-toolbar .ai-search-input::placeholder {
-            color: var(--text-muted);
-        }
-        .ai-search-wrap {
-            position: relative;
-        }
-        .ai-search-wrap svg {
-            position: absolute;
-            left: 8px;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 11px;
-            height: 11px;
-            color: var(--text-muted);
-            pointer-events: none;
-            transition: color 0.2s;
-        }
-        .ai-search-wrap:focus-within svg {
-            color: var(--accent);
-        }
         .ai-toolbar .ai-retry-btn {
             height: 28px;
             padding: 0 10px;
@@ -2425,7 +2457,6 @@
         .ai-toolbar .ai-retry-btn:active {
             transform: scale(0.97);
         }
-
         @media (max-width: 1600px) {
             .ai-toolbar {
                 position: relative;
@@ -2439,27 +2470,6 @@
             .ai-toolbar .custom-select-trigger .custom-select-icon {
                 width: 16px;
                 height: 16px;
-            }
-            .ai-toolbar .ai-search-input {
-                width: 28px;
-                padding: 0;
-                border-color: transparent;
-                background: transparent;
-                cursor: pointer;
-                transition: width 0.2s, padding 0.2s, background 0.2s, border-color 0.2s;
-            }
-            .ai-toolbar .ai-search-input:focus {
-                width: 160px;
-                padding: 0 10px 0 28px;
-                border-color: var(--accent);
-                background: var(--bg-card);
-                cursor: text;
-            }
-            .ai-toolbar .ai-search-input::placeholder {
-                color: transparent;
-            }
-            .ai-toolbar .ai-search-input:focus::placeholder {
-                color: var(--text-muted);
             }
         }
         @media (max-width: 1400px) {
@@ -2549,6 +2559,10 @@
         }
         .custom-select-dropdown.show {
             display: block;
+        }
+        .custom-select-dropdown.align-right {
+            left: auto;
+            right: 0;
         }
         .custom-select-option {
             padding: 6px 10px;
@@ -2763,16 +2777,6 @@
             border: 1px solid var(--accent);
             border-radius: 6px;
         }
-        .canvas-toolbar .archive-delete {
-            background: var(--bg-card);
-            border-color: var(--border);
-            color: var(--text-primary);
-        }
-        .canvas-toolbar .archive-delete:hover {
-            background: var(--accent-bg);
-            border-color: var(--accent);
-            color: var(--accent);
-        }
     </style>
 </head>
 <body>
@@ -2860,7 +2864,7 @@
                             <div class="config-grid">
                                 <div class="form-group">
                                     <label>API Key</label>
-                                    <input type="password" class="form-input" id="apiKey" placeholder="输入您的 API Key">
+                                    <input type="password" class="form-input" id="apiKey" autocomplete="off" placeholder="输入您的 API Key">
                                     <button class="settings-toggle" style="width:100%;justify-content:center" id="paramsToggle">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" /></svg>
                                         参数设置
@@ -2911,7 +2915,7 @@
                                  <span style="width:1px;height:14px;background:var(--border);flex-shrink:0;"></span>
                                  <button class="btn btn-secondary archive-btn" data-action="saveArchive" title="存档当前关联配置">
                                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-                                     存档
+                                     <span class="archive-text">存档</span>
                                  </button>
                                  <div class="custom-select" id="archiveSelectorWrap">
                                      <input type="hidden" id="archiveSelector" value="">
@@ -2970,14 +2974,23 @@
                             <div class="custom-select-option selected" data-dropdown="resultFilterModel" data-value="" data-label="所有模型">所有模型</div>
                         </div>
                     </div>
-                    <div class="ai-search-wrap">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                        <input type="text" class="ai-search-input" id="resultFilterText" placeholder="搜索...">
+                    <div class="custom-select" id="searchWrap">
+                         <button class="custom-select-trigger" data-action="toggleDropdown" data-param="resultFilterText" title="搜索">
+                            <svg class="custom-select-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                            <span class="custom-select-text">搜索</span>
+                            <svg class="custom-select-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 15 12 9 18 15"/></svg>
+                        </button>
+                        <div class="custom-select-dropdown" id="resultFilterTextDropdown" style="width:180px;right:0;left:auto;">
+                            <div style="padding:6px;">
+                                <input type="text" id="resultFilterTextInput" placeholder="搜索..." style="width:100%;padding:6px 8px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--bg-input);color:var(--text-primary);outline:none;font-family:inherit;box-sizing:border-box;">
+                            </div>
+                        </div>
                     </div>
                     <span class="ai-stream-status" id="aiStreamStatus">等待中</span>
                 </div>
             </div>
             <div class="ai-stream-content" id="aiStreamContent">
+                <div class="ai-stream-setname" id="aiStreamSetname"></div>
                 <div class="ai-empty">
                     <div class="ai-empty-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /><line x1="9" y1="10" x2="15" y2="10" /><line x1="12" y1="7" x2="12" y2="13" /></svg></div>
                     <p>开始测试后，这里将显示AI的实时回复</p>
@@ -3016,8 +3029,8 @@
             </div>
             <div class="params-modal-body">
                 <div class="params-modal-grid">
-                    <div class="slider-group" data-param="temperature">
-                        <div class="slider-label"><span class="dot-toggle" data-dot="temperature"></span>温度 (temperature)</div>
+                    <div class="slider-group">
+                        <div class="slider-label"><span class="dot-toggle on" data-dot="temperature"></span>温度 (temperature)</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-temperature">
                                 <div class="slider-track"><div class="slider-fill" style="width:35%"></div></div>
@@ -3068,11 +3081,11 @@
                             <div class="custom-slider" id="modal-maxRetries">
                                 <div class="slider-track"><div class="slider-fill" style="width:22%"></div></div>
                                 <div class="slider-thumb" style="left:22%"></div>
-                                <input type="range" class="slider-native" step="1" min="1" max="10" value="3" data-slider="maxRetries">
+                                <input type="range" class="slider-native" step="1" min="0" max="10" value="3" data-slider="maxRetries">
                             </div>
                             <div class="stepper-input">
                                 <button class="stepper-btn" data-stepper="maxRetries" data-delta="-1">-</button>
-                                <input type="number" class="stepper-value" id="modal-maxRetriesInput" step="1" min="1" max="10" value="3">
+                                <input type="number" class="stepper-value" id="modal-maxRetriesInput" step="1" min="0" max="10" value="3">
                                 <button class="stepper-btn" data-stepper="maxRetries" data-delta="1">+</button>
                             </div>
                         </div>
@@ -3101,14 +3114,14 @@
                         <span class="toggle-label">自动关联节点</span>
                     </label>
                 </div>
-                </div>
+            </div>
             <div class="params-expand-bar" id="paramsExpandBar">
                 <span class="params-expand-icon">▼</span>
             </div>
             <div class="params-expand-content" id="paramsExpandContent">
                 <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:16px;margin-bottom:12px;">
                     <div class="slider-group" data-param="contextSize">
-                        <div class="slider-label"><span class="dot-toggle" data-dot="contextSize"></span>上下文大小</div>
+                        <div class="slider-label"><span class="dot-toggle on" data-dot="contextSize"></span>上下文大小</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-contextSize">
                                 <div class="slider-track"><div class="slider-fill" style="width:6%"></div></div>
@@ -3123,7 +3136,7 @@
                         </div>
                     </div>
                     <div class="slider-group" data-param="topP">
-                        <div class="slider-label"><span class="dot-toggle" data-dot="topP"></span>Top-P</div>
+                        <div class="slider-label"><span class="dot-toggle on" data-dot="topP"></span>Top-P</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-topP">
                                 <div class="slider-track"><div class="slider-fill" style="width:100%"></div></div>
@@ -3138,7 +3151,7 @@
                         </div>
                     </div>
                     <div class="slider-group" data-param="minP">
-                        <div class="slider-label"><span class="dot-toggle" data-dot="minP"></span>Min-P</div>
+                        <div class="slider-label"><span class="dot-toggle on" data-dot="minP"></span>Min-P</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-minP">
                                 <div class="slider-track"><div class="slider-fill" style="width:5%"></div></div>
@@ -3153,7 +3166,7 @@
                         </div>
                     </div>
                     <div class="slider-group" data-param="topK">
-                        <div class="slider-label"><span class="dot-toggle" data-dot="topK"></span>Top-K</div>
+                        <div class="slider-label"><span class="dot-toggle on" data-dot="topK"></span>Top-K</div>
                         <div class="slider-row">
                             <div class="custom-slider" id="modal-topK">
                                 <div class="slider-track"><div class="slider-fill" style="width:39%"></div></div>
@@ -3180,6 +3193,7 @@
                 </div>
             </div>
         </div>
+    </div>
 
     <div class="model-modal-overlay" id="modelModal">
         <div class="model-modal">
@@ -3292,9 +3306,6 @@
 
             const WORLD_CENTER_X = 5000;
             const WORLD_CENTER_Y = 5000;
-            const PROMPT_X = WORLD_CENTER_X - 450;
-            const QUESTION_X = WORLD_CENTER_X;
-            const MODEL_X = WORLD_CENTER_X + 450;
             const START_Y = WORLD_CENTER_Y - 60;
             const NODE_GAP_Y = 100;
 
@@ -3418,7 +3429,7 @@
                         temperature: document.querySelector('[data-dot="temperature"]')?.classList.contains('on') ? p('modal-temperature') : null,
                         concurrency: pi('modal-concurrency'),
                         test_count: pi('modal-testCount'),
-                        max_retries: pi('modal-maxRetries'),
+                        max_retries: Math.max(0, pi('modal-maxRetries')),
                         context_size: document.querySelector('[data-dot="contextSize"]')?.classList.contains('on') ? pi('modal-contextSize') : null,
                         streaming: document.getElementById('modal-streaming').checked,
                         top_p: document.querySelector('[data-dot="topP"]')?.classList.contains('on') ? p('modal-topP') : null,
@@ -3427,9 +3438,9 @@
                         models: this.selectedModels,
                         model_thinking_config: this._modelThinkingConfig,
                         auto_append_v1: document.getElementById('autoAppendV1').checked,
+                        auto_connect: document.getElementById('autoConnectToggle').checked,
                         anthropic_mode: document.getElementById('anthropicMode').checked,
                         force_openai_endpoint: document.getElementById('forceOpenAIEndpoint').checked,
-                        auto_connect: document.getElementById('autoConnectToggle').checked,
                         disabled_params: ['contextSize', 'topP', 'minP', 'topK', 'temperature'].filter(
                             p => !document.querySelector(`[data-dot="${p}"]`)?.classList.contains('on')
                         )
@@ -3507,6 +3518,18 @@
                     let num = parseFloat(value);
                     const input = document.getElementById('modal-' + id + 'Input');
                     const slider = document.getElementById('modal-' + id);
+                    if (isNaN(num)) {
+                        const fallbackMin = (input && input.min !== '') ? parseFloat(input.min) : (slider ? parseFloat(slider.querySelector('.slider-native').min) : 0);
+                        num = (isNaN(fallbackMin) || fallbackMin <= 0) ? 0 : fallbackMin;
+                        if (input) input.value = num;
+                        if (slider) {
+                            const native = slider.querySelector('.slider-native');
+                            if (native) native.value = num;
+                        }
+                        this.updateSliderVisual(id);
+                        this.debouncedConfigChange();
+                        return;
+                    }
                     const min = input && input.min !== '' ? parseFloat(input.min) : (slider ? parseFloat(slider.querySelector('.slider-native').min) : NaN);
                     const max = input && input.max !== '' ? parseFloat(input.max) : (slider ? parseFloat(slider.querySelector('.slider-native').max) : NaN);
                     if (!isNaN(min) && !isNaN(max)) {
@@ -3589,6 +3612,7 @@
                             testSetCounts[ts] = (testSetCounts[ts] || 0) + 1;
                         });
                         this.openGroups.clear();
+                        this.onTestSetChange();
                         this.computeCurrentTags();
                         this.renderSetFilterPanel();
                         if (total > 0) {
@@ -3708,11 +3732,101 @@
                     document.querySelectorAll('.custom-select-dropdown.show').forEach(d => {
                         d.classList.remove('show');
                         d.previousElementSibling?.classList.remove('open');
+                        // 清除上一次定位产生的内联样式
+                        d.style.removeProperty('left');
+                        d.style.removeProperty('right');
+                        d.style.removeProperty('max-width');
+                        d.style.removeProperty('position');
+                        d.style.removeProperty('top');
+                        d.style.removeProperty('bottom');
+                        d.classList.remove('align-right');
                     });
                     if (!isOpen) {
-                        dropdown.style.display = '';
+                        // 先临时显示一次以测量内容尺寸
+                        const prevDisplay = dropdown.style.display;
+                        const prevVisibility = dropdown.style.visibility;
+                        dropdown.style.visibility = 'hidden';
+                        dropdown.style.display = 'block';
                         dropdown.classList.add('show');
+                        const rect = trigger?.getBoundingClientRect();
+                        const dRect = dropdown.getBoundingClientRect();
+                        const winW = window.innerWidth;
+                        const winH = window.innerHeight;
+                        // 默认 left:0 展开；若右侧超出且左侧空间足够则改为右对齐
+                        if (rect && (rect.left + dRect.width) > (winW - 4) && rect.left > dRect.width) {
+                            dropdown.classList.add('align-right');
+                        } else if (rect && (rect.left + dRect.width) > (winW - 4) && rect.left <= dRect.width) {
+                            // 两侧都不够时，贴右对齐并限制最大宽度，避免溢出屏幕
+                            dropdown.classList.add('align-right');
+                            dropdown.style.maxWidth = Math.max(120, winW - 8) + 'px';
+                        }
+                        // ====== 关键修复：检测下拉菜单所在容器 (configPanel / aiPanel / centerPanel) 的 overflow:hidden 边界 ======
+                        // 1) canvas-toolbar 内的下拉（如 archiveSelector）位于 .config-panel 中，
+                        //    其右边界就是 .ai-stream-panel 的左边界；向右展开会越过 .ai-stream-panel
+                        //    的 overflow:hidden 被裁剪，所以必须把 dropdown 限制在 configPanel 范围内。
+                        // 2) AI 工具栏内的下拉（historySelector 等）位于 .ai-stream-panel 中，
+                        //    其左边界是 .ai-stream-panel 的左边界；如果 align-right 模式下 dropdown
+                        //    左边界超出 aiPanel 左边界，同样会被裁剪。
+                        // 3) 其它下拉位于 .center-panel，按视口边界判断。
+                        const configPanel = trigger?.closest('.config-panel');
+                        const aiPanel = trigger?.closest('.ai-stream-panel');
+                        // 选择最严格（最近）的 overflow:hidden 容器
+                        const container = aiPanel || configPanel || trigger?.closest('.center-panel');
+                        if (container && rect) {
+                            const cRect = container.getBoundingClientRect();
+                            // 计算 align-right 后下拉菜单的 left 位置
+                            const alignedLeft = rect.right - dRect.width;
+                            if (alignedLeft < cRect.left - 0.5) {
+                                // 下拉菜单左边界超出容器左边界，需要把 right 贴齐容器右边界并限制 max-width
+                                const triggerOffset = rect.right - cRect.right; // trigger 右边相对容器右边的偏移
+                                if (triggerOffset > 0) {
+                                    // trigger 本身在容器右边外（异常），退回到默认行为
+                                } else {
+                                    // 1) 解除 align-right，恢复默认 left 定位以贴 trigger
+                                    dropdown.classList.remove('align-right');
+                                    // 2) 把下拉菜单放到一个不会被裁剪的层级
+                                    //    策略：先尝试在容器内限制 max-width 让 left-align 也能容下
+                                    const availableForLeftAlign = Math.min(dRect.width, cRect.right - rect.left);
+                                    if (availableForLeftAlign >= 120) {
+                                        dropdown.style.maxWidth = availableForLeftAlign + 'px';
+                                    } else {
+                                        // 左侧空间也不够，把下拉菜单 reverse direction: right 贴容器右边，max-width 填满容器
+                                        dropdown.style.right = (winW - cRect.right) + 'px';
+                                        dropdown.style.maxWidth = (cRect.width - 4) + 'px';
+                                    }
+                                }
+                            }
+                            // ====== 新增：canvas-toolbar 内的下拉（如 archiveSelector）======
+                            // 下拉默认 left:0 展开，可能向右超出 configPanel 的右边界（= aiPanel 左边界），
+                            // 被 aiPanel overflow:hidden 裁剪。这种情况直接强制 align-right，
+                            // 让 dropdown 向左对齐到 trigger，避免跨越 aiPanel 边界。
+                            if (configPanel) {
+                                const cfgR = configPanel.getBoundingClientRect();
+                                if ((rect.left + dRect.width) > cfgR.right - 0.5) {
+                                    // 下拉菜单右边界会超出 configPanel 右边界
+                                    // 左侧空间够：让 dropdown 向左对齐到 trigger
+                                    if (rect.left - dRect.width >= cfgR.left - 0.5) {
+                                        dropdown.classList.add('align-right');
+                                    } else {
+                                        // 左侧也不够：限制 max-width 让其正好填到 configPanel 右边界
+                                        dropdown.classList.add('align-right');
+                                        dropdown.style.maxWidth = Math.max(120, rect.left - cfgR.left - 4) + 'px';
+                                    }
+                                }
+                            }
+                        }
+                        // 垂直方向：如果向下展开会超出视口底部，改为向上展开
+                        if (rect && (rect.bottom + dRect.height + 4) > (winH - 4) && (rect.top - dRect.height - 4) > 60) {
+                            dropdown.style.bottom = (winH - rect.top + 4) + 'px';
+                            dropdown.style.top = 'auto';
+                        }
+                        dropdown.style.visibility = prevVisibility;
+                        dropdown.style.display = prevDisplay;
                         trigger?.classList.add('open');
+                        if (id === 'resultFilterText') {
+                            const input = document.getElementById('resultFilterTextInput');
+                            if (input) setTimeout(() => input.focus(), 50);
+                        }
                     }
                 },
 
@@ -3740,8 +3854,8 @@
                     if (!slider || !input) return;
                     const native = slider.querySelector('.slider-native');
                     if (!native) return;
-                    const min = input.min !== '' ? parseFloat(input.min) : parseFloat(native.min);
-                    const max = input.max !== '' ? parseFloat(input.max) : parseFloat(native.max);
+                    const min = parseFloat(native.min);
+                    const max = parseFloat(native.max);
                     const step = parseFloat(native.step);
                     let current = parseFloat(input.value) || 0;
                     let newVal = current + delta;
@@ -3761,9 +3875,7 @@
                     if (!native || !fill || !thumb) return;
                     const min = parseFloat(native.min);
                     const max = parseFloat(native.max);
-                    const input = document.getElementById('modal-' + param + 'Input');
-                    const raw = input ? parseFloat(input.value) : parseFloat(native.value);
-                    const val = Math.min(max, Math.max(min, raw || 0));
+                    const val = parseFloat(native.value);
                     const pct = max > min ? ((val - min) / (max - min)) * 100 : 0;
                     fill.style.width = Math.min(100, Math.max(0, pct)) + '%';
                     thumb.style.left = Math.min(100, Math.max(0, pct)) + '%';
@@ -4541,7 +4653,7 @@
                         this.renderQuestionList();
                     } else if (node.type === 'model' && node.value) {
                         const idx = this.selectedModels.indexOf(node.value);
-                        if (idx !== -1) { this.selectedModels.splice(idx, 1); this.persistSelectedModels(); }
+                        if (idx !== -1) { this.selectedModels.splice(idx, 1); this.persistSelectedModels(); this.updateSelectedModelCount(); }
                     }
                     this.canvasState.nodes = this.canvasState.nodes.filter(n => n.id !== nodeId);
                     this.canvasState.connections = this.canvasState.connections.filter(c => c.from !== nodeId && c.to !=
@@ -4724,7 +4836,7 @@
                     let html = '<div class="custom-select-option selected" data-dropdown="archiveSelector" data-value="" data-label="读取存档">读取存档</div>';
                     saves.forEach(s => {
                         const date = new Date(s.timestamp).toLocaleString('zh-CN');
-                        html += `<div class="custom-select-option" data-dropdown="archiveSelector" data-value="${this.escapeHtml(s.id)}" data-label="${this.escapeHtml(s.name)}">${this.escapeHtml(s.name)} (${date})</div>`;
+                        html += `<div class="custom-select-option" data-dropdown="archiveSelector" data-value="${attrEscape(s.id)}" data-label="${attrEscape(s.name)}">${this.escapeHtml(s.name)} (${date})</div>`;
                     });
                     dropdown.innerHTML = html;
                 },
@@ -5525,6 +5637,8 @@
 
                 startSocketDrag(e, nodeId, type, dir, typeClass) {
                     e.preventDefault();
+                    e.stopPropagation();
+                    this.canvasPanState = null;
                     const container = document.getElementById('comfyCanvasContainer');
                     const nodeEl = container.querySelector(`.comfy-node[data-node-id="${nodeId}"]`);
                     if (!nodeEl) return;
@@ -5715,7 +5829,7 @@
                         popup.innerHTML = items.map((item, idx) => {
                             const sel = node.value === item;
                             const lbActive = type === 'model' && this._modelThinkingConfig[item]?.thinking?.type === 'enabled';
-                            const lb = type === 'model' ? `<button class="model-lightbulb-btn ${lbActive ? 'active' : ''}" data-sel-lb="${nodeId}" data-sel-model="${this.escapeHtml(item)}" title="推理设置">
+                            const lb = type === 'model' ? `<button class="model-lightbulb-btn ${lbActive ? 'active' : ''}" data-sel-lb="${nodeId}" data-sel-model="${attrEscape(item)}" title="推理设置">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
                             </button>` : '';
                             return `<div class="comfy-sel-item ${sel ? 'picked' : ''}" data-node-id="${nodeId}" data-type="${type}" data-index="${idx}"><span>${this.escapeHtml(item)}</span>${lb}</div>`;
@@ -5799,7 +5913,6 @@
                         this.updateSelectedModelCount();
                         this.autoConnectCanvas();
                     }
-                    this._markMissingModels();
                     this.closeAllSelectors();
                     this.renderAssociationCanvas({ center: false });
                     this.saveCanvasSnapshot();
@@ -5991,7 +6104,7 @@
                     const warningHtml = missingSelected.length > 0
                         ? `<div style="padding:8px 12px;font-size:12px;color:#ef4444;background:#fef2f2;border-radius:6px;margin-bottom:8px;">${missingSelected.length} 个已选模型在当前 API 中不可用</div>`
                         : '';
-                    container.innerHTML = warningHtml + this.availableModels.map(model => {
+                    const listHtml = this.availableModels.map(model => {
                         const index = this.selectedModels.indexOf(model);
                         const orderNum = index !== -1 ? index + 1 : null;
                         const thinkingActive = this._modelThinkingConfig[model]?.thinking?.type === 'enabled';
@@ -6003,6 +6116,11 @@
                         </button>
                     </div>`;
                     }).join('');
+                    const extraFillers = Math.max(0, 5 - this.availableModels.length);
+                    const fillerHtml = extraFillers > 0
+                        ? '<div class="model-checkbox-empty" style="opacity:0;pointer-events:none;height:48px"></div>'.repeat(extraFillers)
+                        : '';
+                    container.innerHTML = warningHtml + listHtml + fillerHtml;
                     container.querySelectorAll('.model-checkbox-item').forEach(el => {
                         el.addEventListener('click', (e) => {
                             if (e.target.closest('.model-lightbulb-btn')) return;
@@ -6030,32 +6148,85 @@
                     const disabled = thinkingOn ? '' : 'disabled';
                     const effortStyle = thinkingOn ? '' : 'opacity:0.4;pointer-events:none;';
                     const body = overlay.querySelector('.thinking-submodal-body');
+                    const _gv = (k) => parseFloat(document.getElementById('modal-' + k + 'Input')?.value) || 0;
+                    const tsParams = this._modelThinkingConfig[model]?.params || {};
+                    const tsPar = [
+                        { key: 'temperature', min: 0, max: 2, step: 0.05 },
+                        { key: 'context_size', min: 0, max: 131072, step: 4096 },
+                        { key: 'top_p', min: 0, max: 1, step: 0.05 },
+                        { key: 'min_p', min: 0, max: 1, step: 0.01 },
+                        { key: 'top_k', min: 1, max: 100, step: 1 },
+                    ];
+                    const tsParamRows = tsPar.map(c => {
+                        const val = tsParams[c.key] !== undefined ? tsParams[c.key] : _gv(c.key);
+                        const dot = tsParams[c.key] !== undefined ? 'on' : '';
+                        return `<div class="thinking-row param-row" style="display:flex;align-items:center;gap:6px">
+                            <span class="thinking-label" style="flex:0 0 80px">${c.key}</span>
+                            <span class="dot-toggle ${dot}" data-param="${c.key}"></span>
+                            <input type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}" ${dot ? '' : 'disabled'} class="param-slider">
+                            <input type="text" value="${val}" ${dot ? '' : 'disabled'} style="width:50px;text-align:center;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:11px;padding:2px 4px">
+                        </div>`;
+                    }).join('');
+                    const hasThinking = thinkingOn && effortOn;
+                    const hasParams = Object.keys(tsParams).length > 0;
+                    const initMode = hasThinking && hasParams ? 3 : hasParams ? 2 : hasThinking ? 1 : 0;
+                    const thinkVis = initMode === 1 || initMode === 3;
+                    const paramVis = initMode === 2 || initMode === 3;
                     body.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text-primary)">推理设置 — ${this.escapeHtml(model)}</div>
-                        <div class="thinking-row" style="margin-bottom:10px">
-                            <span class="thinking-label">开启推理</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" id="ts-thinking" ${thinkingOn ? 'checked' : ''}>
-                                <span class="toggle-track"></span>
-                            </label>
+                        <div class="mode-capsule" id="ts-capsule">
+                            <span class="mode-segment${initMode===0?' active':''}" data-mode="0">无作为</span>
+                            <span class="mode-segment${initMode===1?' active':''}" data-mode="1">仅推理</span>
+                            <span class="mode-segment${initMode===2?' active':''}" data-mode="2">仅参数</span>
+                            <span class="mode-segment${initMode===3?' active':''}" data-mode="3">全部</span>
                         </div>
-                        <div class="thinking-row" style="margin-bottom:6px;${effortStyle}">
-                            <span class="thinking-label">推理强度</span>
+                        <div id="ts-thinking-area" style="display:${thinkVis?'block':'none'}">
+                            <div class="thinking-row" style="margin-bottom:10px">
+                                <span class="thinking-label">开启推理</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="ts-thinking" ${thinkingOn ? 'checked' : ''}>
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="thinking-row" style="margin-bottom:8px;${thinkVis?effortStyle:'opacity:0.4;pointer-events:none;'}">
+                                <span style="font-size:12px;font-weight:500;color:var(--text-secondary)">推理强度</span>
+                            </div>
+                            <div class="effort-options" id="ts-effort-options" style="${thinkVis?effortStyle:'opacity:0.4;pointer-events:none;'}">
+                                ${presetValues.map(v => `<button class="effort-option${effortOn && effortVal === v && !showCustom ? ' active' : ''}" data-value="${v}" ${thinkVis?disabled:'disabled'}>${v}</button>`).join('')}
+                                <button class="effort-option${showCustom ? ' active' : ''}" data-value="__custom__" ${thinkVis?disabled:'disabled'}>自定义</button>
+                            </div>
+                            <input type="text" class="effort-custom-input" id="ts-custom-input" placeholder="输入自定义推理强度" style="margin-top:8px;${showCustom && thinkingOn && thinkVis ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
                         </div>
-                        <div class="effort-options" id="ts-effort-options" style="${effortStyle}">
-                            ${presetValues.map(v => `<button class="effort-option${effortOn && effortVal === v && !showCustom ? ' active' : ''}" data-value="${v}" ${disabled}>${v}</button>`).join('')}
-                            <button class="effort-option${showCustom ? ' active' : ''}" data-value="__custom__" ${disabled}>自定义</button>
-                        </div>
-                        <input type="text" class="effort-custom-input" id="ts-custom-input" placeholder="输入自定义推理强度" style="margin-top:8px;${showCustom && thinkingOn ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">`;
+                        <div id="ts-params-area" style="display:${paramVis?'block':'none'}">
+                            <hr style="border:none;border-top:1px solid var(--border);margin:8px 0 12px 0">
+                            <div style="font-size:12px;font-weight:500;color:var(--text-secondary);margin-bottom:12px">模型参数</div>
+                            <div class="param-rows-wrap" style="display:flex;flex-direction:column;gap:10px">${tsParamRows}</div>
+                        </div>`;
                     this._bindThinkingSubmodalEvents(model);
+                    overlay.classList.add('ts-top');
                     overlay.classList.add('show');
                 },
 
                 _bindThinkingSubmodalEvents(model) {
+                    const capsule = document.getElementById('ts-capsule');
+                    const thinkArea = document.getElementById('ts-thinking-area');
+                    const paramArea = document.getElementById('ts-params-area');
                     const tgThinking = document.getElementById('ts-thinking');
                     const effortOptions = document.querySelectorAll('.effort-option');
                     const customInput = document.getElementById('ts-custom-input');
-                    const effortRow = document.querySelector('.thinking-row:nth-child(3)');
+                    const effortRow = document.querySelector('#ts-thinking-area .thinking-row');
                     const effortOptionsDiv = document.getElementById('ts-effort-options');
+
+                    if (capsule) {
+                        capsule.addEventListener('click', (e) => {
+                            const seg = e.target.closest('.mode-segment');
+                            if (!seg) return;
+                            const mode = parseInt(seg.dataset.mode);
+                            capsule.querySelectorAll('.mode-segment').forEach(s => s.classList.remove('active'));
+                            seg.classList.add('active');
+                            if (thinkArea) thinkArea.style.display = (mode === 1 || mode === 3) ? 'block' : 'none';
+                            if (paramArea) paramArea.style.display = (mode === 2 || mode === 3) ? 'block' : 'none';
+                        });
+                    }
 
                     if (tgThinking) {
                         tgThinking.addEventListener('change', () => {
@@ -6105,37 +6276,104 @@
                             if (e.key === 'Enter') customInput.blur();
                         });
                     }
+
+                    const sbBody = document.querySelector('.thinking-submodal-body');
+                    if (sbBody) {
+                        sbBody.querySelectorAll('.dot-toggle[data-param]').forEach(dot => {
+                            dot.addEventListener('click', (e) => {
+                                e.stopPropagation();
+                                const r = dot.closest('.thinking-row');
+                                const sl = r?.querySelector('input[type="range"]');
+                                const st = r?.querySelector('input[type="text"]');
+                                dot.classList.toggle('on');
+                                const on = dot.classList.contains('on');
+                                if (sl) sl.disabled = !on;
+                                if (st) st.disabled = !on;
+                            });
+                        });
+                        sbBody.querySelectorAll('.param-slider').forEach(sl => {
+                            sl.addEventListener('input', () => {
+                                const r = sl.closest('.thinking-row');
+                                const st = r?.querySelector('input[type="text"]');
+                                if (st) st.value = sl.value;
+                            });
+                        });
+                        sbBody.querySelectorAll('.thinking-row input[type="text"]').forEach(st => {
+                            st.addEventListener('change', () => {
+                                const r = st.closest('.thinking-row');
+                                const sl = r?.querySelector('input[type="range"]');
+                                if (!sl) return;
+                                const mn = parseFloat(sl.min), mx = parseFloat(sl.max), sp = parseFloat(sl.step);
+                                let v = parseFloat(st.value);
+                                if (isNaN(v)) v = mn;
+                                v = Math.round(Math.min(mx, Math.max(mn, v)) / sp) * sp;
+                                st.value = v;
+                                sl.value = v;
+                            });
+                        });
+                    }
                 },
 
                 _confirmThinkingModal() {
                     const overlay = document.getElementById('thinkingSubmodalOverlay');
                     if (!overlay) return;
                     const model = this._thinkingModalModel;
-                    if (!model) { overlay.classList.remove('show'); return; }
+                    if (!model) { overlay.classList.remove('ts-top'); overlay.classList.remove('show'); return; }
                     const tgThinking = document.getElementById('ts-thinking');
                     const activeOption = document.querySelector('.effort-option.active');
                     const customInput = document.getElementById('ts-custom-input');
                     if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
-                    if (tgThinking?.checked) {
-                        this._modelThinkingConfig[model].thinking = { type: 'enabled' };
-                        if (activeOption) {
-                            if (activeOption.dataset.value === '__custom__') {
-                                const val = customInput?.value.trim() || '';
-                                if (val) {
-                                    this._modelThinkingConfig[model].reasoning_effort = val;
-                                } else {
-                                    delete this._modelThinkingConfig[model].reasoning_effort;
-                                }
-                            } else {
-                                this._modelThinkingConfig[model].reasoning_effort = activeOption.dataset.value;
-                            }
-                        } else {
-                            delete this._modelThinkingConfig[model].reasoning_effort;
-                        }
-                    } else {
+                    const modeEl = overlay.querySelector('.mode-segment.active');
+                    const mode = parseInt(modeEl?.dataset.mode || '0');
+                    if (mode === 0 || mode === 2) {
                         this._modelThinkingConfig[model].thinking = { type: 'disabled' };
                         delete this._modelThinkingConfig[model].reasoning_effort;
                     }
+                    if (mode === 1 || mode === 3) {
+                        if (tgThinking?.checked) {
+                            this._modelThinkingConfig[model].thinking = { type: 'enabled' };
+                            if (activeOption) {
+                                if (activeOption.dataset.value === '__custom__') {
+                                    const val = customInput?.value.trim() || '';
+                                    if (val) {
+                                        this._modelThinkingConfig[model].reasoning_effort = val;
+                                    } else {
+                                        delete this._modelThinkingConfig[model].reasoning_effort;
+                                    }
+                                } else {
+                                    this._modelThinkingConfig[model].reasoning_effort = activeOption.dataset.value;
+                                }
+                            } else {
+                                delete this._modelThinkingConfig[model].reasoning_effort;
+                            }
+                        } else {
+                            this._modelThinkingConfig[model].thinking = { type: 'disabled' };
+                            delete this._modelThinkingConfig[model].reasoning_effort;
+                        }
+                    }
+                    if (mode === 0 || mode === 1) {
+                        this._modelThinkingConfig[model].params = undefined;
+                    }
+                    if (mode >= 2) {
+                        const tsParams = {};
+                        const sbBody = overlay.querySelector('.thinking-submodal-body');
+                        if (sbBody) {
+                            sbBody.querySelectorAll('.dot-toggle[data-param]').forEach(dot => {
+                                if (!dot.classList.contains('on')) return;
+                                const r = dot.closest('.thinking-row');
+                                const st = r?.querySelector('input[type="text"]');
+                                const sl = r?.querySelector('input[type="range"]');
+                                if (!st || !sl) return;
+                                const mn = parseFloat(sl.min), mx = parseFloat(sl.max), sp = parseFloat(sl.step);
+                                let v = parseFloat(st.value);
+                                if (isNaN(v)) v = mn;
+                                v = Math.round(Math.min(mx, Math.max(mn, v)) / sp) * sp;
+                                tsParams[dot.dataset.param] = v;
+                            });
+                        }
+                        this._modelThinkingConfig[model].params = Object.keys(tsParams).length > 0 ? tsParams : undefined;
+                    }
+                    overlay.classList.remove('ts-top');
                     overlay.classList.remove('show');
                     this.renderModelCheckboxList();
                     this.onConfigChange();
@@ -6146,34 +6384,43 @@
 
                 _cancelThinkingModal() {
                     const overlay = document.getElementById('thinkingSubmodalOverlay');
-                    if (overlay) overlay.classList.remove('show');
+                    if (overlay) { overlay.classList.remove('ts-top'); overlay.classList.remove('show'); }
                 },
 
                 _showSelectorThinkingPopup(btnEl) {
-                    const popupId = btnEl.dataset.selLb;
+                    const nodeId = btnEl.dataset.selLb;
                     const model = btnEl.dataset.selModel;
-                    const existing = document.querySelector(`.thinking-popup[data-sel-lb-id="${popupId}"]`);
+                    const existing = document.querySelector(`.thinking-popup[data-sel-lb-id="${nodeId}"]`);
                     if (existing) { existing.remove(); return; }
                     document.querySelectorAll('.thinking-popup').forEach(el => el.remove());
                     const rect = btnEl.getBoundingClientRect();
                     const popup = document.createElement('div');
                     popup.className = 'thinking-popup';
-                    popup.dataset.selLbId = popupId;
-                    popup.innerHTML = this._renderCanvasThinkingHtml(model);
+                    popup.dataset.selLbId = nodeId;
+                    popup.innerHTML = this._renderCanvasThinkingHtml(model, nodeId);
                     document.body.appendChild(popup);
                     let left = rect.left - popup.offsetWidth - 4;
-                    let top = rect.top - 4;
+                    let top = rect.top - popup.offsetHeight - 4;
                     if (left < 0) left = rect.right + 4;
-                    if (top + popup.offsetHeight > window.innerHeight) {
-                        top = window.innerHeight - popup.offsetHeight - 6;
-                    }
+                    if (left + popup.offsetWidth > window.innerWidth) left = window.innerWidth - popup.offsetWidth - 6;
                     if (top < 0) top = 6;
+                    if (top + popup.offsetHeight > window.innerHeight) top = window.innerHeight - popup.offsetHeight - 6;
                     popup.style.left = left + 'px';
                     popup.style.top = top + 'px';
-                    this._bindCanvasThinkingEvents(popup, model);
+                    this._bindCanvasThinkingEvents(popup, model, nodeId);
                 },
 
-                _renderCanvasThinkingHtml(model) {
+                _renderCanvasThinkingHtml(model, nodeId) {
+                    const node = this.canvasState.nodes.find(n => n.id === nodeId);
+                    const params = node?.params || {};
+                    const _gv = (k) => parseFloat(document.getElementById('modal-' + k + 'Input')?.value) || 0;
+                    const pv = (k) => {
+                        if (params[k] !== undefined) return params[k];
+                        const mp = this._modelThinkingConfig?.[model]?.params;
+                        if (mp && mp[k] !== undefined) return mp[k];
+                        return _gv(k);
+                    };
+                    const dotOn = (k) => params[k] !== undefined ? 'on' : '';
                     const cfg = this._modelThinkingConfig[model] || {};
                     const thinkingOn = cfg.thinking?.type === 'enabled';
                     const effortOn = !!cfg.reasoning_effort;
@@ -6182,34 +6429,150 @@
                     const presetValues = ['low', 'medium', 'high', 'max'];
                     const disabled = thinkingOn ? '' : 'disabled';
                     const effortStyle = thinkingOn ? '' : 'opacity:0.4;pointer-events:none;';
+                    const hasRegular = ['temperature','top_p','top_k','min_p','context_size'].some(k => params[k] !== undefined);
+                    const hasThinking = !!params.thinking_cfg;
+                    const initMode = hasRegular && hasThinking ? 3 : hasRegular ? 2 : hasThinking ? 1 : 0;
+                    const thinkVis = initMode === 1 || initMode === 3;
+                    const paramVis = initMode === 2 || initMode === 3;
+                    const par = [
+                        { key: 'temperature', min: 0, max: 2, step: 0.05 },
+                        { key: 'top_p', min: 0, max: 1, step: 0.05 },
+                        { key: 'top_k', min: 1, max: 200, step: 1 },
+                        { key: 'min_p', min: 0, max: 1, step: 0.01 },
+                        { key: 'context_size', min: 0, max: 131072, step: 4096 },
+                    ];
+                    const rows = par.map(c => {
+                        const val = pv(c.key);
+                        const dot = dotOn(c.key);
+                        return `<div class="thinking-row param-row" style="display:flex;align-items:center;gap:6px">
+                            <span class="thinking-label" style="flex:0 0 80px">${c.key}</span>
+                            <span class="dot-toggle ${dot}" data-param="${c.key}"></span>
+                            <input type="range" min="${c.min}" max="${c.max}" step="${c.step}" value="${val}" ${dot ? '' : 'disabled'} class="param-slider">
+                            <input type="text" value="${val}" ${dot ? '' : 'disabled'} style="width:50px;text-align:center;background:var(--bg-card);border:1px solid var(--border);border-radius:4px;color:var(--text-primary);font-size:11px;padding:2px 4px">
+                        </div>`;
+                    }).join('');
                     return `<div style="display:flex;flex-direction:column;gap:8px" data-tm="${this.escapeHtml(model)}">
                         <div style="font-size:12px;font-weight:500;color:var(--text-secondary)">${this.escapeHtml(model)}</div>
-                        <div class="thinking-row">
-                            <span class="thinking-label">开启推理</span>
-                            <label class="toggle-switch">
-                                <input type="checkbox" class="tg-thinking" ${thinkingOn ? 'checked' : ''}>
-                                <span class="toggle-track"></span>
-                            </label>
+                        <div class="mode-capsule">
+                            <span class="mode-segment${initMode===0?' active':''}" data-mode="0">无作为</span>
+                            <span class="mode-segment${initMode===1?' active':''}" data-mode="1">仅推理</span>
+                            <span class="mode-segment${initMode===2?' active':''}" data-mode="2">仅参数</span>
+                            <span class="mode-segment${initMode===3?' active':''}" data-mode="3">全部</span>
                         </div>
-                        <div class="thinking-row" style="${effortStyle};margin-bottom:4px">
-                            <span class="thinking-label">推理强度</span>
+                        <div class="canvas-think-area" style="visibility:${thinkVis?'visible':'hidden'};pointer-events:${thinkVis?'auto':'none'}">
+                            <div class="thinking-row">
+                                <span class="thinking-label">开启推理</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" class="tg-thinking" ${thinkingOn ? 'checked' : ''}>
+                                    <span class="toggle-track"></span>
+                                </label>
+                            </div>
+                            <div class="thinking-row" style="${effortStyle};margin-bottom:8px">
+                                <span style="font-size:12px;font-weight:500;color:var(--text-secondary)">推理强度</span>
+                            </div>
+                            <div class="effort-options" style="${effortStyle}">
+                                ${presetValues.map(v => `<button class="effort-option${effortOn && effortVal === v && !showCustom ? ' active' : ''}" data-value="${v}" ${disabled}>${v}</button>`).join('')}
+                                <button class="effort-option${showCustom ? ' active' : ''}" data-value="__custom__" ${disabled}>自定义</button>
+                            </div>
+                            <input type="text" class="effort-custom-input" placeholder="输入自定义推理强度" style="margin-top:4px;${showCustom && thinkingOn && thinkVis ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
                         </div>
-                        <div class="effort-options" style="${effortStyle}">
-                            ${presetValues.map(v => `<button class="effort-option${effortOn && effortVal === v && !showCustom ? ' active' : ''}" data-value="${v}" ${disabled}>${v}</button>`).join('')}
-                            <button class="effort-option${showCustom ? ' active' : ''}" data-value="__custom__" ${disabled}>自定义</button>
+                        <div class="canvas-params-area" style="visibility:${paramVis?'visible':'hidden'};pointer-events:${paramVis?'auto':'none'}">
+                            <div style="border-top:1px solid var(--border);margin:0 0 8px 0"></div>
+                            <div class="param-rows-wrap" style="display:flex;flex-direction:column;gap:10px">
+                                ${rows}
+                            </div>
                         </div>
-                        <input type="text" class="effort-custom-input" placeholder="输入自定义推理强度" style="margin-top:4px;${showCustom && thinkingOn ? '' : 'display:none'}" value="${showCustom ? this.escapeHtml(effortVal) : ''}">
                     </div>`;
                 },
 
-                _bindCanvasThinkingEvents(popup, model) {
+                _bindCanvasThinkingEvents(popup, model, nodeId) {
                     const container = popup.querySelector('[data-tm]');
                     if (!container) return;
+                    const capsule = container.querySelector('.mode-capsule');
+                    const thinkArea = container.querySelector('.canvas-think-area');
+                    const paramArea = container.querySelector('.canvas-params-area');
                     const tgThinking = container.querySelector('.tg-thinking');
                     const effortOptions = container.querySelectorAll('.effort-option');
                     const customInput = container.querySelector('.effort-custom-input');
-                    const effortRow = container.querySelector('.thinking-row:nth-child(3)');
+                    const effortRows = container.querySelectorAll('.canvas-think-area .thinking-row');
+                    const effortRow = effortRows[1];
                     const effortOptionsDiv = container.querySelector('.effort-options');
+
+                    if (capsule) {
+                        capsule.addEventListener('click', (e) => {
+                            const seg = e.target.closest('.mode-segment');
+                            if (!seg) return;
+                            const mode = parseInt(seg.dataset.mode);
+                            capsule.querySelectorAll('.mode-segment').forEach(s => s.classList.remove('active'));
+                            seg.classList.add('active');
+                            if (thinkArea) { thinkArea.style.visibility = (mode === 1 || mode === 3) ? 'visible' : 'hidden'; thinkArea.style.pointerEvents = (mode === 1 || mode === 3) ? 'auto' : 'none'; }
+                            if (paramArea) { paramArea.style.visibility = (mode === 2 || mode === 3) ? 'visible' : 'hidden'; paramArea.style.pointerEvents = (mode === 2 || mode === 3) ? 'auto' : 'none'; }
+                            _sv();
+                        });
+                    }
+
+                    const _sv = () => {
+                        const n = this.canvasState.nodes.find(x => x.id === nodeId);
+                        if (!n) return;
+                        const modeEl = container.querySelector('.mode-segment.active');
+                        const mode = parseInt(modeEl?.dataset.mode || '0');
+                        const p = {};
+                        if (mode === 1 || mode === 3) {
+                            const cfg = this._modelThinkingConfig[model] || {};
+                            if (cfg.thinking?.type === 'enabled') {
+                                p.thinking_cfg = { type: 'enabled' };
+                                if (cfg.reasoning_effort) p.thinking_cfg.reasoning_effort = cfg.reasoning_effort;
+                            }
+                        }
+                        if (mode >= 2) {
+                            container.querySelectorAll('.dot-toggle[data-param]').forEach(dot => {
+                                if (!dot.classList.contains('on')) return;
+                                const r = dot.closest('.thinking-row');
+                                const st = r?.querySelector('input[type="text"]');
+                                if (st) p[dot.dataset.param] = parseFloat(st.value);
+                            });
+                        }
+                        n.params = Object.keys(p).length > 0 ? p : undefined;
+                        this.debouncedAutoSave();
+                    };
+
+                    container.querySelectorAll('.dot-toggle[data-param]').forEach(dot => {
+                        dot.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            const r = dot.closest('.thinking-row');
+                            const sl = r?.querySelector('input[type="range"]');
+                            const st = r?.querySelector('input[type="text"]');
+                            dot.classList.toggle('on');
+                            const on = dot.classList.contains('on');
+                            if (sl) sl.disabled = !on;
+                            if (st) st.disabled = !on;
+                            _sv();
+                        });
+                    });
+
+                    container.querySelectorAll('.param-rows-wrap input[type="range"]').forEach(sl => {
+                        sl.addEventListener('input', () => {
+                            const r = sl.closest('.thinking-row');
+                            const st = r?.querySelector('input[type="text"]');
+                            if (st) st.value = sl.value;
+                        });
+                        sl.addEventListener('change', _sv);
+                    });
+
+                    container.querySelectorAll('.param-rows-wrap input[type="text"]').forEach(st => {
+                        st.addEventListener('change', () => {
+                            const r = st.closest('.thinking-row');
+                            const sl = r?.querySelector('input[type="range"]');
+                            if (!sl) return;
+                            const mn = parseFloat(sl.min), mx = parseFloat(sl.max), sp = parseFloat(sl.step);
+                            let v = parseFloat(st.value);
+                            if (isNaN(v)) v = mn;
+                            v = Math.round(Math.min(mx, Math.max(mn, v)) / sp) * sp;
+                            st.value = v;
+                            sl.value = v;
+                            _sv();
+                        });
+                    });
 
                     if (tgThinking) {
                         tgThinking.addEventListener('change', () => {
@@ -6232,6 +6595,7 @@
                             effortOptions.forEach(btn => btn.disabled = !on);
                             if (!on && customInput) customInput.style.display = 'none';
                             this.onConfigChange();
+                            _sv();
                         });
                     }
 
@@ -6253,6 +6617,7 @@
                                 }
                             }
                             this.onConfigChange();
+                            _sv();
                         });
                     });
 
@@ -6412,6 +6777,7 @@
                         return;
                     }
 
+                    this.canvasToSelectedModels();
                     const testSetsPayload = testSetNames.map(ts => ({
                         name: ts,
                         prompts: bySet[ts].prompts,
@@ -6422,7 +6788,7 @@
                         const hubResp = await fetch('/api/v1/test-job/hub', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({action: 'start', test_sets: testSetsPayload, models: this.selectedModels})
+                            body: JSON.stringify({action: 'start', test_sets: testSetsPayload, models: this.canvasState.nodes.filter(n => n.type === 'model' && n.value).map(n => { const np = n.params || {}; const mp = this._modelThinkingConfig[n.value]?.params || {}; return {model: n.value, params: {...mp, ...np}}; })})
                         });
                         if (hubResp.status === 409) {
                             const err = await hubResp.json();
@@ -6446,6 +6812,8 @@
                         document.getElementById('aiStreamStatus').textContent = '生成中';
                         document.getElementById('aiStreamStatus').classList.add('active');
                         document.getElementById('resultCount').textContent = '0 题';
+                        const setnameEl = document.getElementById('aiStreamSetname');
+                        if (setnameEl) setnameEl.textContent = '';
                         document.getElementById('progressContainer').style.display = 'block';
                         document.getElementById('progressContainer').dataset.total = total_tasks;
                         document.getElementById('progressText').textContent = '正在连接...';
@@ -6557,6 +6925,8 @@
                         this.loadHistoryResults().then(() => {
                             const textEl = document.querySelector('#historySelectorWrap .custom-select-text');
                             if (textEl) textEl.textContent = '当前运行';
+                            const setnameEl = document.getElementById('aiStreamSetname');
+                            if (setnameEl) setnameEl.textContent = '';
                         });
                     } else if (data.type === 'status') {
                         if (data.status === 'stopped') {
@@ -6604,17 +6974,12 @@
                         const promptTag = data.prompt_tag || '';
                         const expected = data.expected_answer || data.answer || '';
                         const aiReply = data.ai_answer || data.model_reply || '';
-                        const reasoning = data.reasoning_content || '';
-                        let aiContent = '';
-                        if (reasoning) {
-                            aiContent += '&lt;think&gt;\n' + this.escapeHtml(reasoning) + '\n&lt;/think&gt;\n';
-                        }
-                        if (aiReply) {
-                            aiContent += (aiContent ? '\n' : '') + this.escapeHtml(aiReply);
-                        } else if (!reasoning) {
-                            aiContent += '<span style="color:var(--text-muted)">无回复</span>';
-                        }
                         const displayId = (data.question_id || '?') + (data.test_count > 1 ? '-' + (data.test_index || 1) : '');
+                        const reasoning = data.reasoning_content || '';
+                        const reasoningHtml = reasoning ? `<div class="result-row">
+                            <div class="result-label">思考过程</div>
+                            <div class="result-content reasoning" style="max-height:200px;overflow-y:auto;font-style:italic;color:var(--text-muted)">&lt;think&gt;\n${this.escapeHtml(reasoning)}\n&lt;/think&gt;</div>
+                        </div>` : '';
                         item.innerHTML = `
                         <div class="result-header">
                             <span class="result-id">${this.escapeHtml(promptTag)} / #${this.escapeHtml(displayId)}</span>
@@ -6624,6 +6989,7 @@
                             <div class="result-label">问题</div>
                             <div class="result-content" style="font-size:12px;background:var(--bg-card);">${this.escapeHtml(data.question || '')}</div>
                         </div>
+                        ${reasoningHtml}
                         <div style="display:flex;gap:8px;margin-top:6px;">
                             <div style="flex:1;">
                                 <div class="result-label">期望答案</div>
@@ -6631,7 +6997,7 @@
                             </div>
                             <div style="flex:1;">
                                 <div class="result-label">AI回复</div>
-                                <div class="result-content ai">${aiContent}</div>
+                                <div class="result-content ai">${this.escapeHtml(aiReply) || '<span style="color:var(--text-muted)">无回复</span>'}</div>
                             </div>
                         </div>`;
                         item.dataset.modelId = modelId;
@@ -6653,14 +7019,17 @@
 
                     const aiDiv = item.querySelector('.result-content.ai');
                     if (aiDiv) {
-                        let text = '';
-                        if (data.reasoning_content) {
-                            text += '<think>\n' + data.reasoning_content + '\n</think>\n';
-                        }
                         if (data.ai_answer) {
-                            text += (text ? '\n' : '') + data.ai_answer;
+                            const atBottom = aiDiv.scrollTop + aiDiv.clientHeight >= aiDiv.scrollHeight - 5;
+                            aiDiv.textContent = data.ai_answer;
+                            if (atBottom) aiDiv.scrollTop = aiDiv.scrollHeight;
+                        } else {
+                            aiDiv.innerHTML = '<span style="color:var(--text-muted)">无回复</span>';
                         }
-                        aiDiv.textContent = text || '无回复';
+                    }
+                    const reasoningDiv = item.querySelector('.result-content.reasoning');
+                    if (reasoningDiv && data.reasoning_content) {
+                        reasoningDiv.innerHTML = `&lt;think&gt;\n${this.escapeHtml(data.reasoning_content)}\n&lt;/think&gt;`;
                     }
                     this._scheduleAutoScroll();
                     return item;
@@ -6670,7 +7039,7 @@
                     return {
                         status: document.getElementById('resultFilterStatus')?.value || 'all',
                         model: document.getElementById('resultFilterModel')?.value || '',
-                        text: (document.getElementById('resultFilterText')?.value || '').toLowerCase()
+                        text: (document.getElementById('resultFilterTextInput')?.value || '').toLowerCase()
                     };
                 },
 
@@ -6758,7 +7127,8 @@
                 },
 
                 async loadHistoryResults() {
-                    if (!this.testSetNames.length) return;
+                    // 始终至少渲染"当前运行"选项；testSetNames 为空时只显示"当前运行"，
+                    // 待 testSetNames 准备好后再被 init 中的串联调用重新加载填充真实结果
                     try {
                         const results = await Promise.allSettled(this.testSetNames.map(async (name) => {
                             const resp = await fetchWithTimeout(
@@ -6777,7 +7147,7 @@
                             this.historyResultsList.map((r, idx) => {
                                 const key = r.path || r.name || 'result_' + idx;
                                 const text = `[${r.testSet}] ${r.name}`;
-                                return `<div class="custom-select-option" data-dropdown="historySelector" data-value="${this.escapeHtml(key)}" data-label="${this.escapeHtml(text)}">${this.escapeHtml(text)}</div>`;
+                                return `<div class="custom-select-option" data-dropdown="historySelector" data-value="${attrEscape(key)}" data-label="${attrEscape(text)}">${this.escapeHtml(text)}</div>`;
                             }).join('');
                     }
                     } catch (error) {
@@ -6798,6 +7168,8 @@
                     const val = hidden ? hidden.value : '';
                     if (val === this._currentDisplay) return;
                     if (!val) {
+                        const setnameEl = document.getElementById('aiStreamSetname');
+                        if (setnameEl) setnameEl.textContent = '';
                         this._liveItems = this._savedLiveItems || [];
                         this._userScrolledAway = false;
                         if (this._liveItems.length > 0) {
@@ -6817,6 +7189,8 @@
                     }
                     const result = this.historyResultsList.find(r => (r.path || r.name) === val);
                     if (!result || !result.data) return;
+                    const setnameEl = document.getElementById('aiStreamSetname');
+                    if (setnameEl) setnameEl.textContent = `[${result.testSet}] ${result.name}`;
                     const sorted = [...result.data].sort((a, b) => this._compareByLogicalOrder(a, b));
                     const container = document.getElementById('aiStreamContent');
                     container.innerHTML = '';
@@ -6832,17 +7206,93 @@
                 },
 
                 async init() {
-                    await this.loadConfig();
-                    await this.loadAllTestSets();
-                    await this.loadCanvasState();
+                    // ===== 修复初始化阻塞问题 =====
+                    // 之前 init 串行 await loadConfig → loadAllTestSets → loadCanvasState，
+                    // 任何一个后端接口慢/失败都会阻塞后续 renderAssociationCanvas / renderPromptList / renderQuestionList
+                    // 整个页面看起来卡死。
+                    //
+                    // 新策略：先同步渲染所有可见 UI（关联管理、提示词/问题列表的"暂无..."空状态、画布等），
+                    // 然后 fire-and-forget 并行加载各种后端数据；每个数据到达后独立触发对应的 render 刷新。
 
+                    // 1) 立即渲染"骨架/空状态"（数据为空时 renderPromptList/renderQuestionList 会显示"暂无提示词"占位）
+                    //    这样用户看到页面立即有响应，而不是长时间空白
+                    this.renderAssociationCanvas({ center: false });
+                    this.renderPromptList();
+                    this.renderQuestionList();
+                    this.renderSetFilterPanel();
+
+                    // 2) 绑定 UI 事件（按钮、滑块、tab 切换等）
+                    this.initDropdowns();
+                    _bindEvents();
+                    ['temperature', 'concurrency', 'testCount', 'maxRetries', 'contextSize', 'topP', 'minP', 'topK']
+                        .forEach(p => this.updateSliderVisual(p));
+                    window.addEventListener('resize', this.debouncedCanvasResize.bind(this));
+
+                    // 3) 加载画布状态（本地 backend 很快，但仍异步避免阻塞）
+                    this.loadCanvasState().then(() => {
+                        this._applyCanvasStateToUI();
+                    }).catch(err => {
+                        console.warn('加载画布状态失败（不影响页面其余部分）:', err);
+                    });
+
+                    // 4) 加载 config（apiKey/baseUrl 等），完成后立即同步滑块和模型选择
+                    this.loadConfig().then(() => {
+                        ['temperature', 'concurrency', 'testCount', 'maxRetries', 'contextSize', 'topP', 'minP', 'topK']
+                            .forEach(p => this.updateSliderVisual(p));
+                        document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
+                    }).catch(err => {
+                        console.warn('加载 config 失败（不影响页面其余部分）:', err);
+                    });
+
+                    // 5) 加载所有测试集（这是最重的网络请求），完成后刷新 prompt/question 列表
+                    //    依赖关系：loadHistoryResults 依赖 testSetNames 字段，必须在 loadAllTestSets 完成后才能正确执行，
+                    //    因此把 loadHistoryResults 串联在 .then() 里避免竞态（init 重构成 fire-and-forget 后旧代码会在 testSetNames 为空时早 return）
+                    this.loadAllTestSets().then(() => {
+                        // 同步选择状态后再 render
+                        this._applyCanvasStateToUI();
+                        // 加载历史结果（依赖 testSetNames）
+                        return this.loadHistoryResults().catch(err => {
+                            console.warn('加载历史结果失败（不影响页面其余部分）:', err);
+                        });
+                    }).catch(err => {
+                        console.warn('加载测试集失败（不影响页面其余部分）:', err);
+                    });
+
+                    this._refreshJobStatus().catch(err => {
+                        console.warn('查询任务状态失败（不影响页面其余部分）:', err);
+                    });
+
+                    // 7) 异步加载存档选择器
+                    this.renderArchiveSelector().catch(err => {
+                        console.warn('加载存档选择器失败（不影响页面其余部分）:', err);
+                    });
+
+                    // 8) 异步校验模型列表连通性（最不可控的网络请求，绝不能阻塞）
+                    this.loadModels().catch(err => {
+                        console.warn('加载模型列表失败（不影响页面其余部分）:', err);
+                    });
+
+                    // 9) 关联管理工具栏自适应（同步执行，使用 ResizeObserver 监听父容器）
+                    this.updateCanvasToolbarCompact();
+                    const _debouncedToolbarCompact = debounce(this.updateCanvasToolbarCompact.bind(this), 100);
+                    window.addEventListener('resize', _debouncedToolbarCompact);
+                    // 监听父容器 resize：仅当 .canvas-toolbar 自身 class 变化不应触发重算，
+                    // 否则会形成 ResizeObserver→切换 class→reflow→ResizeObserver 的鬼畜循环
+                    const _canvasSection = document.querySelector('.config-panel') || document.querySelector('.center-panel');
+                    if (_canvasSection && typeof ResizeObserver !== 'undefined') {
+                        new ResizeObserver(_debouncedToolbarCompact).observe(_canvasSection);
+                    }
+                },
+
+                /** 把 canvasState 应用到 UI 选择状态 + 重新 render 关联管理 */
+                _applyCanvasStateToUI() {
                     if (this.canvasState.selectedPrompts) {
                         this.selectedPrompts = new Set(this.canvasState.selectedPrompts);
                         this.selectedQuestions = new Set(this.canvasState.selectedQuestions);
                         if (this.canvasState.selectedModels) {
                             this.selectedModels = this.canvasState.selectedModels;
                         }
-                    } else if (this.canvasState.nodes.some(n => (n.type === 'prompt' || n.type === 'question') && n.tag)) {
+                    } else if (this.canvasState.nodes && this.canvasState.nodes.some(n => (n.type === 'prompt' || n.type === 'question') && n.tag)) {
                         this.selectedPrompts.clear();
                         this.selectedQuestions.clear();
                         this.canvasState.nodes.forEach(n => {
@@ -6874,26 +7324,21 @@
                     this.syncCanvasFromSelection();
 
                     // Only sync model nodes when NOT loading a saved canvas
-                    // (saved canvas already has model nodes with correct positions)
                     if (!this._hasSavedCanvas) {
                         this.syncModelNodesToCanvas();
                     } else {
-                        // Just update the model count display without re-syncing
                         document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
                     }
 
+                    this._markMissingModels();
+                    this._markMissingPromptQuestions();
                     this.renderAssociationCanvas({ center: false });
                     this.renderPromptList();
                     this.renderQuestionList();
-                    // Validate model nodes: auto-refresh if selected models not in availableModels
-                    const modelNodes = this.canvasState.nodes.filter(n => n.type === 'model' && n.value);
-                    const missingModels = modelNodes.filter(n => !this.availableModels.includes(n.value));
-                    if (missingModels.length > 0) {
-                        await this.loadModels();
-                    }
-                    this._markMissingModels();
-                    this._markMissingPromptQuestions();
-                    this.loadHistoryResults();
+                },
+
+                /** 异步查询任务 hub 状态（用于恢复正在运行的测试进度） */
+                async _refreshJobStatus() {
                     try {
                         const resp = await fetch('/api/v1/test-job/hub', {
                             method: 'POST',
@@ -6934,14 +7379,6 @@
                             }
                         }
                     } catch(e) {}
-                    this.canvasState.history = [];
-                    this.canvasHistoryIndex = -1;
-                    this.saveCanvasSnapshot();
-                    try { await this.renderArchiveSelector(); } catch (e) { console.error('加载存档失败', e); }
-                    this.initDropdowns();
-                    _bindEvents();
-                    ['temperature', 'concurrency', 'testCount', 'maxRetries', 'contextSize', 'topP', 'minP', 'topK'].forEach(p => this.updateSliderVisual(p));
-                    window.addEventListener('resize', this.debouncedCanvasResize.bind(this));
                 },
 
                 async loadConfig() {
@@ -6979,17 +7416,9 @@
                         setSlider('minP', config.min_p ?? 0.05);
                         document.getElementById('modal-streaming').checked = config.streaming === true;
                         document.getElementById('autoAppendV1').checked = config.auto_append_v1 !== false;
+                        document.getElementById('autoConnectToggle').checked = config.auto_connect !== false;
                         document.getElementById('anthropicMode').checked = config.anthropic_mode === true;
                         document.getElementById('forceOpenAIEndpoint').checked = config.force_openai_endpoint === true;
-                        document.getElementById('autoConnectToggle').checked = config.auto_connect !== false;
-                        if (config.api_key) { this.loadModels(); }
-                        if (config.models && Array.isArray(config.models)) {
-                            this.selectedModels = config.models;
-                            document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
-                        }
-                        if (config.model_thinking_config) {
-                            this._modelThinkingConfig = JSON.parse(JSON.stringify(config.model_thinking_config));
-                        }
                         const disabled = config.disabled_params || ['contextSize', 'topP', 'minP', 'topK'];
                         ['temperature', 'contextSize', 'topP', 'minP', 'topK'].forEach(p => {
                             const dot = document.querySelector(`[data-dot="${p}"]`);
@@ -7001,10 +7430,16 @@
                                 const input = group?.querySelector('.stepper-value');
                                 if (native) native.disabled = true;
                                 if (input) input.disabled = true;
-                            } else {
-                                if (dot) dot.classList.add('on');
                             }
                         });
+                        if (config.api_key) { await this.loadModels(); }
+                        if (config.models && Array.isArray(config.models)) {
+                            this.selectedModels = config.models;
+                            document.getElementById('selectedModelCount').textContent = this.selectedModels.length;
+                        }
+                        if (config.model_thinking_config) {
+                            this._modelThinkingConfig = JSON.parse(JSON.stringify(config.model_thinking_config));
+                        }
                     } catch (error) {
                         handleError('loadConfig', error);
                     }
@@ -7013,7 +7448,47 @@
                 onCanvasResize() { this.renderLines(); },
                 debouncedCanvasResize: debounce(function() { this.renderLines(); this.updateCoordDisplay(); }, 150),
                 debouncedConfigChange: debounce(function() { this.onConfigChange(); }, 500),
-                debouncedAutoSave: debounce(function() { this.saveCanvas(); }, 200)
+                debouncedAutoSave: debounce(function() { this.saveCanvas(); }, 200),
+
+                /**
+                 * 根据可用空间智能切换关联管理工具栏的紧凑状态：
+                 *   - 充足：所有按钮正常显示
+                 *   - 紧凑 (compact)：隐藏"存档"和"读取存档"的文字
+                 *   - 极紧凑 (ultra-compact)：再隐藏 chevron，把这两个按钮压成仅图标
+                 *   - 仍超出预计范围的 25% 时才启用换行 wrap（避免微小溢出就过早换行）
+                 *
+                 * "预计范围" = 工具栏最左侧元素的左边缘，到 AI 回复预览左侧分割线（即 panel-header 右边缘）的距离
+                 */
+                updateCanvasToolbarCompact() {
+                    const toolbar = document.querySelector('.canvas-toolbar');
+                    if (!toolbar) return;
+                    // 先恢复到完整状态以便准确测量
+                    toolbar.classList.remove('compact', 'ultra-compact', 'wrap');
+                    const overflow = toolbar.scrollWidth - toolbar.clientWidth;
+                    if (overflow <= 0) return;
+
+                    // 计算预计范围：工具栏左边缘 → panel-header 右边缘（也就是 AI 回复预览分割线）
+                    const panelHeader = toolbar.closest('.panel-header');
+                    let wrapThreshold = 0;
+                    if (panelHeader) {
+                        const headerRect = panelHeader.getBoundingClientRect();
+                        const toolbarRect = toolbar.getBoundingClientRect();
+                        const expectedRange = Math.max(0, headerRect.right - toolbarRect.left);
+                        // 超出预计范围 25% 才换行；最小 24px 兜底，避免极窄情况下一直不换
+                        wrapThreshold = Math.max(24, expectedRange * 0.25);
+                    }
+
+                    // 阶段1：先隐藏两个尾部按钮的文字
+                    toolbar.classList.add('compact');
+                    let after = toolbar.scrollWidth - toolbar.clientWidth;
+                    if (after <= 0) return;
+                    // 阶段2：再隐藏 chevron，仅留图标
+                    toolbar.classList.add('ultra-compact');
+                    after = toolbar.scrollWidth - toolbar.clientWidth;
+                    if (after <= wrapThreshold) return; // 超出量在 25% 阈值以内，保持 ultra-compact 即可
+                    // 阶段3：超出超过 25% -> 启用换行
+                    toolbar.classList.add('wrap');
+                }
             };
 
             function _bindEvents() {
@@ -7025,8 +7500,45 @@
                 on(byId('questionSearch'), 'input', debounce(() => App.renderQuestionList(), 300));
                 on(byId('testSetDir'), 'blur', () => App.onTestSetDirChange());
                 on(byId('baseUrl'), 'blur', () => App.onBaseUrlBlur());
-                on(byId('resultFilterText'), 'input', debounce(() => App.applyStreamFilter(), 300));
+                on(byId('apiKey'), 'blur', () => App.onConfigChange());
+                on(byId('resultFilterTextInput'), 'input', debounce(() => App.applyStreamFilter(), 300));
                 on(byId('paramsToggle'), 'click', () => App.toggleParamsModal());
+                on(byId('paramsExpandBar'), 'click', function() {
+                    const content = byId('paramsExpandContent');
+                    const bar = byId('paramsExpandBar');
+                    if (content.classList.contains('open')) {
+                        content.classList.remove('open');
+                        bar.classList.remove('open');
+                        content.style.maxHeight = '';
+                        content.style.overflowY = '';
+                    } else {
+                        content.classList.add('open');
+                        bar.classList.add('open');
+                        const modal = byId('paramsModal').querySelector('.params-modal');
+                        const header = modal.querySelector('.params-modal-header');
+                        const body = modal.querySelector('.params-modal-body');
+                        const maxH = window.innerHeight * 0.8 - header.offsetHeight - body.offsetHeight - bar.offsetHeight - 40;
+                        content.style.maxHeight = Math.max(180, maxH) + 'px';
+                        content.style.overflowY = 'auto';
+                    }
+                });
+                $$('.dot-toggle').forEach(el => {
+                    on(el, 'click', function(e) {
+                        e.stopPropagation();
+                        const param = this.dataset.dot;
+                        if (!param) return;
+                        const group = this.closest('.slider-group');
+                        this.classList.toggle('on');
+                        if (group) {
+                            group.classList.toggle('disabled');
+                            const native = group.querySelector('.slider-native');
+                            const input = group.querySelector('.stepper-value');
+                            if (native) native.disabled = group.classList.contains('disabled');
+                            if (input) input.disabled = group.classList.contains('disabled');
+                        }
+                        App.debouncedConfigChange();
+                    });
+                });
                 on(byId('openModelBtn'), 'click', () => App.openModelModal());
                 on(byId('runBtn'), 'click', () => App.runTests());
                 on(byId('stopBtn'), 'click', () => App.stopTests());
@@ -7082,31 +7594,6 @@
                     on(el, 'change', () => App.onModalNumberChange(param, el.value));
                 });
 
-                on(byId('paramsExpandBar'), 'click', function() {
-                    const content = byId('paramsExpandContent');
-                    const bar = byId('paramsExpandBar');
-                    if (content.classList.contains('open')) {
-                        content.classList.remove('open');
-                        bar.classList.remove('open');
-                    } else {
-                        content.classList.add('open');
-                        bar.classList.add('open');
-                    }
-                });
-                $$('.dot-toggle').forEach(el => {
-                    on(el, 'click', function(e) {
-                        e.stopPropagation();
-                        const param = this.dataset.dot;
-                        const group = this.closest('.slider-group');
-                        this.classList.toggle('on');
-                        group.classList.toggle('disabled');
-                        const native = group.querySelector('.slider-native');
-                        const input = group.querySelector('.stepper-value');
-                        if (native) native.disabled = group.classList.contains('disabled');
-                        if (input) input.disabled = group.classList.contains('disabled');
-                        App.debouncedConfigChange();
-                    });
-                });
                 on(byId('paramsModal'), 'click', function(e) {
                     if (e.target === this) App.toggleParamsModal();
                 });
