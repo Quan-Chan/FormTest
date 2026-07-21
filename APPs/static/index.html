@@ -5828,7 +5828,8 @@
                     } else {
                         popup.innerHTML = items.map((item, idx) => {
                             const sel = node.value === item;
-                            const lbActive = type === 'model' && this._modelThinkingConfig[item]?.thinking?.type === 'enabled';
+                            const _cfg = this._modelThinkingConfig[item] || {};
+                            const lbActive = type === 'model' && (_cfg.thinking?.type === 'enabled' || (_cfg.mode && _cfg.mode > 0));
                             const lb = type === 'model' ? `<button class="model-lightbulb-btn ${lbActive ? 'active' : ''}" data-sel-lb="${nodeId}" data-sel-model="${attrEscape(item)}" title="推理设置">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/></svg>
                             </button>` : '';
@@ -6107,7 +6108,8 @@
                     const listHtml = this.availableModels.map(model => {
                         const index = this.selectedModels.indexOf(model);
                         const orderNum = index !== -1 ? index + 1 : null;
-                        const thinkingActive = this._modelThinkingConfig[model]?.thinking?.type === 'enabled';
+                        const cfg = this._modelThinkingConfig[model] || {};
+                        const thinkingActive = cfg.thinking?.type === 'enabled' || (cfg.mode && cfg.mode > 0);
                         return `<div class="model-checkbox-item" data-model="${this.escapeHtml(model)}">
                         <span class="model-order-badge ${orderNum ? 'active' : ''}">${orderNum || ''}</span>
                         <span class="model-name">${this.escapeHtml(model)}</span>
@@ -6169,7 +6171,10 @@
                     }).join('');
                     const hasThinking = thinkingOn && effortOn;
                     const hasParams = Object.keys(tsParams).length > 0;
-                    const initMode = hasThinking && hasParams ? 3 : hasParams ? 2 : hasThinking ? 1 : 0;
+                    const savedMode = cfg.mode;
+                    const initMode = (savedMode !== undefined && savedMode !== null)
+                        ? savedMode
+                        : (hasThinking && hasParams ? 3 : hasParams ? 2 : hasThinking ? 1 : 0);
                     const thinkVis = initMode === 1 || initMode === 3;
                     const paramVis = initMode === 2 || initMode === 3;
                     body.innerHTML = `<div style="font-size:14px;font-weight:600;margin-bottom:12px;color:var(--text-primary)">推理设置 — ${this.escapeHtml(model)}</div>
@@ -6325,6 +6330,12 @@
                     if (!this._modelThinkingConfig[model]) this._modelThinkingConfig[model] = {};
                     const modeEl = overlay.querySelector('.mode-segment.active');
                     const mode = parseInt(modeEl?.dataset.mode || '0');
+                    // 保存模式 (0=无作为, 1=仅推理, 2=仅参数, 3=全部)
+                    if (mode > 0) {
+                        this._modelThinkingConfig[model].mode = mode;
+                    } else {
+                        delete this._modelThinkingConfig[model].mode;
+                    }
                     if (mode === 0 || mode === 2) {
                         this._modelThinkingConfig[model].thinking = { type: 'disabled' };
                         delete this._modelThinkingConfig[model].reasoning_effort;
@@ -6431,7 +6442,10 @@
                     const effortStyle = thinkingOn ? '' : 'opacity:0.4;pointer-events:none;';
                     const hasRegular = ['temperature','top_p','top_k','min_p','context_size'].some(k => params[k] !== undefined);
                     const hasThinking = !!params.thinking_cfg;
-                    const initMode = hasRegular && hasThinking ? 3 : hasRegular ? 2 : hasThinking ? 1 : 0;
+                    const savedMode = params.mode;
+                    const initMode = (savedMode !== undefined && savedMode !== null)
+                        ? savedMode
+                        : (hasRegular && hasThinking ? 3 : hasRegular ? 2 : hasThinking ? 1 : 0);
                     const thinkVis = initMode === 1 || initMode === 3;
                     const paramVis = initMode === 2 || initMode === 3;
                     const par = [
@@ -6517,6 +6531,8 @@
                         const modeEl = container.querySelector('.mode-segment.active');
                         const mode = parseInt(modeEl?.dataset.mode || '0');
                         const p = {};
+                        // 始终保存当前模式(>0时),以确保模式状态可被恢复
+                        if (mode > 0) p.mode = mode;
                         if (mode === 1 || mode === 3) {
                             const cfg = this._modelThinkingConfig[model] || {};
                             if (cfg.thinking?.type === 'enabled') {
